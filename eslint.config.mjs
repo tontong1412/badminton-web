@@ -51,6 +51,7 @@ export default [
       'space-before-function-paren': ['error', 'never'],
       'space-in-parens': ['error', 'never'],
       'space-infix-ops': ['error', { 'int32Hint': false }],
+      'comma-spacing': ['error', { 'before': false, 'after': true }]
     },
   }
 ]
