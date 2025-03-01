@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "cypress run"
   },
   "dependencies": {
     "next": "15.1.7",
@@ -25,6 +26,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.3.4",
+    "cypress": "^14.1.0",
     "eslint": "^9.21.0",
     "eslint-plugin-react": "^7.37.4",
     "globals": "^16.0.0",
