@@ -3,6 +3,7 @@ import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginReact from 'eslint-plugin-react'
 import stylisticJs from '@stylistic/eslint-plugin-js'
+import pluginNext from '@next/eslint-plugin-next'
 
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -14,7 +15,13 @@ export default [
   pluginReact.configs.flat.recommended,
   {
     plugins: {
-      '@stylistic/js': stylisticJs
+      '@stylistic/js': stylisticJs,
+      '@next/next': pluginNext
+    },
+    settings: {
+      react: {
+        version: 'detect'
+      }
     },
     rules: {
       '@stylistic/js/indent': [
