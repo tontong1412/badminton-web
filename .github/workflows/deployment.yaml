@@ -31,4 +31,5 @@ jobs:
           start: npm start
           wait-on: http://localhost:3000
       - name: Trigger deployment
+        if: ${{ github.event_name == 'push' }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
