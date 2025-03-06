@@ -12,7 +12,7 @@ env:
   CONTAIN_SKIP: ${{ !contains(github.event.head_commit.message, '#skip') }}
 
 jobs:
-  simple_deployment_pipeline:
+  build_and-test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
@@ -33,8 +33,20 @@ jobs:
           command: npm run test:e2e
           start: npm start
           wait-on: http://localhost:3000
+      - name: Test fail
+        uses: rjstone/discord-webhook-notify@v1.0.4
+        if: ${{ failure() }}
+        with:
+          severity: error
+          details: Test Failed
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-20.04
+   if: ${{ suscess() && github.event_name == 'push' && !env.CONTAIN_SKIP }} if
+    steps:
       - name: Trigger deployment
-        if: ${{ github.event_name == 'push' && !env.CONTAIN_SKIP }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
       - name: Deployment success
         uses: rjstone/discord-webhook-notify@v1.0.4
@@ -59,7 +71,7 @@ jobs:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   tag_release:
-    needs: [simple_deployment_pipeline]
+    needs: [deploy]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
