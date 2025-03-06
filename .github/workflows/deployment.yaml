@@ -44,7 +44,7 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-20.04
-   if: ${{ suscess() && github.event_name == 'push' && !env.CONTAIN_SKIP }} if
+    if: ${{ suscess() && github.event_name == 'push' && !env.CONTAIN_SKIP }} if
     steps:
       - name: Trigger deployment
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
