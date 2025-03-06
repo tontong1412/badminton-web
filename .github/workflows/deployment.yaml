@@ -31,7 +31,7 @@ jobs:
           start: npm start
           wait-on: http://localhost:3000
       - name: Trigger deployment
-        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip' }}
+        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
 
   tag_release:
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Bump version and push tag
-        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip' }}
+        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
         uses: anothrNick/github-tag-action@1.71.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
