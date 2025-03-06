@@ -36,6 +36,27 @@ jobs:
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && !env.CONTAIN_SKIP }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+      - name: Deployment success
+        uses: rjstone/discord-webhook-notify@v1.0.4
+        if: ${{ success() }}
+        with:
+          severity: info
+          details: Deploy Seccueeded
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Deployment fail
+        uses: rjstone/discord-webhook-notify@v1.0.4
+        if: ${{ failure() }}
+        with:
+          severity: error
+          details: Deploy Failed
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Deployment Cancelled
+        uses: rjstone/discord-webhook-notify@v1.0.4
+        if: ${{ cancelled() }}
+        with:
+          severity: warn
+          details: Deploy Cancelled
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   tag_release:
     needs: [simple_deployment_pipeline]
