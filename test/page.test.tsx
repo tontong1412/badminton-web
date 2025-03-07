@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react'
 import Page from '../src/app/page'
 
 describe('Home Component', () => {
-  it('renders the Next.js logo', () => {
+  it('renders Badminstar', () => {
     render(<Page/>)
-    const logo = screen.getAllByAltText('Next.js logo')
-    expect(logo).toBeDefined()
+    const content = screen.getByText('Badminstar')
+    expect(content).toBeDefined()
   })
 })
