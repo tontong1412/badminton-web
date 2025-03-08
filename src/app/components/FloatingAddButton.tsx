@@ -8,12 +8,13 @@ const fabStyle = {
 }
 
 interface FloatingAddButtonProps {
-  onClick: (...args: unknown[]) => void
+  onClick: (...args: unknown[]) => void,
+  'data-test-id'?: string  // Add this to the interface
 }
 
-const FloatingAddButton = ({ onClick }: FloatingAddButtonProps) => {
+const FloatingAddButton = ({ onClick, ...props }: FloatingAddButtonProps) => {
   return (
-    <Fab color='primary' sx={fabStyle} onClick={onClick}>
+    <Fab color='primary' sx={fabStyle} onClick={onClick} {...props}>
       <AddIcon />
     </Fab>
   )

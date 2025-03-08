@@ -89,6 +89,7 @@ const AddPlayerModal = ({ visible, setVisible, players, setPlayers }: AddPlayerM
 
   return (
     <Dialog
+      data-testid="add-player-modal"
       open={visible}
       onClose={() => setVisible(false)}
       slots={{ transition: Transition }}

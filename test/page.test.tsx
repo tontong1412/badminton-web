@@ -1,11 +1,33 @@
-import { expect, describe, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import Page from '../src/app/page'
+import userEvent from '@testing-library/user-event'
+import Home from '../src/app/page'
+import { useRouter } from 'next/navigation'
+import { vi, expect, Mock } from 'vitest'
+
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(),
+}))
 
 describe('Home Component', () => {
-  it('renders Badminstar', () => {
-    render(<Page/>)
-    const content = screen.getByText('Badminstar')
-    expect(content).toBeDefined()
+  it('renders the title and button', () => {
+    render(<Home />)
+
+    expect(screen.getByText('Badminstar')).toBeInTheDocument()
+
+    const button = screen.getByRole('button', { name: /Host a Session/i })
+    expect(button).toBeInTheDocument()
+  })
+
+  it('navigates to /sessions when button is clicked', async() => {
+    const user = userEvent.setup()
+    const mockPush = vi.fn();
+    (useRouter as Mock).mockReturnValue({ push: mockPush })
+
+    render(<Home />)
+
+    const button = screen.getByRole('button', { name: /Host a Session/i })
+    await user.click(button)
+
+    expect(mockPush).toHaveBeenCalledWith('/sessions')
   })
 })
