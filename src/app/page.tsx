@@ -10,7 +10,7 @@ const Home = () => {
       <Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
         Badminstar
       </Typography>
-      <Button variant='contained' size="large" onClick={() => router.push('/sessions')}>Host a Session</Button>
+      <Button data-test-id='button-to-session' variant='contained' size="large" onClick={() => router.push('/sessions')}>Host a Session</Button>
     </div>
   )
 }

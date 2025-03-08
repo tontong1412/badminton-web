@@ -41,7 +41,7 @@ const Session = () => {
                 <IconButton edge="end" aria-label="delete" onClick={() => removePlayer(player.id)}>
                   <DeleteIcon />
                 </IconButton>
-                <IconButton edge="end" aria-label="delete" onClick={() => console.log(player.id)}>
+                <IconButton edge="end" aria-label="see-detail" onClick={() => console.log(player.id)}>
                   <RemoveRedEyeIcon />
                 </IconButton>
               </Box>
@@ -59,7 +59,7 @@ const Session = () => {
 
       </List>
       <AddPlayerModal visible={addPlayerModalVisible} setVisible={setAddPlayerModalVisible} players={players} setPlayers={setPlayers}/>
-      <FloatingAddButton onClick={() => setAddPlayerModalVisible(true)}/>
+      <FloatingAddButton data-test-id='add-player-button' onClick={() => setAddPlayerModalVisible(true)}/>
     </div>
   )
 }
