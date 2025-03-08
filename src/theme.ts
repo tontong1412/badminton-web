@@ -18,7 +18,7 @@ const theme = createTheme({
   },
   cssVariables: true,
   typography: {
-    fontFamily: 'var(--font-roboto)',
+    fontFamily: 'var(--font-nunito)',
   },
 })
 

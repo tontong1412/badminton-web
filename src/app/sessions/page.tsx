@@ -1,6 +1,4 @@
 'use client'
-import Fab from '@mui/material/Fab'
-import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import Avatar from '@mui/material/Avatar'
 import { IconButton, List, ListItem, Typography, ListItemAvatar, ListItemText, Box, Chip } from '@mui/material'
@@ -9,12 +7,7 @@ import { useEffect, useState } from 'react'
 import AddPlayerModal from '../components/AddPlayerModal'
 import { fetchPlayers, updatePlayers } from '../libs/fetchData'
 import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye'
-
-const fabStyle = {
-  position: 'absolute',
-  bottom: 80,
-  right: 20
-}
+import FloatingAddButton from '../components/FloatingAddButton'
 
 const Session = () => {
   const [addPlayerModalVisible, setAddPlayerModalVisible] = useState<boolean>(false)
@@ -66,10 +59,7 @@ const Session = () => {
 
       </List>
       <AddPlayerModal visible={addPlayerModalVisible} setVisible={setAddPlayerModalVisible} players={players} setPlayers={setPlayers}/>
-
-      <Fab color='primary' sx={fabStyle} onClick={() => setAddPlayerModalVisible(true)}>
-        <AddIcon />
-      </Fab>
+      <FloatingAddButton onClick={() => setAddPlayerModalVisible(true)}/>
     </div>
   )
 }
