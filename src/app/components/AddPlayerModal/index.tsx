@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, ChangeEvent, FormEvent, Dispatch, SetStateAction, forwardRef } from 'react'
+import { useState, ChangeEvent, FormEvent, Dispatch, SetStateAction } from 'react'
 import { NewPlayer, PaymentStatus, Player } from '@/type'
 import { v1 as uuid } from 'uuid'
 import moment from 'moment'
@@ -16,11 +16,10 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
-  Slide,
 } from '@mui/material'
 import { SelectChangeEvent } from '@mui/material/Select'
-import { TransitionProps } from '@mui/material/transitions'
 import { updatePlayers } from '@/app/libs/fetchData'
+import Transition from '../ModalTransition'
 
 interface AddPlayerModalProps {
   visible: boolean;
@@ -28,16 +27,6 @@ interface AddPlayerModalProps {
   players: Player[];
   setPlayers: Dispatch<SetStateAction<Player[]>>;
 }
-
-const Transition = forwardRef(function Transition(
-  props: TransitionProps & {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    children: React.ReactElement<any, any>;
-  },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />
-})
 
 const AddPlayerModal = ({ visible, setVisible, players, setPlayers }: AddPlayerModalProps) => {
   const [formData, setFormData] = useState<NewPlayer>({

@@ -10,6 +10,11 @@ export enum MatchStatus {
   Finished = 'finished',
 }
 
+export enum GameType {
+  Single = 'single',
+  Double = 'double',
+}
+
 export interface Player {
   id: string;
   officialName: string;
@@ -28,6 +33,7 @@ export interface Team {
   id: string;
   players: MatchPlayer[];
 }
+export type NewTeam = Omit<Team, 'id'>
 
 export interface Match {
   id: string;
@@ -41,7 +47,10 @@ export interface Match {
     team: Team;
   }
   shuttlecockUsed: number;
+  note?: string;
 }
+
+export type NewMatch = Omit<Match, 'id'>
 
 export interface Session {
   id: string;

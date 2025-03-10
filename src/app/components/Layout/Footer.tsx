@@ -35,7 +35,7 @@ const Footer = () => {
         }}
       >
         <BottomNavigationAction label="Players" icon={<GroupIcon />} />
-        <BottomNavigationAction label="Queue" icon={<TocIcon />} disabled/>
+        <BottomNavigationAction label="Queue" icon={<TocIcon />} />
         <BottomNavigationAction label="Settings" icon={<SettingsIcon />} disabled/>
       </BottomNavigation>
     </Box>
