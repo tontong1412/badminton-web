@@ -2,8 +2,13 @@ import { Match, MatchStatus, NewTeam, Player, Team } from '@/type'
 import moment from 'moment'
 import { v1 as uuid } from 'uuid'
 
-export const fetchPlayers = (): Player[] => {
-  const players = JSON.parse(localStorage.getItem('players') || '[]')
+import axios from 'axios'
+
+
+export const fetchPlayers = async(): Promise<Player[]> => {
+  const { data: players } = await axios.get('http://localhost:8080/api/players')
+  console.log(players)
+  // const players = JSON.parse(localStorage.getItem('players') || '[]')
   return players as Player[]
 }
 

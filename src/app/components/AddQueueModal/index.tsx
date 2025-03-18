@@ -38,8 +38,11 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
   const [gameType, setGameType] = useState<GameType>(GameType.Double)
 
   useEffect(() => {
-    const players: Player[] = fetchPlayers()
-    setPlayerList(players)
+    const getPlayer = async() => {
+      const players: Player[] = await fetchPlayers()
+      setPlayerList(players)
+    }
+    getPlayer()
   }, [])
 
   const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
