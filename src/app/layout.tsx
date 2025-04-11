@@ -5,6 +5,7 @@ import { Nunito } from 'next/font/google'
 import { ThemeProvider } from '@mui/material/styles'
 import theme from '../theme'
 import Layout from './components/Layout'
+import Providers from './providers'
 
 const nunito = Nunito({
   weight: ['300', '400', '500', '700'],
@@ -40,9 +41,11 @@ export default function RootLayout({
       <body className={`${nunito.variable}`} >
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
-            <Layout>
-              {children}
-            </Layout>
+            <Providers>
+              <Layout>
+                {children}
+              </Layout>
+            </Providers>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

@@ -1,42 +1,51 @@
 'use client'
-import { useState }from 'react'
+import { useSelector } from 'react-redux'
+import { RootState, useAppDispatch } from '@/app/libs/redux/store'
+import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import Box from '@mui/material/Box'
 import BottomNavigation from '@mui/material/BottomNavigation'
 import BottomNavigationAction from '@mui/material/BottomNavigationAction'
-import GroupIcon from '@mui/icons-material/Group'
-import TocIcon from '@mui/icons-material/Toc'
+import HomeIcon from '@mui/icons-material/Home'
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import SettingsIcon from '@mui/icons-material/Settings'
+// import GroupIcon from '@mui/icons-material/Group'
+// import TocIcon from '@mui/icons-material/Toc'
 import { useRouter } from 'next/navigation'
+import { AppMenu } from '@/type'
 
 const Footer = () => {
-  const [value, setValue] = useState(0)
   const router = useRouter()
+  const dispatch = useAppDispatch()
+  const activeMenu = useSelector((state: RootState) => state.app.activeMenu)
 
   return (
     <Box>
       <BottomNavigation
         className="fixed bottom-0 left-0 w-full"
         showLabels
-        value={value}
+        value={activeMenu}
         onChange={(event, newValue) => {
-          setValue(newValue)
+          console.log(activeMenu, newValue)
+          dispatch(setActiveMenu(newValue))
           switch (newValue) {
-          case 0:
-            router.push('/sessions')
+          case AppMenu.Home:
+            router.push('/')
             break
-          case 1:
+          case AppMenu.Tournament:
             router.push('/sessions/match')
             break
-          case 2:
+          case AppMenu.Setting:
             break
           default:
             break
           }
         }}
       >
-        <BottomNavigationAction label="Players" icon={<GroupIcon />} />
-        <BottomNavigationAction label="Queue" icon={<TocIcon />} />
-        <BottomNavigationAction label="Settings" icon={<SettingsIcon />} disabled/>
+        <BottomNavigationAction label="Home" value={AppMenu.Home} icon={<HomeIcon />} />
+        <BottomNavigationAction label="Tournament" value={AppMenu.Tournament} icon={<EmojiEventsIcon />} />
+        <BottomNavigationAction label="Settings" value={AppMenu.Setting} icon={<SettingsIcon />} />
+        {/* <BottomNavigationAction label="Players" value='' icon={<GroupIcon />} />
+        <BottomNavigationAction label="Queue" icon={<TocIcon />} /> */}
       </BottomNavigation>
     </Box>
   )

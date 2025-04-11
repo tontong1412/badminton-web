@@ -4,5 +4,6 @@ export const MAP_LEVEL_TO_LABEL = [
   'intermediate',
   'advanced',
   'professional',
+  'VIP',
 ]
 

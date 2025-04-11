@@ -25,6 +25,35 @@ export interface Player {
   paymentStatus: PaymentStatus;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  player: {
+    id: string;
+    officialName: {
+      local: string;
+      en?: string;
+      pronunciation?: string;
+    };
+    level: number;
+    displayName?: {
+      local?: string;
+      en?: string;
+      pronunciation?: string;
+    }
+    club?: string;
+    photo?: string;
+  }
+}
+
+export enum AppMenu {
+  Home = 'home',
+  Tournament = 'tournament',
+  Setting = 'setting'
+  // Session = 'session',
+  // Venue = 'venue'
+}
+
 export type MatchPlayer = Omit<Player, 'paymentStatus' | 'lastMatchEnd'>
 
 export type NewPlayer = Omit<Player, 'id'>
