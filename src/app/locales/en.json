@@ -1,0 +1,18 @@
+{
+  "greeting": "Hi",
+  "footer": {
+    "home": "Home",
+    "tournament": "Tournament",
+    "settings": "Settings"
+  },
+  "settings": {
+    "language": "Language Settings"
+  },
+  "action": {
+    "cancel": "cancel",
+    "close": "close",
+    "submit": "submit",
+    "add": "add",
+    "login": "Log in"
+  }
+}

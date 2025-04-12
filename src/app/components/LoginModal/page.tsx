@@ -1,0 +1,140 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import {
+  TextField,
+  Button,
+  Box,
+  FormControlLabel,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from '@mui/material'
+import { useAppDispatch } from '@/app/libs/redux/store'
+import { login } from '@/app/libs/redux/slices/appSlice'
+import axios from 'axios'
+import { Dispatch, SetStateAction } from 'react'
+import Transition from '../ModalTransition'
+import { useTranslation } from 'react-i18next'
+import { SERVICE_ENDPOINT } from '@/app/constants'
+
+interface LoginModalProps {
+  visible: boolean;
+  setVisible: Dispatch<SetStateAction<boolean>>;
+}
+
+type LoginFormInputs = {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+};
+
+const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
+  const dispatch = useAppDispatch()
+  const router = useRouter()
+  const { t } = useTranslation()
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormInputs>()
+
+  const onSubmit = async(data: LoginFormInputs) => {
+    const { data: loginData } = await axios.post(
+      `${SERVICE_ENDPOINT}/api/users/login`,
+      {
+        email: data.email.toLowerCase(),
+        password: data.password,
+      }
+    )
+    const savedLoginData = {
+      id: loginData.user.id,
+      email: loginData.user.email,
+      player: loginData.player,
+    }
+    dispatch(login(savedLoginData))
+    if(data.rememberMe){
+      localStorage.setItem('rememberMe', data.rememberMe.toString())
+      localStorage.setItem('login', JSON.stringify(savedLoginData))
+    }
+    setVisible(false)
+  }
+
+  return (
+    <Dialog
+      data-testid="login-modal"
+      open={visible}
+      onClose={() => setVisible(false)}
+      slots={{ transition: Transition }}
+    >
+
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{ maxWidth: 400, mx: 'auto' }}
+      >
+        <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
+          Login
+        </DialogTitle>
+        <DialogContent dividers>
+          {/* <form onSubmit={handleSubmit(onSubmit)} noValidate> */}
+          <TextField
+            label="Email"
+            fullWidth
+            margin="normal"
+            {...register('email', {
+              required: 'Email is required',
+              pattern: {
+                value:
+                  /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/,
+                message: 'Invalid email address',
+              },
+            })}
+            error={!!errors.email}
+            helperText={errors.email?.message}
+          />
+
+          <TextField
+            label="Password"
+            type="password"
+            fullWidth
+            margin="normal"
+            {...register('password', {
+              required: 'Password is required',
+              minLength: {
+                value: 8,
+                message: 'Password must be at least 8 characters',
+              },
+            })}
+            error={!!errors.password}
+            helperText={errors.password?.message}
+          />
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                {...register('rememberMe')}
+                defaultChecked={true}
+              />
+            }
+            label="Remember Me"
+          />
+
+        </DialogContent>
+        <DialogActions>
+          <Button variant='outlined' onClick={() => setVisible(false)}>
+            {t('action.cancel')}
+          </Button>
+          <Button type="submit" variant='contained' autoFocus>
+            {t('action.login')}
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
+  )
+}
+export default LoginModal

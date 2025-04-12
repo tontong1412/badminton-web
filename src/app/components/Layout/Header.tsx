@@ -11,21 +11,33 @@ import Avatar from '@mui/material/Avatar'
 import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
 import MenuItem from '@mui/material/MenuItem'
-import { useState, MouseEvent } from 'react'
+import { useState, MouseEvent, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState, useAppDispatch } from '@/app/libs/redux/store'
-import { logout } from '@/app/libs/redux/slices/appSlice'
-import { useRouter } from 'next/navigation'
+import { login, logout } from '@/app/libs/redux/slices/appSlice'
+// import { useRouter } from 'next/navigation'
+import LoginModal from '../LoginModal/page'
+import LanguageSettingModal from '../LanguageSettingModal'
 
-const pages: string[] = []
-const settings: string[] = ['View Profile', 'Account', 'Logout']
+const pages: string[] = ['Tournament']
+const settings: string[] = ['View Profile', 'Account', 'Language Setting', 'Logout']
 
 const  ResponsiveAppBar = () => {
+  const [loginModalVisible, setLoginModalVisible] = useState(false)
+  const [languageSettingModal, setLanguageSettingModal] = useState(false)
   const user = useSelector((state: RootState) => state.app.user)
   const dispatch = useAppDispatch()
-  const router = useRouter()
+  // const router = useRouter()
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null)
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null)
+
+  useEffect(() => {
+    if(!user){
+      const retreivedUser = localStorage.getItem('login')
+      if(!retreivedUser) return
+      dispatch(dispatch(login(JSON.parse(retreivedUser))))
+    }
+  }, [])
 
   const handleOpenNavMenu = (event: MouseEvent<HTMLElement>) => {
     if(pages.length > 0){
@@ -47,7 +59,9 @@ const  ResponsiveAppBar = () => {
     case 'Logout':
       localStorage.clear()
       dispatch(logout())
-      console.log(user)
+      break
+    case 'Language Setting':
+      setLanguageSettingModal(true)
       break
     default:
     }
@@ -92,7 +106,7 @@ const  ResponsiveAppBar = () => {
     return(
       <Box sx={{ flexGrow: 0 }}>
         <Tooltip title="Open settings">
-          <Typography sx={{ textAlign: 'center' }} onClick={() => router.push('/login')}>Log in</Typography>
+          <Typography sx={{ textAlign: 'center' }} onClick={() => setLoginModalVisible(true)}>Log in</Typography>
         </Tooltip>
       </Box>
     )
@@ -189,6 +203,8 @@ const  ResponsiveAppBar = () => {
 
         </Toolbar>
       </Container>
+      <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
+      <LanguageSettingModal visible={languageSettingModal} setVisible={setLanguageSettingModal}/>
     </AppBar>
   )
 }

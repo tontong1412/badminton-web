@@ -7,15 +7,17 @@ import BottomNavigation from '@mui/material/BottomNavigation'
 import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import HomeIcon from '@mui/icons-material/Home'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
-import SettingsIcon from '@mui/icons-material/Settings'
+// import SettingsIcon from '@mui/icons-material/Settings'
 // import GroupIcon from '@mui/icons-material/Group'
 // import TocIcon from '@mui/icons-material/Toc'
 import { useRouter } from 'next/navigation'
 import { AppMenu } from '@/type'
+import { useTranslation } from 'react-i18next'
 
 const Footer = () => {
   const router = useRouter()
   const dispatch = useAppDispatch()
+  const { t } = useTranslation()
   const activeMenu = useSelector((state: RootState) => state.app.activeMenu)
 
   return (
@@ -25,7 +27,6 @@ const Footer = () => {
         showLabels
         value={activeMenu}
         onChange={(event, newValue) => {
-          console.log(activeMenu, newValue)
           dispatch(setActiveMenu(newValue))
           switch (newValue) {
           case AppMenu.Home:
@@ -41,9 +42,9 @@ const Footer = () => {
           }
         }}
       >
-        <BottomNavigationAction label="Home" value={AppMenu.Home} icon={<HomeIcon />} />
-        <BottomNavigationAction label="Tournament" value={AppMenu.Tournament} icon={<EmojiEventsIcon />} />
-        <BottomNavigationAction label="Settings" value={AppMenu.Setting} icon={<SettingsIcon />} />
+        <BottomNavigationAction label={t('footer.home')} value={AppMenu.Home} icon={<HomeIcon />} />
+        <BottomNavigationAction label={t('footer.tournament')} value={AppMenu.Tournament} icon={<EmojiEventsIcon />} />
+        {/* <BottomNavigationAction label={t('footer.settings')} value={AppMenu.Setting} icon={<SettingsIcon />} /> */}
         {/* <BottomNavigationAction label="Players" value='' icon={<GroupIcon />} />
         <BottomNavigationAction label="Queue" icon={<TocIcon />} /> */}
       </BottomNavigation>

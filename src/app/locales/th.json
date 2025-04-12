@@ -1,0 +1,18 @@
+{
+  "greeting": "สวัสดี",
+  "footer": {
+    "home": "หน้าหลัก",
+    "tournament": "รายการแข่ง",
+    "settings": "ตั้งค่า"
+  },
+  "settings": {
+    "language": "ตั้งค่าภาษา"
+  },
+  "action": {
+    "cancel": "ยกเลิก",
+    "close": "ปิด",
+    "submit": "ยืนยัน",
+    "add": "เพิ่ม",
+    "login": "เข้าสู่ระบบ"
+  }
+}

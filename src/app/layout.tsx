@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import theme from '../theme'
 import Layout from './components/Layout'
 import Providers from './providers'
+import { TranslationWrapper } from './components/TranslationWrapper'
 
 const nunito = Nunito({
   weight: ['300', '400', '500', '700'],
@@ -42,9 +43,11 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <Providers>
-              <Layout>
-                {children}
-              </Layout>
+              <TranslationWrapper>
+                <Layout>
+                  {children}
+                </Layout>
+              </TranslationWrapper>
             </Providers>
           </ThemeProvider>
         </AppRouterCacheProvider>
