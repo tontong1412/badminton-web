@@ -33,7 +33,7 @@ const Footer = () => {
             router.push('/')
             break
           case AppMenu.Tournament:
-            router.push('/sessions/match')
+            router.push('/tournaments')
             break
           case AppMenu.Setting:
             break

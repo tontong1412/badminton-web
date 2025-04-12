@@ -96,3 +96,9 @@ export interface Session {
   players: Player[];
   queue: Match[]
 }
+
+export enum TournamentQuery {
+  Recent = 'recent',
+  ThisWeek = 'thisWeek',
+  RegistrationOpen = 'registrationOpen'
+}
