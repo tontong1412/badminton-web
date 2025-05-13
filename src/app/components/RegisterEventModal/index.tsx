@@ -128,7 +128,6 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
   }, [])
 
   useEffect(() => {
-    console.log(user)
     if(user){
       setContactPerson({
         id: user.player.id,
@@ -192,7 +191,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
-    console.log({ event, player1, player2, contactPerson })
+    // console.log({ event, player1, player2, contactPerson })
     const playersArray = []
     if(player1.officialName){
       playersArray.push({
@@ -243,8 +242,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         contact: contactPerson.contact
       }
     }
-    const response = await axios.post(`${SERVICE_ENDPOINT}/api/events/register`, registerPayload, { withCredentials: true })
-    console.log(response.data)
+    await axios.post(`${SERVICE_ENDPOINT}/api/events/register`, registerPayload, { withCredentials: true })
     handleCloseModal()
   }
 

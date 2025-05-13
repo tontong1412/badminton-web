@@ -28,7 +28,7 @@ type LoginFormInputs = {
   email: string;
   password: string;
   rememberMe: boolean;
-};
+}
 
 const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
   const dispatch = useAppDispatch()

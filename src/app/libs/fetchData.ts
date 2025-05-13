@@ -7,7 +7,6 @@ import axios from 'axios'
 
 export const fetchPlayers = async(): Promise<Player[]> => {
   const { data: players } = await axios.get('http://localhost:8080/api/players')
-  console.log(players)
   // const players = JSON.parse(localStorage.getItem('players') || '[]')
   return players as Player[]
 }

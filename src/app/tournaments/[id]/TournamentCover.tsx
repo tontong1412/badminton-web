@@ -1,5 +1,5 @@
 'use client'
-import LoginModal from '@/app/components/LoginModal/page'
+import LoginModal from '@/app/components/LoginModal'
 import RegisterEventForm from '@/app/components/RegisterEventModal'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
