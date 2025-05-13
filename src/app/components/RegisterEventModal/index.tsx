@@ -118,7 +118,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
   useEffect(() => {
     const fetchPlayers = async() => {
       // Fetch players from API or any data source
-      const players = await axios.get(`${SERVICE_ENDPOINT}/api/players`)
+      const players = await axios.get(`${SERVICE_ENDPOINT}/players`)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedPlayerList = players.data.map((p: any) => ({ ...p, officialName: p.officialName[language] || p.officialName['en'] }))
       setPlayerList(formattedPlayerList)
@@ -242,7 +242,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         contact: contactPerson.contact
       }
     }
-    await axios.post(`${SERVICE_ENDPOINT}/api/events/register`, registerPayload, { withCredentials: true })
+    await axios.post(`${SERVICE_ENDPOINT}/events/register`, registerPayload, { withCredentials: true })
     handleCloseModal()
   }
 

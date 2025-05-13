@@ -43,7 +43,7 @@ const  ResponsiveAppBar = () => {
   useEffect(() => {
     const getUser = async() => {
       try{
-        const response = await axios.post(`${SERVICE_ENDPOINT}/api/users/refresh-token`, {}, { withCredentials: true })
+        const response = await axios.post(`${SERVICE_ENDPOINT}/users/refresh-token`, {}, { withCredentials: true })
         const userObj = {
           id: response.data.user.id,
           email: response.data.user.email,
@@ -75,7 +75,7 @@ const  ResponsiveAppBar = () => {
   const handleCloseUserMenu = async(selectedMenu: string) => {
     switch(selectedMenu){
     case 'Logout':
-      await axios.post(`${SERVICE_ENDPOINT}/api/users/logout`, { userId: user?.id }, { withCredentials: true })
+      await axios.post(`${SERVICE_ENDPOINT}/users/logout`, { userId: user?.id }, { withCredentials: true })
       dispatch(logout())
       break
     case 'Language Setting':

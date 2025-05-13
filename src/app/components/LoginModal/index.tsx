@@ -42,7 +42,7 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
 
   const onSubmit = async(data: LoginFormInputs) => {
     const { data: loginData } = await axios.post(
-      `${SERVICE_ENDPOINT}/api/users/login`,
+      `${SERVICE_ENDPOINT}/users/login`,
       {
         email: data.email.toLowerCase(),
         password: data.password,
