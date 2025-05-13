@@ -1,5 +1,4 @@
 'use client'
-import { useSelector } from 'react-redux'
 import { RootState, useAppDispatch } from '@/app/libs/redux/store'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import Box from '@mui/material/Box'
@@ -13,6 +12,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import { useRouter } from 'next/navigation'
 import { AppMenu } from '@/type'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from '@/app/providers'
 
 const Footer = () => {
   const router = useRouter()

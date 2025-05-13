@@ -1,10 +1,13 @@
 'use client'
-import { TournamentQuery } from '@/type'
+import { Language, Tournament, TournamentQuery } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
 import { Box, Card, CardActionArea, CardContent, CardMedia, Container, Typography } from '@mui/material'
 import moment from 'moment'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useSelector } from '../providers'
+import { RootState } from '../libs/redux/store'
 
 interface TournamentListProps {
   query: TournamentQuery
@@ -16,6 +19,8 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const router = useRouter()
+  const { t } = useTranslation()
+  const language: Language = useSelector((state: RootState) => state.app.language)
 
   useEffect(() => {
     const fetchTournaments = async() => {
@@ -26,7 +31,8 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
         }
         const data = await response.json()
         setTournaments(data)
-      } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
         setError(err.message)
       } finally {
         setLoading(false)
@@ -46,7 +52,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
       </Typography>
       {tournaments.length > 0 ? (
         <Box style={{ display: 'flex', flexWrap: 'nowrap', gap: '5px', overflowX: 'scroll' }}>
-          {tournaments.map((tournament) => (
+          {tournaments.map((tournament: Tournament) => (
             <Card
               key={tournament.id}
               onClick={() => router.push(`/tournaments/${tournament.id}`)}
@@ -69,7 +75,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
                       sx={{ color: 'text.secondary' }}
                     >
                       <LocationOn sx={{ fontSize: 'small', marginRight: 1 }} />
-                      {tournament.venue.name.en} | Helsinki
+                      {tournament.venue.name[language]}
                     </Typography>
                     <Typography
                       variant="subtitle1"
@@ -90,7 +96,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
           variant="subtitle1"
           component="div"
           sx={{ color: 'text.secondary' }} >
-          No tournaments found.
+          {t('tournament.notfound')}
         </Typography>
       )}
     </Container>

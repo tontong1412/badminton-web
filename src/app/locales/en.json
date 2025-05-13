@@ -9,10 +9,56 @@
     "language": "Language Settings"
   },
   "action": {
-    "cancel": "cancel",
+    "cancel": "Cancel",
     "close": "close",
     "submit": "submit",
     "add": "add",
     "login": "Log in"
+  },
+  "login": {
+    "title": "Login",
+    "description": "Please login to your account",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "loginButton": "Log in",
+    "registerButton": "Register",
+    "notMember": "Not a member yet?",
+    "register": " Register now"
+  },
+  "tournament": {
+    "title": "Tournament",
+    "description": "Description",
+    "date": "Date",
+    "time": "Time",
+    "location": "Location",
+    "thisWeek": "This Week",
+    "registrationOpen": "Registration Open",
+    "recent": "Recent",
+    "notfound": "No tournament found",
+    "registration": {
+      "title": "Registration",
+      "event": "Event",
+      "player": "Player",
+      "me": "Me",
+      "fullname": "Full name",
+      "fullnameEN": "Full name (English)",
+      "pronunciation": "Pronunciation",
+      "displayName": "Display name",
+      "displayNameEN": "Display name (English)",
+      "club": "Club",
+      "level": "Level",
+      "gender": "Gender",
+      "female": "female",
+      "male": "male",
+      "uploadPhoto": "Upload photo",
+      "contactPerson": "Contact person",
+      "tel": "Tel",
+      "email": "Email",
+      "socialMedia": "Social media",
+      "registerConfirm": "Register",
+      "eventList": "Events"
+    }
   }
 }

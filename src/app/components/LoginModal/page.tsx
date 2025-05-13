@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import {
   TextField,
@@ -12,6 +11,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
 } from '@mui/material'
 import { useAppDispatch } from '@/app/libs/redux/store'
 import { login } from '@/app/libs/redux/slices/appSlice'
@@ -20,6 +20,7 @@ import { Dispatch, SetStateAction } from 'react'
 import Transition from '../ModalTransition'
 import { useTranslation } from 'react-i18next'
 import { SERVICE_ENDPOINT } from '@/app/constants'
+import Link from 'next/link'
 
 interface LoginModalProps {
   visible: boolean;
@@ -34,7 +35,6 @@ type LoginFormInputs = {
 
 const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
   const dispatch = useAppDispatch()
-  const router = useRouter()
   const { t } = useTranslation()
 
   const {
@@ -49,6 +49,9 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
       {
         email: data.email.toLowerCase(),
         password: data.password,
+      },
+      {
+        withCredentials: true,
       }
     )
     const savedLoginData = {
@@ -57,10 +60,6 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
       player: loginData.player,
     }
     dispatch(login(savedLoginData))
-    if(data.rememberMe){
-      localStorage.setItem('rememberMe', data.rememberMe.toString())
-      localStorage.setItem('login', JSON.stringify(savedLoginData))
-    }
     setVisible(false)
   }
 
@@ -78,12 +77,12 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
         sx={{ maxWidth: 400, mx: 'auto' }}
       >
         <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
-          Login
+          {t('login.title')}
         </DialogTitle>
         <DialogContent dividers>
           {/* <form onSubmit={handleSubmit(onSubmit)} noValidate> */}
           <TextField
-            label="Email"
+            label={t('login.email')}
             fullWidth
             margin="normal"
             {...register('email', {
@@ -99,7 +98,7 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
           />
 
           <TextField
-            label="Password"
+            label={t('login.password')}
             type="password"
             fullWidth
             margin="normal"
@@ -114,16 +113,29 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
             helperText={errors.password?.message}
           />
 
-          <FormControlLabel
+          <Link href="/forgot-password" className='text-blue-500 text-sm'>
+            {t('login.forgotPassword')}
+          </Link>
+
+          {/* <FormControlLabel
             control={
               <Checkbox
                 {...register('rememberMe')}
                 defaultChecked={true}
               />
             }
-            label="Remember Me"
-          />
+            label={t('login.rememberMe')}
+          /> */}
 
+          {/* <Divider sx={{ my: 2 }} /> */}
+          <div>
+            <span className='text-sm'>
+              {t('login.notMember')}
+              <Link href="/register" className='text-blue-500 text-sm'>
+                {t('login.register')}
+              </Link>
+            </span>
+          </div>
         </DialogContent>
         <DialogActions>
           <Button variant='outlined' onClick={() => setVisible(false)}>

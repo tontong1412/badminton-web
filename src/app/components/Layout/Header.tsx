@@ -12,17 +12,26 @@ import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
 import MenuItem from '@mui/material/MenuItem'
 import { useState, MouseEvent, useEffect } from 'react'
-import { useSelector } from 'react-redux'
 import { RootState, useAppDispatch } from '@/app/libs/redux/store'
 import { login, logout } from '@/app/libs/redux/slices/appSlice'
 // import { useRouter } from 'next/navigation'
 import LoginModal from '../LoginModal/page'
 import LanguageSettingModal from '../LanguageSettingModal'
+import axios from 'axios'
+import { SERVICE_ENDPOINT } from '@/app/constants'
+import { useSelector } from '@/app/providers'
+import { useTranslation } from 'react-i18next'
 
-const pages: string[] = ['Tournament']
-const settings: string[] = ['View Profile', 'Account', 'Language Setting', 'Logout']
+const pages: string[] = ['Home', 'Tournament']
+const settings: string[] = [
+  // 'View Profile',
+  // 'Account',
+  'Language Setting',
+  'Logout'
+]
 
 const  ResponsiveAppBar = () => {
+  const { t } = useTranslation()
   const [loginModalVisible, setLoginModalVisible] = useState(false)
   const [languageSettingModal, setLanguageSettingModal] = useState(false)
   const user = useSelector((state: RootState) => state.app.user)
@@ -32,11 +41,20 @@ const  ResponsiveAppBar = () => {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null)
 
   useEffect(() => {
-    if(!user){
-      const retreivedUser = localStorage.getItem('login')
-      if(!retreivedUser) return
-      dispatch(dispatch(login(JSON.parse(retreivedUser))))
+    const getUser = async() => {
+      try{
+        const response = await axios.post(`${SERVICE_ENDPOINT}/api/users/refresh-token`, {}, { withCredentials: true })
+        const userObj = {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          player: response.data.player
+        }
+        dispatch(login(userObj))
+      }catch(err){
+        console.log('Error fetching user data:', err)
+      }
     }
+    getUser()
   }, [])
 
   const handleOpenNavMenu = (event: MouseEvent<HTMLElement>) => {
@@ -54,10 +72,10 @@ const  ResponsiveAppBar = () => {
     setAnchorElNav(null)
   }
 
-  const handleCloseUserMenu = (selectedMenu: string) => {
+  const handleCloseUserMenu = async(selectedMenu: string) => {
     switch(selectedMenu){
     case 'Logout':
-      localStorage.clear()
+      await axios.post(`${SERVICE_ENDPOINT}/api/users/logout`, { userId: user?.id }, { withCredentials: true })
       dispatch(logout())
       break
     case 'Language Setting':
@@ -106,7 +124,7 @@ const  ResponsiveAppBar = () => {
     return(
       <Box sx={{ flexGrow: 0 }}>
         <Tooltip title="Open settings">
-          <Typography sx={{ textAlign: 'center' }} onClick={() => setLoginModalVisible(true)}>Log in</Typography>
+          <Typography sx={{ textAlign: 'center' }} onClick={() => setLoginModalVisible(true)}>{t('action.login')}</Typography>
         </Tooltip>
       </Box>
     )

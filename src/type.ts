@@ -31,18 +31,23 @@ export interface User {
   player: {
     id: string;
     officialName: {
-      local: string;
+      th?: string;
       en?: string;
       pronunciation?: string;
     };
+    gender?: string;
     level: number;
-    displayName?: {
-      local?: string;
+    displayName: {
+      th?: string;
       en?: string;
       pronunciation?: string;
     }
     club?: string;
     photo?: string;
+    contact?: {
+      line: string;
+      tel: string;
+    }
   }
 }
 
@@ -101,4 +106,41 @@ export enum TournamentQuery {
   Recent = 'recent',
   ThisWeek = 'thisWeek',
   RegistrationOpen = 'registrationOpen'
+}
+
+export type Language = 'th' | 'en';
+
+export type ContactMethod = 'line' | 'tel' | 'tg' | 'whatsapp' | 'email' | 'wechat' | 'facebook';
+
+export interface TournamentEvent {
+  id: string;
+  name: {
+    th: string;
+    en: string;
+  }
+  description: string;
+  fee: {
+    amount: number;
+    currency: string;
+  }
+  prize?: string;
+  type: string;
+}
+export interface Tournament {
+  id: string;
+  name: {
+    th: string;
+    en: string;
+  }
+  photo?: string;
+  language: Language;
+  events: TournamentEvent[];
+  startDate: string;
+  endDate: string;
+  venue: {
+    name: {
+      th: string;
+      en: string;
+    }
+  }
 }

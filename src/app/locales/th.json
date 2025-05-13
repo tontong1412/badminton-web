@@ -14,5 +14,51 @@
     "submit": "ยืนยัน",
     "add": "เพิ่ม",
     "login": "เข้าสู่ระบบ"
+  },
+  "login": {
+    "title": "เข้าสู่ระบบ",
+    "description": "กรุณาเข้าสู่ระบบบัญชีของคุณ",
+    "email": "อีเมล",
+    "password": "รหัสผ่าน",
+    "rememberMe": "จดจำฉัน",
+    "forgotPassword": "ลืมรหัสผ่าน?",
+    "loginButton": "เข้าสู่ระบบ",
+    "registerButton": "ลงทะเบียน",
+    "notMember": "ยังไม่เป็นสมาชิก?",
+    "register": " ลงทะเบียนเลยตอนนี้"
+  },
+  "tournament": {
+    "title": "รายการแข่ง",
+    "description": "รายละเอียดการแข่งขัน",
+    "date": "วันที่",
+    "time": "เวลา",
+    "location": "สนาม",
+    "thisWeek": "สัปดาห์นี้",
+    "registrationOpen": "เปิดรับสมัคร",
+    "recent": "ล่าสุด",
+    "notfound": "ไม่มีรายการแข่งขัน",
+    "registration": {
+      "title": "สมัครแข่งขัน",
+      "event": "ประเภท",
+      "player": "ผู้เล่น",
+      "me": "ฉัน",
+      "fullname": "ชื่อ-นามสกุล",
+      "fullnameEN": "ชื่อ-นามสกุล (ภาษาอังกฤษ)",
+      "pronunciation": "คำอ่าน",
+      "displayName": "ชื่อเล่น",
+      "displayNameEN": "ชื่อเล่น (ภาษาอังกฤษ)",
+      "club": "สโมสร",
+      "level": "ระดับมือ",
+      "gender": "เพศ",
+      "female": "หญิง",
+      "male": "ชาย",
+      "uploadPhoto": "อัพโหลดรูปภาพ",
+      "contactPerson": "ข้อมูลผู้ติดต่อ",
+      "tel": "เบอร์โทรศัพท์",
+      "email": "อีเมล",
+      "socialMedia": "ช่องทางการติดต่อ",
+      "registerConfirm": "สมัครแข่งขัน",
+      "eventList": "รายการที่เปิดรับสมัคร"
+    }
   }
 }

@@ -12,9 +12,9 @@ import {
 import Transition from './ModalTransition'
 import { SUPPORTED_LANG } from '../constants'
 import { RootState, useAppDispatch } from '../libs/redux/store'
-import { useSelector } from 'react-redux'
 import { changeLanguage } from '@/app/libs/redux/slices/appSlice'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from '../providers'
 
 interface LanguageSettingModalProps {
   visible: boolean;

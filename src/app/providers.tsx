@@ -13,7 +13,6 @@ export const useAppDispatch = () => useDispatch<AppDispatch>()
 
 const  LanguageInitializer = () => {
   const dispatch = useAppDispatch()
-
   useEffect(() => {
     dispatch(initializeLanguage())
   }, [dispatch])
