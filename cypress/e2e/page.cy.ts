@@ -1,3 +1,4 @@
+//TODO: fix test
 describe.skip('Playing Sessions Tests', () => {
   beforeEach(() => {
     cy.visit('http://localhost:3000')

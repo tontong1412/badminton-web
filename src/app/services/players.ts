@@ -1,6 +1,7 @@
 import { Player } from '@/type'
 import axios from 'axios'
-const baseUrl = 'http://localhost:8080/api/players'
+import { SERVICE_ENDPOINT } from '../constants'
+const baseUrl = `${SERVICE_ENDPOINT}/api/players`
 
 const getAll = () : Promise<Player[]> => {
   const request = axios.get(baseUrl)

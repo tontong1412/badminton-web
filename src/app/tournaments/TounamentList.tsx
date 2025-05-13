@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from '../providers'
 import { RootState } from '../libs/redux/store'
+import { SERVICE_ENDPOINT } from '../constants'
 
 interface TournamentListProps {
   query: TournamentQuery
@@ -25,7 +26,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
   useEffect(() => {
     const fetchTournaments = async() => {
       try {
-        const response = await fetch(`http://localhost:8080/api/tournaments?tab=${query}`)
+        const response = await fetch(`${SERVICE_ENDPOINT}/api/tournaments?tab=${query}`)
         if (!response.ok) {
           throw new Error('Failed to fetch tournaments')
         }

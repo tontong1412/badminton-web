@@ -3,10 +3,11 @@ import moment from 'moment'
 import { v1 as uuid } from 'uuid'
 
 import axios from 'axios'
+import { SERVICE_ENDPOINT } from '../constants'
 
 
 export const fetchPlayers = async(): Promise<Player[]> => {
-  const { data: players } = await axios.get('http://localhost:8080/api/players')
+  const { data: players } = await axios.get(`${SERVICE_ENDPOINT}/api/players`)
   // const players = JSON.parse(localStorage.getItem('players') || '[]')
   return players as Player[]
 }
