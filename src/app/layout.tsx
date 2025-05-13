@@ -44,7 +44,7 @@ export default function RootLayout({
   console.log('layout')
   return (
     <html lang="en">
-      <body className={`${ibmPlexSansThai.className}`} >
+      <body className={`${ibmPlexSansThai.className} ${nunito.className}`} >
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <Providers>

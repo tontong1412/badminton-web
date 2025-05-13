@@ -18,6 +18,7 @@ interface Player {
 interface Props {
   player: 'player1' | 'player2'
   playerList: Player[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handlePlayerChange: (player: 'player1' | 'player2', field: keyof Player, value: any) => Promise<void>
   setPlayer: (player: Player) => void
   playerValue: Player

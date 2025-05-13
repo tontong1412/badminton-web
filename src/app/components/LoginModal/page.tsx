@@ -5,13 +5,10 @@ import {
   TextField,
   Button,
   Box,
-  FormControlLabel,
-  Checkbox,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider,
 } from '@mui/material'
 import { useAppDispatch } from '@/app/libs/redux/store'
 import { login } from '@/app/libs/redux/slices/appSlice'
