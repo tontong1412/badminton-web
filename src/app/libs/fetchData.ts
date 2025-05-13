@@ -7,7 +7,7 @@ import { SERVICE_ENDPOINT } from '../constants'
 
 
 export const fetchPlayers = async(): Promise<Player[]> => {
-  const { data: players } = await axios.get(`${SERVICE_ENDPOINT}/api/players`)
+  const { data: players } = await axios.get(`${SERVICE_ENDPOINT}/players`)
   // const players = JSON.parse(localStorage.getItem('players') || '[]')
   return players as Player[]
 }

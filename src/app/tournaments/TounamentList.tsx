@@ -26,7 +26,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
   useEffect(() => {
     const fetchTournaments = async() => {
       try {
-        const response = await fetch(`${SERVICE_ENDPOINT}/api/tournaments?tab=${query}`)
+        const response = await fetch(`${SERVICE_ENDPOINT}/tournaments?tab=${query}`)
         if (!response.ok) {
           throw new Error('Failed to fetch tournaments')
         }

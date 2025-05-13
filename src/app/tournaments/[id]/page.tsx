@@ -11,7 +11,7 @@ interface Props {
 
 const getTournament = async(id: string) => {
   try{
-    const res = await axios.get(`${SERVICE_ENDPOINT}/api/tournaments/${id}`)
+    const res = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${id}`)
     const tournament = res.data
     if(!tournament) notFound()
     return tournament
@@ -24,7 +24,7 @@ const getTournament = async(id: string) => {
 
 export const generateStaticParams = async() => {
   try {
-    const response = await axios.get(`${SERVICE_ENDPOINT}/api/tournaments?tab=thisWeek`)
+    const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments?tab=thisWeek`)
     const tournaments = response.data
 
     return tournaments.map((tournament: { id: string }) => ({
