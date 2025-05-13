@@ -11,14 +11,51 @@ import Avatar from '@mui/material/Avatar'
 import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
 import MenuItem from '@mui/material/MenuItem'
-import { useState, MouseEvent } from 'react'
+import { useState, MouseEvent, useEffect } from 'react'
+import { RootState, useAppDispatch } from '@/app/libs/redux/store'
+import { login, logout } from '@/app/libs/redux/slices/appSlice'
+// import { useRouter } from 'next/navigation'
+import LoginModal from '../LoginModal'
+import LanguageSettingModal from '../LanguageSettingModal'
+import axios from 'axios'
+import { SERVICE_ENDPOINT } from '@/app/constants'
+import { useSelector } from '@/app/providers'
+import { useTranslation } from 'react-i18next'
 
-const pages: string[] = []
-const settings: string[] = []
+const pages: string[] = ['Home', 'Tournament']
+const settings: string[] = [
+  // 'View Profile',
+  // 'Account',
+  'Language Setting',
+  'Logout'
+]
 
-function ResponsiveAppBar() {
+const  ResponsiveAppBar = () => {
+  const { t } = useTranslation()
+  const [loginModalVisible, setLoginModalVisible] = useState(false)
+  const [languageSettingModal, setLanguageSettingModal] = useState(false)
+  const user = useSelector((state: RootState) => state.app.user)
+  const dispatch = useAppDispatch()
+  // const router = useRouter()
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null)
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null)
+
+  useEffect(() => {
+    const getUser = async() => {
+      try{
+        const response = await axios.post(`${SERVICE_ENDPOINT}/api/users/refresh-token`, {}, { withCredentials: true })
+        const userObj = {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          player: response.data.player
+        }
+        dispatch(login(userObj))
+      }catch(err){
+        console.log('Error fetching user data:', err)
+      }
+    }
+    getUser()
+  }, [])
 
   const handleOpenNavMenu = (event: MouseEvent<HTMLElement>) => {
     if(pages.length > 0){
@@ -35,12 +72,66 @@ function ResponsiveAppBar() {
     setAnchorElNav(null)
   }
 
-  const handleCloseUserMenu = () => {
+  const handleCloseUserMenu = async(selectedMenu: string) => {
+    switch(selectedMenu){
+    case 'Logout':
+      await axios.post(`${SERVICE_ENDPOINT}/api/users/logout`, { userId: user?.id }, { withCredentials: true })
+      dispatch(logout())
+      break
+    case 'Language Setting':
+      setLanguageSettingModal(true)
+      break
+    default:
+    }
     setAnchorElUser(null)
   }
 
+  const renderAvatarSetting = () => {
+    return (
+      <Box sx={{ flexGrow: 0 }}>
+        <Tooltip title="Open settings">
+          <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+            <Avatar alt="Remy Sharp" src="/avatar.png" />
+          </IconButton>
+        </Tooltip>
+        <Menu
+          sx={{ mt: '45px' }}
+          id="menu-appbar"
+          anchorEl={anchorElUser}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          keepMounted
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          open={Boolean(anchorElUser)}
+          onClose={handleCloseUserMenu}
+        >
+          {settings.map((setting) => (
+            <MenuItem key={setting} onClick={() => handleCloseUserMenu(setting)}>
+              <Typography sx={{ textAlign: 'center' }} >{setting}</Typography>
+            </MenuItem>
+          ))}
+        </Menu>
+      </Box>
+    )
+  }
+
+  const renderLoginButton = () => {
+    return(
+      <Box sx={{ flexGrow: 0 }}>
+        <Tooltip title="Open settings">
+          <Typography sx={{ textAlign: 'center' }} onClick={() => setLoginModalVisible(true)}>{t('action.login')}</Typography>
+        </Tooltip>
+      </Box>
+    )
+  }
+
   return (
-    <AppBar position="static">
+    <AppBar position="fixed">
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           <Typography
@@ -53,7 +144,7 @@ function ResponsiveAppBar() {
               display: { xs: 'none', md: 'flex' },
               fontFamily: 'Nunito',
               fontWeight: 400,
-              letterSpacing: '.2rem',
+              letterSpacing: '.1rem',
               color: 'inherit',
               textDecoration: 'none',
             }}
@@ -72,6 +163,7 @@ function ResponsiveAppBar() {
             >
               <MenuIcon />
             </IconButton>
+
             <Menu
               id="menu-appbar"
               anchorEl={anchorElNav}
@@ -124,38 +216,15 @@ function ResponsiveAppBar() {
               </Button>
             ))}
           </Box>
-          <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="Remy Sharp" src="/avatar.png" />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              sx={{ mt: '45px' }}
-              id="menu-appbar"
-              anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-            >
-              {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                  <Typography sx={{ textAlign: 'center' }}>{setting}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Box>
+
+          {user ? renderAvatarSetting() : renderLoginButton()}
+
         </Toolbar>
       </Container>
+      <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
+      <LanguageSettingModal visible={languageSettingModal} setVisible={setLanguageSettingModal}/>
     </AppBar>
   )
 }
 export default ResponsiveAppBar
+

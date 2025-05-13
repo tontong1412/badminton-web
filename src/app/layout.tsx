@@ -1,16 +1,23 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
-import { Nunito } from 'next/font/google'
+import { Nunito, IBM_Plex_Sans_Thai  } from 'next/font/google'
 import { ThemeProvider } from '@mui/material/styles'
 import theme from '../theme'
 import Layout from './components/Layout'
+import Providers from './providers'
+import { TranslationWrapper } from './components/TranslationWrapper'
 
 const nunito = Nunito({
   weight: ['300', '400', '500', '700'],
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-nunito',
+})
+
+const ibmPlexSansThai = IBM_Plex_Sans_Thai({
+  weight: ['400', '500', '600'],  // specify the font weights you want to use
+  subsets: ['latin', 'thai'], // specify the subsets (if using Thai characters)
 })
 
 export const metadata: Metadata = {
@@ -36,13 +43,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-
-      <body className={`${nunito.variable}`} >
+      <body className={`${ibmPlexSansThai.className} ${nunito.className}`} >
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
-            <Layout>
-              {children}
-            </Layout>
+            <Providers>
+              <TranslationWrapper>
+                <Layout>
+                  {children}
+                </Layout>
+              </TranslationWrapper>
+            </Providers>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

@@ -14,8 +14,11 @@ const Session = () => {
   const [players, setPlayers] = useState<Player[]>([])
 
   useEffect(() => {
-    const fetchedPlayers = fetchPlayers()
-    setPlayers(fetchedPlayers)
+    const getPlayer = async() => {
+      const fetchedPlayers = await fetchPlayers()
+      setPlayers(fetchedPlayers)
+    }
+    getPlayer()
   }, [])
 
   const removePlayer = (id: string) => {

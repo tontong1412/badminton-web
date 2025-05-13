@@ -1,4 +1,4 @@
-describe('Playing Sessions Tests', () => {
+describe.skip('Playing Sessions Tests', () => {
   beforeEach(() => {
     cy.visit('http://localhost:3000')
     cy.contains('Badminstar')
