@@ -13,7 +13,8 @@
     "close": "close",
     "submit": "submit",
     "add": "add",
-    "login": "Log in"
+    "login": "Log in",
+    "register": "Register now"
   },
   "login": {
     "title": "Login",
@@ -25,7 +26,8 @@
     "loginButton": "Log in",
     "registerButton": "Register",
     "notMember": "Not a member yet?",
-    "register": " Register now"
+    "register": " Register now",
+    "confirmPassword": "Confirm password"
   },
   "tournament": {
     "title": "Tournament",
@@ -60,5 +62,15 @@
       "registerConfirm": "Register",
       "eventList": "Events"
     }
+  },
+  "player": {
+    "detail": "Player Detail",
+    "officialName": "Full name",
+    "displayName": "Display name",
+    "pronunciation": "Pronunciation",
+    "club": "Club",
+    "level": "Level",
+    "gender": "Gender",
+    "dob": "Birthdate"
   }
 }

@@ -32,7 +32,7 @@ import { useSelector } from '@/app/providers'
 import { ContactMethod, Language, TournamentEvent } from '@/type'
 import { useTranslation } from 'react-i18next'
 
-interface Player {
+export interface Player {
   id?: string;
   officialName: string;
   officialNameEn?: string;
@@ -120,12 +120,18 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
       // Fetch players from API or any data source
       const players = await axios.get(`${SERVICE_ENDPOINT}/players`)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const formattedPlayerList = players.data.map((p: any) => ({ ...p, officialName: p.officialName[language] || p.officialName['en'] }))
+      const formattedPlayerList = players.data.map((p: any) => ({
+        ...p,
+        officialName: p.officialName[language] || p.officialName['en'],
+        displayName: p.displayName[language] || p.displayName['en'],
+        officialNameEn: p.officialName['en'],
+        pronunciation: p.officialName.pronunciation || '',
+      }))
       setPlayerList(formattedPlayerList)
       setFilteredPlayerList(formattedPlayerList)
     }
     fetchPlayers()
-  }, [])
+  }, [language])
 
   useEffect(() => {
     if(user){
