@@ -1,19 +1,7 @@
 import { Autocomplete, createFilterOptions, TextField } from '@mui/material'
-import { initialPlayer } from '.'
+import { initialPlayer, Player } from '.'
 
 const filter = createFilterOptions<Player>()
-
-interface Player {
-  id?: string;
-  officialName: string;
-  displayName: string;
-  pronunciation?: string;
-  level: number;
-  club: string;
-  gender: string;
-  photo: File | null;
-  inputValue?: string; // For dynamic option creation
-}
 
 interface Props {
   player: 'player1' | 'player2'
@@ -51,6 +39,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
           setPlayer({
             id: '',
             officialName: newValue.inputValue,
+            officialNameEn: '',
             pronunciation: '',
             displayName: '',
             club: '',
@@ -65,6 +54,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
               ? {
                 id: newValue.id || '',
                 officialName: newValue.officialName || '',
+                officialNameEn: newValue.officialNameEn || '',
                 displayName: newValue.displayName || '',
                 pronunciation: newValue.pronunciation || '',
                 club: newValue.club || '',
@@ -96,6 +86,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
           filtered.push({
             inputValue,
             officialName: `Add "${inputValue}"`,
+            officialNameEn: '',
             displayName: '',
             pronunciation: '',
             club: '',
