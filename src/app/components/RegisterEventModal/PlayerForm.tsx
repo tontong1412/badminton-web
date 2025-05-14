@@ -44,7 +44,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
             displayName: '',
             club: '',
             gender: 'female',
-            photo: null,
+            photo: undefined,
             inputValue: '',
             level: 0,
           })
@@ -59,9 +59,10 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
                 pronunciation: newValue.pronunciation || '',
                 club: newValue.club || '',
                 gender: newValue.gender || 'female',
-                photo: null,
+                photo: undefined,
                 inputValue: '',
                 level: newValue.level || 0,
+                photoPreview: newValue?.photo || ''
               }
               : initialPlayer
           )
@@ -91,7 +92,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
             pronunciation: '',
             club: '',
             gender: 'female',
-            photo: null,
+            photo: undefined,
             level: 0,
           })
         }
