@@ -41,23 +41,29 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
   } = useForm<LoginFormInputs>()
 
   const onSubmit = async(data: LoginFormInputs) => {
-    const { data: loginData } = await axios.post(
-      `${SERVICE_ENDPOINT}/users/login`,
-      {
-        email: data.email.toLowerCase(),
-        password: data.password,
-      },
-      {
-        withCredentials: true,
+    try {
+      const { data: loginData } = await axios.post(
+        `${SERVICE_ENDPOINT}/users/login`,
+        {
+          email: data.email.toLowerCase(),
+          password: data.password,
+        },
+        {
+          withCredentials: true,
+        }
+      )
+      const savedLoginData = {
+        id: loginData.user.id,
+        email: loginData.user.email,
+        player: loginData.player,
       }
-    )
-    const savedLoginData = {
-      id: loginData.user.id,
-      email: loginData.user.email,
-      player: loginData.player,
+      dispatch(login(savedLoginData))
+      setVisible(false)
+    }catch (error) {
+      console.error('Login error:', error)
+      setVisible(false)
+      alert(t('login.error'))
     }
-    dispatch(login(savedLoginData))
-    setVisible(false)
   }
 
   return (
