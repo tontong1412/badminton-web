@@ -21,8 +21,23 @@ import axios from 'axios'
 import { SERVICE_ENDPOINT } from '@/app/constants'
 import { useSelector } from '@/app/providers'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
 
-const pages: string[] = ['Home', 'Tournament']
+interface Page {
+  name: string;
+  action: string;
+}
+
+const pages: Page[] = [
+  {
+    name: 'Home',
+    action: '/'
+  },
+  {
+    name: 'Tournament',
+    action: '/tournaments'
+  }
+]
 const settings: string[] = [
   // 'View Profile',
   // 'Account',
@@ -32,6 +47,7 @@ const settings: string[] = [
 
 const  ResponsiveAppBar = () => {
   const { t } = useTranslation()
+  const router = useRouter()
   const [loginModalVisible, setLoginModalVisible] = useState(false)
   const [languageSettingModal, setLanguageSettingModal] = useState(false)
   const user = useSelector((state: RootState) => state.app.user)
@@ -68,7 +84,8 @@ const  ResponsiveAppBar = () => {
     }
   }
 
-  const handleCloseNavMenu = () => {
+  const handleCloseNavMenu = (action: string) => {
+    router.push(action)
     setAnchorElNav(null)
   }
 
@@ -91,7 +108,7 @@ const  ResponsiveAppBar = () => {
       <Box sx={{ flexGrow: 0 }}>
         <Tooltip title="Open settings">
           <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-            <Avatar alt="Remy Sharp" src="/avatar.png" />
+            <Avatar alt="profile-picture" src={user?.player.photo || '/avatar.png'} />
           </IconButton>
         </Tooltip>
         <Menu
@@ -181,8 +198,8 @@ const  ResponsiveAppBar = () => {
               sx={{ display: { xs: 'block', md: 'none' } }}
             >
               {pages.map((page) => (
-                <MenuItem key={page} onClick={handleCloseNavMenu}>
-                  <Typography sx={{ textAlign: 'center' }}>{page}</Typography>
+                <MenuItem key={page.name} onClick={() => handleCloseNavMenu(page.action)}>
+                  <Typography sx={{ textAlign: 'center' }} >{page.name}</Typography>
                 </MenuItem>
               ))}
             </Menu>
@@ -208,11 +225,11 @@ const  ResponsiveAppBar = () => {
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
               <Button
-                key={page}
-                onClick={handleCloseNavMenu}
+                key={page.name}
+                onClick={() => handleCloseNavMenu(page.action)}
                 sx={{ my: 2, color: 'white', display: 'block' }}
               >
-                {page}
+                {page.name}
               </Button>
             ))}
           </Box>

@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import {
   Box,
   TextField,
@@ -31,6 +31,7 @@ import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
 import { ContactMethod, Language, TournamentEvent } from '@/type'
 import { useTranslation } from 'react-i18next'
+import photoUtils from '@/app/libs/photo'
 
 export interface Player {
   id?: string;
@@ -40,7 +41,7 @@ export interface Player {
   displayName: string;
   club: string;
   gender: string;
-  photo: File | null;
+  photo?: string;
   photoPreview?: string;
   inputValue?: string; // For dynamic option creation
   level: number;
@@ -76,7 +77,7 @@ export const initialPlayer: Player = {
   displayName: '',
   club: '',
   gender: 'female',
-  photo: null,
+  photo: undefined,
   photoPreview: '',
   inputValue: undefined,
   level: 0,
@@ -85,8 +86,11 @@ export const initialPlayer: Player = {
 
 const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: Props) => {
   const user = useSelector((state: RootState) => state.app.user)
+  const player1UploadRef = useRef<HTMLInputElement>(null)
+  const player2UploadRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
   const language: Language = useSelector((state: RootState) => state.app.language)
+  const [buttonLoading, setButtonLoading] = useState(false)
   const [event, setEvent] = useState('')
   const [playerList, setPlayerList] = useState([])
   const [filteredPlayerList, setFilteredPlayerList] = useState<Player[]>([])
@@ -169,7 +173,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
     if(field === 'photo' && value) {
       const maxSize = 5 * 1024 * 1024
       if (value.size > maxSize) {
-        console.log('File size exceeds 5MB')
+        alert('File size exceeds 5MB')
         return
       }
       // Compress the image
@@ -179,14 +183,12 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         useWebWorker: true,
       })
 
+      // generate preview URL
       const photoUrl = URL.createObjectURL(compressedFile)
       setPlayer((prev) => ({ ...prev, photoPreview: photoUrl }))
 
-      const formData = new FormData()
-      formData.append('image', compressedFile)
-
-      value = formData
-
+      const base64String = await photoUtils.toBase64(compressedFile)
+      value = base64String
     }
     setPlayer((prev) => ({ ...prev, [field]: value }))
   }
@@ -197,59 +199,81 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
-    // console.log({ event, player1, player2, contactPerson })
-    const playersArray = []
-    if(player1.officialName){
-      playersArray.push({
-        id: player1.id,
-        officialName: {
-          [language]: player1.officialName,
-          en: player1.officialNameEn,
-          pronunciation: player1.pronunciation,
-        },
-        displayName: {
-          [language]: player1.displayName,
-        },
-        gender: player1.gender,
-        club: player1.club,
-        level: player1.level
-      })
+    if(!player1.photoPreview){
+      player1UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
     }
-    if(player2.officialName){
-      playersArray.push({
-        id: player2.id,
-        officialName: {
-          [language]: player2.officialName,
-          en: player2.officialNameEn,
-          pronunciation: player2.pronunciation,
-        },
-        displayName: {
-          [language]: player2.displayName,
-        },
-        gender: player2.gender,
-        club: player2.club,
-        level:player2.level
-      })
+    if(!player2.photoPreview){
+      player2UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
     }
-    const registerPayload = {
-      eventID: event,
-      players: playersArray,
-      contactPerson: {
-        id: contactPerson.id,
-        officialName: {
-          [language]: player2.officialName,
-          en: player2.officialName,
-          pronunciation: player2.pronunciation,
-        },
-        displayName: {
-          [language]: player2.displayName,
-          en: player2.displayName,
-        },
-        contact: contactPerson.contact
+    setButtonLoading(true)
+    console.log({ event, player1, player2, contactPerson })
+
+    try{
+      const playersArray = []
+      if(player1.officialName){
+        playersArray.push({
+          id: player1.id,
+          officialName: {
+            [language]: player1.officialName,
+            en: player1.officialNameEn,
+            pronunciation: player1.pronunciation,
+          },
+          displayName: {
+            [language]: player1.displayName,
+          },
+          gender: player1.gender,
+          club: player1.club,
+          level: player1.level,
+          photo: player1.photo,
+        })
       }
+      if(player2.officialName){
+        playersArray.push({
+          id: player2.id,
+          officialName: {
+            [language]: player2.officialName,
+            en: player2.officialNameEn,
+            pronunciation: player2.pronunciation,
+          },
+          displayName: {
+            [language]: player2.displayName,
+          },
+          gender: player2.gender,
+          club: player2.club,
+          level:player2.level,
+          photo: player2.photo,
+        })
+      }
+      const registerPayload = {
+        eventID: event,
+        players: playersArray,
+        contactPerson: {
+          id: contactPerson.id,
+          officialName: {
+            [language]: player2.officialName,
+            en: player2.officialName,
+            pronunciation: player2.pronunciation,
+          },
+          displayName: {
+            [language]: player2.displayName,
+            en: player2.displayName,
+          },
+          contact: contactPerson.contact
+        }
+      }
+      await axios.post(`${SERVICE_ENDPOINT}/events/register`, registerPayload, { withCredentials: true })
+      handleCloseModal()
+      setButtonLoading(false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }catch(err: any){
+      if(err.response.status === 409){
+        alert(err.response.data.message)
+        handleCloseModal()
+      }
+      setButtonLoading(false)
     }
-    await axios.post(`${SERVICE_ENDPOINT}/events/register`, registerPayload, { withCredentials: true })
-    handleCloseModal()
   }
 
   const handleMeCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,7 +289,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         pronunciation: user?.player.officialName.pronunciation || '',
         photoPreview: user?.player.photo || '',
         gender: user?.player.gender || 'female',
-        photo: null,
+        photo: undefined,
         inputValue: '',
         level: user?.player.level || 0
       })
@@ -385,6 +409,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
           {
             player1.photoPreview && (
               <Image
+                loading='lazy'
                 width={100}
                 height={100}
                 src={player1.photoPreview}
@@ -393,24 +418,33 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
               />
             )
           }
-          <Button
-            variant="contained"
-            component="label"
-            startIcon={<PhotoCamera />}
-            fullWidth
-            sx={{ marginTop: 2 }}
-          >
-            {t('tournament.registration.uploadPhoto')}
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              id="upload-image"
-              onChange={(e) =>
-                handlePlayerChange('player1', 'photo', e.target.files ? e.target.files[0] : null)
-              }
-            />
-          </Button>
+          {
+            !player1.photoPreview && (
+              <Typography color="error" variant="caption">
+                Photo is required.
+              </Typography>
+            )
+          }
+          <div ref={player1UploadRef}>
+            <Button
+              variant="contained"
+              component="label"
+              startIcon={<PhotoCamera />}
+              fullWidth
+              sx={{ marginTop: 2 }}
+            >
+              {t('tournament.registration.uploadPhoto')}
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                id="upload-image"
+                onChange={(e) =>
+                  handlePlayerChange('player1', 'photo', e.target.files ? e.target.files[0] : null)
+                }
+              />
+            </Button>
+          </div>
 
           {
             events.find((e) => e.id === event)?.type === 'double' && (
@@ -497,27 +531,38 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
                       src={player2.photoPreview}
                       alt="Uploaded Preview"
                       style={{ width: 150, height: 150, objectFit: 'cover', borderRadius: 8 }}
+                      loading='lazy'
                     />
                   )
                 }
-                <Button
-                  variant="contained"
-                  component="label"
-                  startIcon={<PhotoCamera />}
-                  fullWidth
-                  sx={{ marginTop: 2 }}
-                >
-                  {t('tournament.registration.uploadPhoto')}
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    id="upload-image"
-                    onChange={(e) =>
-                      handlePlayerChange('player2', 'photo', e.target.files ? e.target.files[0] : null)
-                    }
-                  />
-                </Button>
+
+                {
+                  !player2.photoPreview && (
+                    <Typography color="error" variant="caption">
+                      Photo is required.
+                    </Typography>
+                  )
+                }
+                <div ref={player2UploadRef}>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    startIcon={<PhotoCamera />}
+                    fullWidth
+                    sx={{ marginTop: 2 }}
+                  >
+                    {t('tournament.registration.uploadPhoto')}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      id="upload-image"
+                      onChange={(e) =>
+                        handlePlayerChange('player2', 'photo', e.target.files ? e.target.files[0] : null)
+                      }
+                    />
+                  </Button>
+                </div>
               </>
             )
           }
@@ -574,7 +619,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
           <Button variant="outlined" onClick={handleCloseModal}>
             {t('action.cancel')}
           </Button>
-          <Button type="submit" variant="contained">
+          <Button type="submit" variant="contained" loading={buttonLoading} disabled={buttonLoading}>
             {t('tournament.registration.registerConfirm')}
           </Button>
         </DialogActions>
