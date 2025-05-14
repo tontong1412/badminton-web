@@ -42,7 +42,7 @@ const TournamentCover = ({ tournament }: Props) => {
             alignItems: 'center' }}>
           <div>
             <Image
-              src={tournament.photo || '/avatar.png'}
+              src={tournament.logo || '/avatar.png'}
               alt={tournament.name[language]}
               width={200}
               height={200}

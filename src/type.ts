@@ -132,7 +132,7 @@ export interface Tournament {
     th: string;
     en: string;
   }
-  photo?: string;
+  logo?: string;
   language: Language;
   events: TournamentEvent[];
   startDate: string;
