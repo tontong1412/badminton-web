@@ -128,7 +128,7 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
           <div>
             <span className='text-sm'>
               {t('login.notMember')}
-              <Link href="/register" className='text-blue-500 text-sm'>
+              <Link href="/register" className='text-blue-500 text-sm' onClick={() => setVisible(false)}>
                 {t('login.register')}
               </Link>
             </span>

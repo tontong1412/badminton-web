@@ -13,7 +13,8 @@
     "close": "ปิด",
     "submit": "ยืนยัน",
     "add": "เพิ่ม",
-    "login": "เข้าสู่ระบบ"
+    "login": "เข้าสู่ระบบ",
+    "register": "สมัครสมาชิก"
   },
   "login": {
     "title": "เข้าสู่ระบบ",
@@ -25,7 +26,8 @@
     "loginButton": "เข้าสู่ระบบ",
     "registerButton": "ลงทะเบียน",
     "notMember": "ยังไม่เป็นสมาชิก?",
-    "register": " ลงทะเบียนเลยตอนนี้"
+    "register": " ลงทะเบียนเลยตอนนี้",
+    "confirmPassword": "ยืนยันรหัสผ่าน"
   },
   "tournament": {
     "title": "รายการแข่ง",
@@ -60,5 +62,17 @@
       "registerConfirm": "สมัครแข่งขัน",
       "eventList": "รายการที่เปิดรับสมัคร"
     }
+  },
+  "player": {
+    "detail": "ข้อมูลผู้ใช้",
+    "officialName": "ชื่อ-นามสกุล",
+    "officialNameEN": "ชื่อ-นามสกุล (ภาษาอังกฤษ)",
+    "pronunciation": "คำอ่าน",
+    "displayName": "ชื่อเล่น",
+    "displayNameEN": "ชื่อเล่น (ภาษาอังกฤษ)",
+    "club": "สโมสร",
+    "level": "ระดับมือ",
+    "gender": "เพศ",
+    "dob": "วันเกิด"
   }
 }
