@@ -47,28 +47,32 @@ const Register = () => {
   }, [user])
 
   const onSubmit = async(data: RegisterFormInputs) => {
-    const response = await axios.post(`${SERVICE_ENDPOINT}/users`, {
-      email: data.email,
-      password: data.password,
-      officialName: {
-        [language]: data.officialName,
-        en: data.officialNameEN,
-      },
-      displayName: {
-        [language]: data.displayName,
-        en: data.displayNameEN
-      },
-      dob: data.birthDate,
-    }, { withCredentials: true })
+    try {
+      const response = await axios.post(`${SERVICE_ENDPOINT}/users`, {
+        email: data.email,
+        password: data.password,
+        officialName: {
+          [language]: data.officialName,
+          en: data.officialNameEN,
+        },
+        displayName: {
+          [language]: data.displayName,
+          en: data.displayNameEN
+        },
+        dob: data.birthDate,
+      }, { withCredentials: true })
 
-    const savedLoginData = {
-      id: response.data.user.id,
-      email: response.data.user.email,
-      player: response.data.player,
+      const savedLoginData = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        player: response.data.player,
+      }
+      dispatch(login(savedLoginData))
+      router.back()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      alert(error.response?.data?.error || t('register.error'))
     }
-    dispatch(login(savedLoginData))
-    router.back()
-
   }
   return (
     <Container

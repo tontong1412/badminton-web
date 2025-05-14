@@ -27,7 +27,9 @@
     "registerButton": "Register",
     "notMember": "Not a member yet?",
     "register": " Register now",
-    "confirmPassword": "Confirm password"
+    "confirmPassword": "Confirm password",
+    "error": "Invalid email or password",
+    "registerError": "Registration failed, please try again"
   },
   "tournament": {
     "title": "Tournament",
