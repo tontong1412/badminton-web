@@ -116,9 +116,9 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
             helperText={errors.password?.message}
           />
 
-          <Link href="/forgot-password" className='text-blue-500 text-sm'>
+          {/* <Link href="/forgot-password" className='text-blue-500 text-sm'>
             {t('login.forgotPassword')}
-          </Link>
+          </Link> */}
 
           {/* <FormControlLabel
             control={

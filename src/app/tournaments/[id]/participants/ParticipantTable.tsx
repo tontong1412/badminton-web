@@ -1,16 +1,17 @@
 'use client'
 
-import { LEVEL, MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
+import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language } from '@/type'
 import {  FilterList } from '@mui/icons-material'
-import { Avatar, Box, Chip,  IconButton, Menu, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { Chip,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
 import { MouseEvent, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import StatusColumn from './StatusColumn'
 import { useTranslation } from 'react-i18next'
+import PlayerPopover from './PlayerPopover'
 
 interface ParticipantTableProps {
   eventID: string;
@@ -213,32 +214,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
           </TableBody>
         </Table>
       </TableContainer>
-      {showPlayer && <Popover
-        open={showPlayer !== null}
-        anchorEl={anchorEl}
-        onClose={() => {
-          setShowPlayer(null)
-          setAnchorEl(null)
-        }}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-      >
-        <Box>
-          <Box sx={{ width: '300px', m:2, display: 'flex', gap: '5px' }}>
-            <Avatar src={showPlayer?.photo || '/avatar.png'} sx={{ width: 80, height: 80 }}/>
-            <Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Typography sx={{ fontSize: 20 }} >{showPlayer?.officialName[language]}</Typography>
-                {showPlayer.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}
-              </Box>
-              <Typography sx={{ p: 0 }} >{showPlayer?.displayName?.[language]}</Typography>
-              <Typography sx={{ p: 0 }} >{showPlayer?.club}</Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Popover>}
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
     </>
   )
 }
