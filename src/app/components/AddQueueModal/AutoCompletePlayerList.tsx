@@ -23,7 +23,7 @@ const AutoCompletePlayerList = ({ props, option }: AutoCompletePlayerListProps) 
         <div className='flex gap-1'>
           <Avatar src={option.photo || '/avatar.png'}/>
           <div >
-            <div>{option.displayName || option.officialName}</div>
+            <div>{option.displayName?.th || option.officialName.th}</div>
             <div className='text-xs'>{MAP_LEVEL_TO_LABEL[option.level]}</div>
           </div>
         </div>

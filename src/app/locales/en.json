@@ -63,6 +63,19 @@
       "socialMedia": "Social media",
       "registerConfirm": "Register",
       "eventList": "Events"
+    },
+    "action": {
+      "approve": "approve",
+      "reject": "reject",
+      "participantList": "Participant List"
+    },
+    "participants": {
+      "date": "Register Date",
+      "team": "Team",
+      "club": "Club",
+      "status": "Decision",
+      "paymentStatus": "Payment Status",
+      "shuttlecockCredit": "Shuttlecock Credit"
     }
   },
   "player": {

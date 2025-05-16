@@ -63,6 +63,19 @@
       "socialMedia": "ช่องทางการติดต่อ",
       "registerConfirm": "สมัครแข่งขัน",
       "eventList": "รายการที่เปิดรับสมัคร"
+    },
+    "action": {
+      "approve": "ผ่าน",
+      "reject": "ไม่ผ่าน",
+      "participantList": "ดูรายชื่อ"
+    },
+    "participants": {
+      "date": "วันที่สมัคร",
+      "team": "ผู้เล่น",
+      "club": "ทีม",
+      "status": "ประเมินมือ",
+      "paymentStatus": "ค่าสมัคร",
+      "shuttlecockCredit": "คูปองลูก"
     }
   },
   "player": {

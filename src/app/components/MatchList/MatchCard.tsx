@@ -16,7 +16,7 @@ const PlayerDisplay = ({ player, reverse } : PlayerDisplay) => {
   return (
     <div className={`flex items-center gap-5 p-2 w-[150px] ${reverse && 'flex-row-reverse'}`}>
       <Avatar src={player.photo || '/avatar.png'}/>
-      <Typography>{player.displayName || player.officialName}</Typography>
+      <Typography>{player.displayName?.th || player.officialName.th}</Typography>
     </div>
   )
 }

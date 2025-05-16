@@ -62,7 +62,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
                 <CardMedia
                   component="img"
                   sx={{ width: 151 }}
-                  image="/avatar.png"
+                  image={tournament.logo || '/avatar.png'}
                   alt={tournament.name.en}
                 />
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>

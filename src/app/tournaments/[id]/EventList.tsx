@@ -5,6 +5,7 @@ import { AttachMoney, EmojiEvents } from '@mui/icons-material'
 import { Box, Card, CardActionArea, CardContent, Container, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
+import { useRouter } from 'next/navigation'
 
 interface Props {
   tournament: Tournament
@@ -13,6 +14,7 @@ interface Props {
 const EventList = ({ tournament }: Props) => {
   const { t } = useTranslation()
   const language = useSelector((state: RootState) => state.app.language)
+  const router = useRouter()
 
   return (
     <Container maxWidth="xl" sx={{ p: 2 }}>
@@ -27,7 +29,7 @@ const EventList = ({ tournament }: Props) => {
       }}>
         {
           tournament.events.map((e) => (
-            <Card sx={{ maxWidth: 345, minWidth: 300 }} key={e.id}>
+            <Card sx={{ maxWidth: 345, minWidth: 300 }} key={e.id} onClick={() => router.push(`/tournaments/${tournament.id}/participants?event=${e.id}`)}>
               <CardActionArea>
                 <CardContent>
                   <Typography gutterBottom variant="h5" component="div">

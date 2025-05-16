@@ -1,9 +1,10 @@
 import { SERVICE_ENDPOINT } from '@/app/constants'
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import axios from 'axios'
 import { notFound } from 'next/navigation'
 import TournamentCover from './TournamentCover'
 import EventList from './EventList'
+import ParticipantButton from './ParticipantButton'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -43,12 +44,8 @@ const Page = async({ params }: Props) => {
     <Box>
       <TournamentCover tournament={tournament} />
       <EventList tournament={tournament} />
+      <ParticipantButton id={id} />
 
-      <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
-        <Typography >
-          ดูรายชื่อ
-        </Typography>
-      </Box>
     </Box>
   )
 }

@@ -54,8 +54,8 @@ const Session = () => {
               <Avatar src={player.photo || 'avatar.png'}/>
             </ListItemAvatar>
             <ListItemText
-              primary={player.displayName || player.officialName}
-              secondary={player.displayName ? player.officialName : null}
+              primary={player.displayName?.th || player.officialName.th}
+              secondary={player.displayName?.th ? player.officialName.th : null}
             />
           </ListItem>
         ))}
