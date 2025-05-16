@@ -116,7 +116,7 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
           <Autocomplete
             disablePortal
             options={filterOptions([player2, player3, player4])}
-            getOptionLabel={(option) => option.displayName || option.officialName}
+            getOptionLabel={(option) => option.displayName?.th || option.officialName.th || ''}
             renderInput={(params) => <TextField required {...params} fullWidth margin="normal" label="Player 1"/>}
             onChange={(event: SyntheticEvent, newValue: Player | null) => {
               setPlayer1(newValue)
@@ -127,7 +127,7 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
           {gameType === GameType.Double && <Autocomplete
             disablePortal
             options={filterOptions([player1, player3, player4])}
-            getOptionLabel={(option) => option.displayName || option.officialName}
+            getOptionLabel={(option) => option.displayName?.th || option.officialName.th || ''}
             renderInput={(params) => <TextField required {...params} fullWidth margin="normal"  label="Player 2"/>}
             onChange={(event: SyntheticEvent, newValue: Player | null) => {
               setPlayer2(newValue)
@@ -140,7 +140,7 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
           <Autocomplete
             disablePortal
             options={filterOptions([player1, player2, player4])}
-            getOptionLabel={(option) => option.displayName || option.officialName}
+            getOptionLabel={(option) => option.displayName?.th || option.officialName.th || ''}
             renderInput={(params) => <TextField required {...params} fullWidth margin="normal" label="Player 1"/>}
             onChange={(event: SyntheticEvent, newValue: Player | null) => {
               setPlayer3(newValue)
@@ -151,7 +151,7 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
           {gameType === GameType.Double && <Autocomplete
             disablePortal
             options={filterOptions([player1, player2, player3])}
-            getOptionLabel={(option) => option.displayName || option.officialName}
+            getOptionLabel={(option) => option.displayName?.th || option.officialName.th || ''}
             renderInput={(params) => <TextField required {...params} fullWidth margin="normal" label="Player 2"/>}
             onChange={(event: SyntheticEvent, newValue: Player | null) => {
               setPlayer4(newValue)
