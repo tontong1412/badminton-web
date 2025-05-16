@@ -202,6 +202,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                 <TableCell align="center">
                   <Chip
                     label={MAP_PAYMENT_STATUS[team.paymentStatus][language]}
+                    variant='outlined'
                     color={MAP_PAYMENT_STATUS[team.paymentStatus].color} />
                 </TableCell>
                 <TableCell align="center">
