@@ -8,8 +8,9 @@ import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Typograp
 import axios from 'axios'
 import Image from 'next/image'
 
-import { useEffect, useState } from 'react'
+import { MouseEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import PlayerPopover from './PlayerPopover'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -27,6 +28,8 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const { t } = useTranslation()
   const [event, setEvent] = useState<Event>()
   const language: Language = useSelector((state: RootState) => state.app.language)
+  const [showPlayer, setShowPlayer] = useState<Player | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
     const fetchEvent = async() => {
       console.log(eventID)
@@ -51,6 +54,10 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
     const response = await axios.post(`${SERVICE_ENDPOINT}/events/update-team`, payload, { withCredentials: true })
     setEvent(response.data)
   }
+  const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
+    setShowPlayer(player)
+    setAnchorEl(e.currentTarget)
+  }
 
   return (
     <Box>
@@ -58,7 +65,6 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
         event?.teams.map((team) => (
           <Card key={team.id} sx={{ marginBottom: 2 }}>
             <CardHeader
-              // avatar={<Typography>รายการ {event.name[language]}</Typography>}
               sx={{ borderBottom: '1px solid #ddd' }}
               action={
                 <Box>
@@ -76,13 +82,15 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
                 </Box>
               }
               title={<Typography >{t('tournament.registration.event')} {event.name[language]}</Typography>}
-              // subheader="September 14, 2016"
             />
             <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
+
                 {team.players.map((p: Player) => <div key={p.id}>
                   <Box sx={{ display: 'flex' }}>
-                    <Typography width={150}>{p.officialName[language]}</Typography>
+                    <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
+                      <Typography width={150}>{p.officialName[language]}</Typography>
+                    </div>
                     <Typography>{p.club}</Typography>
                   </Box>
                 </div>)}
@@ -104,6 +112,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           </Card>
         ))
       }
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
     </Box>
   )
 
