@@ -30,8 +30,16 @@ interface AddPlayerModalProps {
 
 const AddPlayerModal = ({ visible, setVisible, players, setPlayers }: AddPlayerModalProps) => {
   const [formData, setFormData] = useState<NewPlayer>({
-    officialName: '',
-    displayName: '',
+    officialName: {
+      th: '',
+      en: '',
+      pronunciation: ''
+    },
+    displayName: {
+      th: '',
+      en: ''
+    },
+    club: '',
     level: 0,
     lastMatchEnd: '',
     paymentStatus: PaymentStatus.Unpaid
@@ -67,8 +75,16 @@ const AddPlayerModal = ({ visible, setVisible, players, setPlayers }: AddPlayerM
     updatePlayers(playerList)
     setVisible(false)
     setFormData({
-      officialName: '',
-      displayName: '',
+      officialName: {
+        th: '',
+        en: '',
+        pronunciation: ''
+      },
+      displayName: {
+        th: '',
+        en: '',
+      },
+      club: '',
       level: 0,
       lastMatchEnd: '',
       paymentStatus: PaymentStatus.Unpaid,
