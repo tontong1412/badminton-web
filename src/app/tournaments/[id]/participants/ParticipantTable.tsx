@@ -1,16 +1,17 @@
 'use client'
 
-import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
+import { LEVEL, MAP_DECISION_STATUS, MAP_LEVEL_TO_LABEL, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
-import { PaymentStatus, TeamStatus, Event, EventTeam } from '@/type'
-import { FilterList } from '@mui/icons-material'
-import { Chip, IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language, Gender } from '@/type'
+import { Female, FilterList, Male } from '@mui/icons-material'
+import { Avatar, Box, Chip, Divider, IconButton, Menu, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
-import { useEffect, useState } from 'react'
+import { MouseEvent, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import StatusColumn from './StatusColumn'
 import { useTranslation } from 'react-i18next'
+import Image from 'next/image'
 
 interface ParticipantTableProps {
   eventID: string;
@@ -36,13 +37,15 @@ interface UpdateTeamPayload {
 const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const { t } = useTranslation()
   const [event, setEvent] = useState<Event>()
-  const language = useSelector((state: RootState) => state.app.language)
+  const language: Language = useSelector((state: RootState) => state.app.language)
   const [orderBy, setOrderBy] = useState<keyof EventTeam>('date')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [statusAnchorEl, setStatusAnchorEl] = useState<null | HTMLElement>(null)
   const [paymentAnchorEl, setPaymentAnchorEl] = useState<null | HTMLElement>(null)
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [paymentFilter, setPaymentFilter] = useState<string>('All')
+  const [showPlayer, setShowPlayer] = useState<Player | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const fetchEvent = async() => {
@@ -93,6 +96,11 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
     setEvent(response.data)
   }
 
+  const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
+    setShowPlayer(player)
+    setAnchorEl(e.currentTarget)
+  }
+
 
 
   const sortedRows: EventTeam[] | undefined = event && [...event.teams].sort((a, b) => {
@@ -112,103 +120,135 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
 
   if (!event) return null
   return (
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>
-              <TableSortLabel
-              // align="center"
-                active={orderBy === 'date'}
-                direction={orderBy === 'date' ? order : 'asc'}
-                onClick={() => handleSort('date')}
-              >
-                {t('tournament.participants.date')}
-              </TableSortLabel>
-            </TableCell>
-            <TableCell>{t('tournament.participants.team')}</TableCell>
-            <TableCell>{t('tournament.participants.club')}</TableCell>
-            <TableCell align="center">
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {t('tournament.participants.status')}
-                <Tooltip title="Filter by status">
-                  <IconButton size="small" onClick={handleStatusClick}>
-                    <FilterList fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </span>
-              <Menu anchorEl={statusAnchorEl} open={Boolean(statusAnchorEl)} onClose={() => handleStatusClose()}>
-                <MenuItem onClick={() => handleStatusClose('All')}>All</MenuItem>
-                {
-                  Object.values(TeamStatus).map((s) => (
-                    <MenuItem key={s} value={s} onClick={() => handleStatusClose(s)}>
-                      {MAP_DECISION_STATUS[s][language]}
-                    </MenuItem>
-                  ))
-                }
-              </Menu>
-            </TableCell>
-            <TableCell align="center">
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {t('tournament.participants.paymentStatus')}
-                <Tooltip title="Filter by payment status">
-                  <IconButton size="small" onClick={handlePaymentClick}>
-                    <FilterList fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </span>
-              <Menu anchorEl={paymentAnchorEl} open={Boolean(paymentAnchorEl)} onClose={() => handlePaymentClose()}>
-                <MenuItem onClick={() => handlePaymentClose('All')}>All</MenuItem>
-                {
-                  Object.values(PaymentStatus).map((s) => (
-                    <MenuItem key={s} value={s} onClick={() => handlePaymentClose(s)}>
-                      {MAP_PAYMENT_STATUS[s][language]}
-                    </MenuItem>
-                  ))
-                }
-              </Menu>
-            </TableCell>
-            <TableCell align="center">
-              <TableSortLabel
-              // align="center"
-                active={orderBy === 'shuttlecockCredit'}
-                direction={orderBy === 'shuttlecockCredit' ? order : 'asc'}
-                onClick={() => handleSort('shuttlecockCredit')}
-              >
-                {t('tournament.participants.shuttlecockCredit')}
-              </TableSortLabel>
-            </TableCell>
-            {/* <TableCell align="center">Shuttlecock Credit</TableCell> */}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredRows?.map((team, idx) => (
-            <TableRow key={idx}>
+    <>
+      <TableContainer component={Paper}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
               <TableCell>
-                <Typography >{moment(team.date).format('DD-MM-YYYY')}</Typography>
+                <TableSortLabel
+                  // align="center"
+                  active={orderBy === 'date'}
+                  direction={orderBy === 'date' ? order : 'asc'}
+                  onClick={() => handleSort('date')}
+                >
+                  {t('tournament.participants.date')}
+                </TableSortLabel>
               </TableCell>
-              <TableCell>
-                {team.players.map((player) => <Typography key={player.id}>{player.officialName[language]}</Typography>)}
-              </TableCell>
-              <TableCell>
-                {team.players.map((player) => <Typography key={player.id}>{player.club}</Typography>)}
+              <TableCell>{t('tournament.participants.team')}</TableCell>
+              <TableCell>{t('tournament.participants.club')}</TableCell>
+              <TableCell align="center">
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {t('tournament.participants.status')}
+                  <Tooltip title="Filter by status">
+                    <IconButton size="small" onClick={handleStatusClick}>
+                      <FilterList fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </span>
+                <Menu anchorEl={statusAnchorEl} open={Boolean(statusAnchorEl)} onClose={() => handleStatusClose()}>
+                  <MenuItem onClick={() => handleStatusClose('All')}>All</MenuItem>
+                  {
+                    Object.values(TeamStatus).map((s) => (
+                      <MenuItem key={s} value={s} onClick={() => handleStatusClose(s)}>
+                        {MAP_DECISION_STATUS[s][language]}
+                      </MenuItem>
+                    ))
+                  }
+                </Menu>
               </TableCell>
               <TableCell align="center">
-                <StatusColumn status={team.status} handleUpdate={updateTeam} teamID={team.id} isManager={isManager}/>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {t('tournament.participants.paymentStatus')}
+                  <Tooltip title="Filter by payment status">
+                    <IconButton size="small" onClick={handlePaymentClick}>
+                      <FilterList fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </span>
+                <Menu anchorEl={paymentAnchorEl} open={Boolean(paymentAnchorEl)} onClose={() => handlePaymentClose()}>
+                  <MenuItem onClick={() => handlePaymentClose('All')}>All</MenuItem>
+                  {
+                    Object.values(PaymentStatus).map((s) => (
+                      <MenuItem key={s} value={s} onClick={() => handlePaymentClose(s)}>
+                        {MAP_PAYMENT_STATUS[s][language]}
+                      </MenuItem>
+                    ))
+                  }
+                </Menu>
               </TableCell>
               <TableCell align="center">
-                <Chip
-                  label={MAP_PAYMENT_STATUS[team.paymentStatus][language]}
-                  color={MAP_PAYMENT_STATUS[team.paymentStatus].color} />
+                <TableSortLabel
+                  // align="center"
+                  active={orderBy === 'shuttlecockCredit'}
+                  direction={orderBy === 'shuttlecockCredit' ? order : 'asc'}
+                  onClick={() => handleSort('shuttlecockCredit')}
+                >
+                  {t('tournament.participants.shuttlecockCredit')}
+                </TableSortLabel>
               </TableCell>
-              <TableCell align="center">
-                {team.shuttlecockCredit}
-              </TableCell>
+              {/* <TableCell align="center">Shuttlecock Credit</TableCell> */}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {filteredRows?.map((team, idx) => (
+              <TableRow key={idx}>
+                <TableCell>
+                  <Typography >{moment(team.date).format('DD-MM-YYYY')}</Typography>
+                </TableCell>
+                <TableCell>
+                  {team.players.map((player) => {
+                    return(<div key={player.id} onClick={(e) => handleShowPlayerDetail(e, player)}>
+                      <Typography >{player.officialName[language]}</Typography>
+                    </div>)
+                  })}
+                </TableCell>
+                <TableCell>
+                  {team.players.map((player) => <Typography key={player.id}>{player.club}</Typography>)}
+                </TableCell>
+                <TableCell align="center">
+                  <StatusColumn status={team.status} handleUpdate={updateTeam} teamID={team.id} isManager={isManager}/>
+                </TableCell>
+                <TableCell align="center">
+                  <Chip
+                    label={MAP_PAYMENT_STATUS[team.paymentStatus][language]}
+                    color={MAP_PAYMENT_STATUS[team.paymentStatus].color} />
+                </TableCell>
+                <TableCell align="center">
+                  {team.shuttlecockCredit}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {showPlayer && <Popover
+        open={showPlayer !== null}
+        anchorEl={anchorEl}
+        onClose={() => {
+          setShowPlayer(null)
+          setAnchorEl(null)
+        }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+      >
+        <Box>
+          <Box sx={{ width: '300px', m:2, display: 'flex', gap: '5px' }}>
+            <Avatar src={showPlayer?.photo || '/avatar.png'} sx={{ width: 80, height: 80 }}/>
+            <Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Typography sx={{ p: 0, fontSize: 20 }} >{showPlayer?.officialName[language]}</Typography>
+                {showPlayer.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}
+              </Box>
+              <Typography sx={{ p: 0 }} >{showPlayer?.displayName?.[language]}</Typography>
+              <Typography sx={{ p: 0 }} >{showPlayer?.club}</Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Popover>}
+    </>
   )
 }
 export default ParticipantTable
