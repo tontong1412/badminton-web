@@ -1,31 +1,21 @@
 'use client'
 
-import { LEVEL, MAP_DECISION_STATUS, MAP_LEVEL_TO_LABEL, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
+import { LEVEL, MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
-import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language, Gender } from '@/type'
-import { Female, FilterList, Male } from '@mui/icons-material'
-import { Avatar, Box, Chip, Divider, IconButton, Menu, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language } from '@/type'
+import {  FilterList } from '@mui/icons-material'
+import { Avatar, Box, Chip,  IconButton, Menu, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
 import { MouseEvent, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import StatusColumn from './StatusColumn'
 import { useTranslation } from 'react-i18next'
-import Image from 'next/image'
 
 interface ParticipantTableProps {
   eventID: string;
   isManager: boolean;
 }
-
-// type Row = {
-//   date: string;
-//   team: string;
-//   club: string;
-//   decision: string;
-//   paymentStatus: string;
-//   shuttlecockCredit: number;
-// };
 
 interface UpdateTeamPayload {
   eventID: string;
@@ -239,7 +229,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
             <Avatar src={showPlayer?.photo || '/avatar.png'} sx={{ width: 80, height: 80 }}/>
             <Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Typography sx={{ p: 0, fontSize: 20 }} >{showPlayer?.officialName[language]}</Typography>
+                <Typography sx={{ fontSize: 20 }} >{showPlayer?.officialName[language]}</Typography>
                 {showPlayer.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}
               </Box>
               <Typography sx={{ p: 0 }} >{showPlayer?.displayName?.[language]}</Typography>
