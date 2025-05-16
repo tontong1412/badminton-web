@@ -67,7 +67,8 @@
     "action": {
       "approve": "ผ่าน",
       "reject": "ไม่ผ่าน",
-      "participantList": "ดูรายชื่อ"
+      "participantList": "ดูรายชื่อ",
+      "more": "เพิ่มเติม"
     },
     "participants": {
       "date": "วันที่สมัคร",

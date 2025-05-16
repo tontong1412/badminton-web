@@ -54,8 +54,8 @@
       "club": "Club",
       "level": "Level",
       "gender": "Gender",
-      "female": "female",
-      "male": "male",
+      "female": "Female",
+      "male": "Male",
       "uploadPhoto": "Upload photo",
       "contactPerson": "Contact person",
       "tel": "Tel",
@@ -65,9 +65,10 @@
       "eventList": "Events"
     },
     "action": {
-      "approve": "approve",
-      "reject": "reject",
-      "participantList": "Participant List"
+      "approve": "Approve",
+      "reject": "Reject",
+      "participantList": "Participant List",
+      "more": "More"
     },
     "participants": {
       "date": "Register Date",

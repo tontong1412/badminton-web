@@ -3,16 +3,17 @@ import { SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
 import { Event, Language, Tournament } from '@/type'
-import { Box, Container, Tab, Tabs } from '@mui/material'
+import { Box, Container, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import ParticipantTable from './ParticipantTable'
+import ParticipantMobile from './ParticipantMobile'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
     <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ p: 2 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
     </div>
   )
 }
@@ -21,6 +22,8 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 const ParticipantsPage = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const user = useSelector((state: RootState) => state.app.user)
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [tournament, setTournament] = useState<Tournament>()
   const [tabIndex, setTabIndex] = useState(0)
   const params = useParams()
@@ -75,8 +78,13 @@ const ParticipantsPage = () => {
 
       {tournament.events.map(((event, idx) => {
         return (
-          <TabPanel value={tabIndex} index={idx} key={event.id}>
-            <ParticipantTable eventID={event.id} isManager={isManager} />
+          <TabPanel value={tabIndex} index={idx} key={event.id} >
+            {
+              isMobile
+                ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
+                : <ParticipantTable eventID={event.id} isManager={isManager} />
+            }
+
           </TabPanel>
         )
       }))}
