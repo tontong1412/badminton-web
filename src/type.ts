@@ -23,6 +23,11 @@ export enum TeamStatus {
   withdraw = 'withdraw',
 }
 
+export enum Gender {
+  Male = 'male',
+  Female = 'female'
+}
+
 export interface Player {
   id: string;
   officialName: {
@@ -39,6 +44,7 @@ export interface Player {
   lastMatchEnd?: string;
   paymentStatus?: PaymentStatus;
   club: string;
+  gender?: Gender;
 }
 
 
