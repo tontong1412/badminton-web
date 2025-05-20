@@ -3,14 +3,15 @@
 import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
-import { Event, Language, Player, TeamStatus } from '@/type'
-import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Typography } from '@mui/material'
+import { Event, EventTeam, Language, Player, TeamStatus } from '@/type'
+import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Menu, MenuItem, Typography } from '@mui/material'
 import axios from 'axios'
 import Image from 'next/image'
 
 import { MouseEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
+import ContactPersonModal from '@/app/components/ContactPersonModal'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -30,6 +31,10 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+  const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
+  const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
+  const [contactPersonModalVisible, setContactPersonModalVisible] = useState(false)
+  const [showContact, setShowContact] = useState<Player | null>(null)
   useEffect(() => {
     const fetchEvent = async() => {
       console.log(eventID)
@@ -57,6 +62,11 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
     setShowPlayer(player)
     setAnchorEl(e.currentTarget)
+  }
+
+  const handleCloseMenu = () => {
+    setAnchorElMenu(null)
+    setMenuTeam(null)
   }
 
   return (
@@ -105,14 +115,42 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
             </CardContent>
             {isManager &&
             <CardActions sx={{ display: 'flex', justifyContent: team.status === TeamStatus.Idle ?  'space-between' : 'center', borderTop: '1px solid #ddd', p:0 }}>
-              {team.status === TeamStatus.Idle && <Button sx={{ width: '30%' }} onClick={() => updateTeam(team.id, 'status', TeamStatus.Approved)} size="small">{t('tournament.action.approve')}</Button>}
-              {team.status === TeamStatus.Idle && <Button sx={{ width: '30%' }} onClick={() => updateTeam(team.id, 'status', TeamStatus.Reject)}size="small">{t('tournament.action.reject')}</Button>}
-              <Button size="small" sx={{ width: '30%' }}>{t('tournament.action.more')}</Button>
+              {team.status === TeamStatus.Idle && <Button fullWidth sx={{ width: '100%' }} onClick={() => updateTeam(team.id, 'status', TeamStatus.Approved)} size="small">{t('tournament.action.approve')}</Button>}
+              {team.status === TeamStatus.Idle && <Button fullWidth sx={{ width: '100%' }} onClick={() => updateTeam(team.id, 'status', TeamStatus.Reject)} size="small">{t('tournament.action.reject')}</Button>}
+              <div style={{ width: '100%', textAlign: 'center' }}>
+                <Button fullWidth size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                  setAnchorElMenu(event.currentTarget)
+                  setMenuTeam(team)
+                }}>{t('tournament.action.more')}</Button>
+              </div>
             </CardActions>}
           </Card>
         ))
       }
+      {showContact && <ContactPersonModal visible={contactPersonModalVisible} setVisible={setContactPersonModalVisible} player={showContact}/>}
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {menuTeam && <Menu
+        id="admin-menu"
+        anchorEl={anchorElMenu}
+        open={Boolean(anchorElMenu)}
+        onClose={handleCloseMenu}
+      >
+        <MenuItem onClick={() => {
+          handleCloseMenu()
+          setContactPersonModalVisible(true)
+          setShowContact(menuTeam.contactPerson)
+        }}>{t('tournament.action.contactPerson')}
+        </MenuItem>
+
+        {(menuTeam && menuTeam.status !== TeamStatus.Idle) && <MenuItem onClick={async() => {
+          if(menuTeam){
+            await updateTeam(menuTeam.id, 'status', TeamStatus.Idle)
+          }
+          handleCloseMenu()
+        }}>{t('tournament.action.changeStatus')}</MenuItem>}
+
+        <MenuItem onClick={handleCloseMenu}>{t('tournament.action.paymentSlip')}</MenuItem>
+      </Menu>}
     </Box>
   )
 

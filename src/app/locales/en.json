@@ -68,7 +68,10 @@
       "approve": "Approve",
       "reject": "Reject",
       "participantList": "Participant List",
-      "more": "More"
+      "more": "More",
+      "contactPerson": "Contact person",
+      "changeStatus": "Change Decision",
+      "paymentSlip": "See/Upload Payment Slip"
     },
     "participants": {
       "date": "Register Date",

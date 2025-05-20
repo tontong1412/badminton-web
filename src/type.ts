@@ -45,6 +45,10 @@ export interface Player {
   paymentStatus?: PaymentStatus;
   club: string;
   gender?: Gender;
+  contact?: {
+    tel: string;
+    line: string;
+  }
 }
 
 
