@@ -68,7 +68,10 @@
       "approve": "ผ่าน",
       "reject": "ไม่ผ่าน",
       "participantList": "ดูรายชื่อ",
-      "more": "เพิ่มเติม"
+      "more": "เพิ่มเติม",
+      "contactPerson": "ข้อมูลผู้ติดต่อ",
+      "changeStatus": "แก้ไขผลประเมินมือ",
+      "paymentSlip": "ดู/อัพโหลดสลิป"
     },
     "participants": {
       "date": "วันที่สมัคร",
