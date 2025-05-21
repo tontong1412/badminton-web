@@ -11,12 +11,14 @@ interface Props {
   setPlayer: (player: Player) => void
   playerValue: Player
   label: string
+  disabled: boolean
 }
-const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPlayer, player, label }: Props) => {
+const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPlayer, player, label, disabled }: Props) => {
   return (
     <Autocomplete
       id="autocomplete-player"
       options={playerList}
+      disabled={disabled}
       value={playerValue || initialPlayer}
       renderInput={(params) => <TextField required {...params} fullWidth label={label} />}
       getOptionLabel={(option) => {

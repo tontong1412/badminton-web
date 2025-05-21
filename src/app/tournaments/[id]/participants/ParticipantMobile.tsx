@@ -39,7 +39,6 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false)
   useEffect(() => {
     const fetchEvent = async() => {
-      console.log(eventID)
       try {
         const response = await axios(`${SERVICE_ENDPOINT}/events/${eventID}`)
         setEvent(response.data)
@@ -73,6 +72,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
 
   return (
     <Box>
+      <Typography sx={{ textAlign:'right' }}>{t('tournament.registration.total')} {event?.teams.length}</Typography>
       {
         event?.teams.map((team) => (
           <Card key={team.id} sx={{ marginBottom: 2 }}>

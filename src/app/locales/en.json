@@ -33,7 +33,8 @@
     "confirmPassword": "Confirm password",
     "error": "Invalid email or password",
     "registerError": "Registration failed, please try again",
-    "resetPassword": "Reset Password"
+    "resetPassword": "Reset Password",
+    "resetPasswordLinkSent": "Reset password link sent to your email."
   },
   "tournament": {
     "title": "Tournament",
@@ -68,7 +69,8 @@
       "registerConfirm": "Register",
       "eventList": "Events",
       "payment": "Payment",
-      "uploadSlip": "Upload Slip"
+      "uploadSlip": "Upload Slip",
+      "total": "Total"
     },
     "action": {
       "approve": "Approve",

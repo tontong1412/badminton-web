@@ -54,7 +54,7 @@ const ParticipantsPage = () => {
     }else{
       setIsManager(false)
     }
-  }, [user])
+  }, [user, tournament])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
