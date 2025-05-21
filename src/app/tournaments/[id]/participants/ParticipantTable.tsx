@@ -29,7 +29,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const { t } = useTranslation()
   const [event, setEvent] = useState<Event>()
   const language: Language = useSelector((state: RootState) => state.app.language)
-  const [orderBy, setOrderBy] = useState<keyof EventTeam>('date')
+  const [orderBy, setOrderBy] = useState<Exclude<keyof EventTeam, 'slip'>>('date')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [statusAnchorEl, setStatusAnchorEl] = useState<null | HTMLElement>(null)
   const [paymentAnchorEl, setPaymentAnchorEl] = useState<null | HTMLElement>(null)
@@ -52,7 +52,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
     fetchEvent()
   }, [])
 
-  const handleSort = (property: keyof EventTeam) => {
+  const handleSort = (property: Exclude<keyof EventTeam, 'slip'>) => {
     const isAsc = orderBy === property && order === 'asc'
     setOrder(isAsc ? 'desc' : 'asc')
     setOrderBy(property)
