@@ -173,7 +173,13 @@ export interface Tournament {
       th: string;
       en: string;
     }
-  }
+  };
+  shuttlecockFee: number;
+  payment: {
+    code: string,
+    name: string,
+    bank: string
+  },
 }
 
 export interface displayData {
@@ -198,6 +204,7 @@ export interface EventTeam {
   paymentStatus: PaymentStatus;
   date: Date;
   shuttlecockCredit: number;
+  slip?: string;
 }
 
 export interface Event {

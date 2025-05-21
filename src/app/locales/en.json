@@ -14,7 +14,10 @@
     "submit": "submit",
     "add": "add",
     "login": "Log in",
-    "register": "Register now"
+    "register": "Register now",
+    "approvePayment": "Approve",
+    "rejectPayment": "Reject",
+    "confirm": "Confirm"
   },
   "login": {
     "title": "Login",
@@ -29,7 +32,8 @@
     "register": " Register now",
     "confirmPassword": "Confirm password",
     "error": "Invalid email or password",
-    "registerError": "Registration failed, please try again"
+    "registerError": "Registration failed, please try again",
+    "resetPassword": "Reset Password"
   },
   "tournament": {
     "title": "Tournament",
@@ -62,7 +66,9 @@
       "email": "Email",
       "socialMedia": "Social media",
       "registerConfirm": "Register",
-      "eventList": "Events"
+      "eventList": "Events",
+      "payment": "Payment",
+      "uploadSlip": "Upload Slip"
     },
     "action": {
       "approve": "Approve",
