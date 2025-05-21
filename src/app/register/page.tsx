@@ -49,7 +49,7 @@ const Register = () => {
   const onSubmit = async(data: RegisterFormInputs) => {
     try {
       const response = await axios.post(`${SERVICE_ENDPOINT}/users`, {
-        email: data.email,
+        email: data.email.toLowerCase(),
         password: data.password,
         officialName: {
           [language]: data.officialName,

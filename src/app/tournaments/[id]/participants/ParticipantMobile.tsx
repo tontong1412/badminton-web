@@ -12,6 +12,7 @@ import { MouseEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
 import ContactPersonModal from '@/app/components/ContactPersonModal'
+import PaymentModal from '@/app/components/PaymentModal'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -35,6 +36,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
   const [contactPersonModalVisible, setContactPersonModalVisible] = useState(false)
   const [showContact, setShowContact] = useState<Player | null>(null)
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false)
   useEffect(() => {
     const fetchEvent = async() => {
       console.log(eventID)
@@ -129,6 +131,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
       }
       {showContact && <ContactPersonModal visible={contactPersonModalVisible} setVisible={setContactPersonModalVisible} player={showContact}/>}
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {menuTeam && event && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={event} team={menuTeam} setEvent={setEvent} isManager={isManager} setTeam={setMenuTeam}/>}
       {menuTeam && <Menu
         id="admin-menu"
         anchorEl={anchorElMenu}
@@ -149,7 +152,10 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           handleCloseMenu()
         }}>{t('tournament.action.changeStatus')}</MenuItem>}
 
-        <MenuItem onClick={handleCloseMenu}>{t('tournament.action.paymentSlip')}</MenuItem>
+        <MenuItem onClick={() => {
+          setPaymentModalVisible(true)
+          setAnchorElMenu(null)
+        }}>{t('tournament.action.paymentSlip')}</MenuItem>
       </Menu>}
     </Box>
   )
