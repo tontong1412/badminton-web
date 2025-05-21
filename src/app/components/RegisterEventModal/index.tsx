@@ -460,6 +460,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
                   playerList={filteredPlayerList}
                   setPlayer={setPlayer2}
                   label={t('tournament.registration.fullname')}
+                  disabled={false}
                 />
 
                 {tournamentLanguage !== 'en' && language !== 'en' && (
