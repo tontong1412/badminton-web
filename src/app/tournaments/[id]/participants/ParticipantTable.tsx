@@ -40,7 +40,6 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
 
   useEffect(() => {
     const fetchEvent = async() => {
-      console.log(eventID)
       try {
         const response = await axios(`${SERVICE_ENDPOINT}/events/${eventID}`)
         setEvent(response.data)

@@ -96,6 +96,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
   const [filteredPlayerList, setFilteredPlayerList] = useState<Player[]>([])
   const [player1, setPlayer1] = useState<Player>(initialPlayer)
   const [player2, setPlayer2] = useState<Player>(initialPlayer)
+  const [lockOfficialNameWhenUseMeCheckBox, setLockOfficialNameWhenUseMeCheckBox] = useState(false)
   const [contactPerson, setContactPerson] = useState<ContactPerson>({
     id: user?.player.id || '',
     officialName: '',
@@ -158,8 +159,8 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
     setPlayer2(initialPlayer)
     setContactPerson({
       id: user?.player.id || '',
-      officialName: user?.player.officialName?.[language] || '',
-      displayName: user?.player.displayName?.[language] || '',
+      officialName: '',
+      displayName: '',
       contact: {
         tel: ''
       },
@@ -208,7 +209,6 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
       return
     }
     setButtonLoading(true)
-    console.log({ event, player1, player2, contactPerson })
 
     try{
       const playersArray = []
@@ -252,13 +252,13 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         contactPerson: {
           id: contactPerson.id,
           officialName: {
-            [language]: player2.officialName,
-            en: player2.officialName,
-            pronunciation: player2.pronunciation,
+            [language]: user?.player.officialName[language],
+            en: user?.player.officialName.en,
+            pronunciation: user?.player.officialName.pronunciation,
           },
           displayName: {
-            [language]: player2.displayName,
-            en: player2.displayName,
+            [language]: user?.player.displayName[language],
+            en: user?.player.displayName.en,
           },
           contact: contactPerson.contact
         }
@@ -293,8 +293,10 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         inputValue: '',
         level: user?.player.level || 0
       })
+      setLockOfficialNameWhenUseMeCheckBox(true)
     } else {
       setPlayer1(initialPlayer)
+      setLockOfficialNameWhenUseMeCheckBox(false)
     }
   }
 
@@ -341,6 +343,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
             handlePlayerChange={handlePlayerChange}
             playerList={filteredPlayerList}
             setPlayer={setPlayer1}
+            disabled={lockOfficialNameWhenUseMeCheckBox}
           />
           {tournamentLanguage !== 'en' && language !== 'en' && (
             <TextField
