@@ -1,11 +1,11 @@
-import { AppMenu, Language, User } from '@/type'
+import { AppMenu, Language, TournamentMenu, User } from '@/type'
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import i18n from '../../i18n'
 import { DEFAULT_LANGUAGE, SUPPORTED_LANG } from '@/app/constants'
 
 interface AppState {
   user: User | null;
-  activeMenu: AppMenu;
+  activeMenu: AppMenu | TournamentMenu;
   language: Language
 }
 
@@ -25,7 +25,7 @@ const appSlice = createSlice({
     logout(state) {
       state.user = null
     },
-    setActiveMenu(state, action: PayloadAction<AppMenu>) {
+    setActiveMenu(state, action: PayloadAction<AppMenu | TournamentMenu>) {
       state.activeMenu = action.payload
     },
     changeLanguage: (state, action: PayloadAction<string>) => {

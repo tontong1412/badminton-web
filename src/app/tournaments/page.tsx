@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppDispatch } from '../providers'
 import { useEffect } from 'react'
 import { setActiveMenu } from '../libs/redux/slices/appSlice'
+import Layout from '../components/Layout'
 
 const Tournaments = () => {
   const { t } = useTranslation()
@@ -15,11 +16,13 @@ const Tournaments = () => {
     dispatch(setActiveMenu(AppMenu.Tournament))
   }, [dispatch])
   return (
-    <Container maxWidth="xl">
-      <TournamentList query={TournamentQuery.ThisWeek} label={t('tournament.thisWeek')} />
-      <TournamentList query={TournamentQuery.RegistrationOpen} label={t('tournament.registrationOpen')} />
-      <TournamentList query={TournamentQuery.Recent} label={t('tournament.recent')} />
-    </Container>
+    <Layout>
+      <Container maxWidth="xl">
+        <TournamentList query={TournamentQuery.ThisWeek} label={t('tournament.thisWeek')} />
+        <TournamentList query={TournamentQuery.RegistrationOpen} label={t('tournament.registrationOpen')} />
+        <TournamentList query={TournamentQuery.Recent} label={t('tournament.recent')} />
+      </Container>
+    </Layout>
   )
 }
 

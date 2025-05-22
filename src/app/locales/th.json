@@ -46,6 +46,13 @@
     "registrationOpen": "เปิดรับสมัคร",
     "recent": "ล่าสุด",
     "notfound": "ไม่มีรายการแข่งขัน",
+    "menu": {
+      "info": "ข้อมูล",
+      "participants": "รายชื่อ/สาย",
+      "matches": "รายการแข่ง",
+      "manage": "จัดการ",
+      "me": "ฉัน"
+    },
     "registration": {
       "title": "สมัครแข่งขัน",
       "event": "ประเภท",

@@ -1,14 +1,16 @@
 'use client'
 import { SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
-import { useSelector } from '@/app/providers'
-import { Event, Language, Tournament } from '@/type'
+import { useAppDispatch, useSelector } from '@/app/providers'
+import { Event, Language, Tournament, TournamentMenu } from '@/type'
 import { Box, Container, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import ParticipantTable from './ParticipantTable'
 import ParticipantMobile from './ParticipantMobile'
+import TournamentLayout from '@/app/components/Layout/TournamentLayout'
+import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -30,6 +32,11 @@ const ParticipantsPage = () => {
   const searchParams = useSearchParams()
   const initialEvent = searchParams.get('event')
   const [isManager, setIsManager] = useState(false)
+  const dispatch = useAppDispatch()
+
+  useEffect(() => {
+    dispatch(setActiveMenu(TournamentMenu.Participants))
+  }, [dispatch])
 
   useEffect(() => {
     const fetchTournament = async() => {
@@ -61,35 +68,37 @@ const ParticipantsPage = () => {
   }
   if (!tournament) return null
   return (
-    <Container maxWidth="xl" sx={{ p: 2 }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs
-          value={tabIndex}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          aria-label="basic tabs example"
-        >
-          {tournament.events.map((event, idx) => (
-            <Tab key={idx} label={event.name[language]} />
-          ))}
-        </Tabs>
-      </Box>
+    <TournamentLayout isManager={isManager}>
+      <Container maxWidth="xl" sx={{ p: 2 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={tabIndex}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            aria-label="basic tabs example"
+          >
+            {tournament.events.map((event, idx) => (
+              <Tab key={idx} label={event.name[language]} />
+            ))}
+          </Tabs>
+        </Box>
 
-      {tournament.events.map(((event, idx) => {
-        return (
-          <TabPanel value={tabIndex} index={idx} key={event.id} >
-            {
-              isMobile
-                ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
-                : <ParticipantTable eventID={event.id} isManager={isManager} />
-            }
+        {tournament.events.map(((event, idx) => {
+          return (
+            <TabPanel value={tabIndex} index={idx} key={event.id} >
+              {
+                isMobile
+                  ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
+                  : <ParticipantTable eventID={event.id} isManager={isManager} />
+              }
 
-          </TabPanel>
-        )
-      }))}
+            </TabPanel>
+          )
+        }))}
 
-    </Container>
+      </Container>
+    </TournamentLayout>
   )
 }
 export default ParticipantsPage

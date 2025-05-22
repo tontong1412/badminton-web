@@ -46,6 +46,13 @@
     "registrationOpen": "Registration Open",
     "recent": "Recent",
     "notfound": "No tournament found",
+    "menu": {
+      "info": "Info",
+      "participants": "Entries/Draws",
+      "matches": "Matches",
+      "manage": "Manage",
+      "me": "Me"
+    },
     "registration": {
       "title": "Registration",
       "event": "Event",

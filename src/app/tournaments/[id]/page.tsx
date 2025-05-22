@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import TournamentCover from './TournamentCover'
 import EventList from './EventList'
 import ParticipantButton from './ParticipantButton'
+import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -41,12 +42,13 @@ const Page = async({ params }: Props) => {
   const { id } = await params
   const tournament = await getTournament(id)
   return (
-    <Box>
-      <TournamentCover tournament={tournament} />
-      <EventList tournament={tournament} />
-      <ParticipantButton id={id} />
-
-    </Box>
+    <TournamentLayout isManager={false}>
+      <Box>
+        <TournamentCover tournament={tournament} />
+        <EventList tournament={tournament} />
+        <ParticipantButton id={id} />
+      </Box>
+    </TournamentLayout>
   )
 }
 
