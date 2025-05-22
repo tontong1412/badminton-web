@@ -17,7 +17,8 @@
     "register": "Register now",
     "approvePayment": "Approve",
     "rejectPayment": "Reject",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "save": "Save"
   },
   "login": {
     "title": "Login",
@@ -78,7 +79,8 @@
       "payment": "Payment",
       "uploadSlip": "Upload Slip",
       "total": "Total",
-      "noRegistration": "ํYou have not registered to this tournament"
+      "noRegistration": "ํYou have not registered to this tournament",
+      "note": "Note"
     },
     "action": {
       "approve": "Approve",
@@ -87,7 +89,8 @@
       "more": "More",
       "contactPerson": "Contact person",
       "changeStatus": "Change Decision",
-      "paymentSlip": "See/Upload Payment Slip"
+      "paymentSlip": "See/Upload Payment Slip",
+      "note": "Add note"
     },
     "participants": {
       "date": "Register Date",

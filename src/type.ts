@@ -214,6 +214,7 @@ export interface EventTeam {
   date: Date;
   shuttlecockCredit: number;
   slip?: string;
+  note?: string;
 }
 
 export interface Event {

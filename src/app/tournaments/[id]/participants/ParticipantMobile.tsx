@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
 import ContactPersonModal from '@/app/components/ContactPersonModal'
 import PaymentModal from '@/app/components/PaymentModal'
+import NoteModal from '@/app/components/NoteModal'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -37,6 +38,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [contactPersonModalVisible, setContactPersonModalVisible] = useState(false)
   const [showContact, setShowContact] = useState<Player | null>(null)
   const [paymentModalVisible, setPaymentModalVisible] = useState(false)
+  const [noteModalVisible, setNoteModalVisible] = useState(false)
   useEffect(() => {
     const fetchEvent = async() => {
       try {
@@ -95,24 +97,27 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
               }
               title={<Typography >{t('tournament.registration.event')} {event.name[language]}</Typography>}
             />
-            <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
+            <CardContent >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
 
-                {team.players.map((p: Player) => <div key={p.id}>
-                  <Box sx={{ display: 'flex' }}>
-                    <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
-                      <Typography width={150}>{p.officialName[language]}</Typography>
-                    </div>
-                    <Typography>{p.club}</Typography>
-                  </Box>
-                </div>)}
+                  {team.players.map((p: Player) => <div key={p.id}>
+                    <Box sx={{ display: 'flex' }}>
+                      <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
+                        <Typography width={150}>{p.officialName[language]}</Typography>
+                      </div>
+                      <Typography>{p.club}</Typography>
+                    </Box>
+                  </div>)}
+                </Box>
+                <Box sx={{ display: 'flex', gap: '5px' }}>
+                  <div style={{ position: 'relative', width: '20px', height: 'auto' }}>
+                    <Image alt='shuttle-icon' src='/shuttlecock.png' fill style={{ objectFit: 'contain' }}/>
+                  </div>
+                  <Typography>{team.shuttlecockCredit}</Typography>
+                </Box>
               </Box>
-              <Box sx={{ display: 'flex', gap: '5px' }}>
-                <div style={{ position: 'relative', width: '20px', height: 'auto' }}>
-                  <Image alt='shuttle-icon' src='/shuttlecock.png' fill style={{ objectFit: 'contain' }}/>
-                </div>
-                <Typography>{team.shuttlecockCredit}</Typography>
-              </Box>
+              {team.note && <Typography sx={{ pt:2 }}>{`${t('tournament.registration.note')}: ${team.note}`}</Typography>}
 
             </CardContent>
             {isManager &&
@@ -132,6 +137,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
       {showContact && <ContactPersonModal visible={contactPersonModalVisible} setVisible={setContactPersonModalVisible} player={showContact}/>}
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
       {menuTeam && event && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={event} team={menuTeam} setEvent={setEvent} isManager={isManager} setTeam={setMenuTeam}/>}
+      {menuTeam && event && <NoteModal visible={noteModalVisible} setVisible={setNoteModalVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>}
       {menuTeam && <Menu
         id="admin-menu"
         anchorEl={anchorElMenu}
@@ -156,6 +162,11 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           setPaymentModalVisible(true)
           setAnchorElMenu(null)
         }}>{t('tournament.action.paymentSlip')}</MenuItem>
+
+        <MenuItem onClick={() => {
+          setNoteModalVisible(true)
+          setAnchorElMenu(null)
+        }}>{t('tournament.action.note')}</MenuItem>
       </Menu>}
     </Box>
   )

@@ -17,7 +17,8 @@
     "register": "สมัครสมาชิก",
     "approvePayment": "จ่ายแล้ว",
     "rejectPayment": "ยังไม่จ่าย",
-    "confirm": "ยืนยัน"
+    "confirm": "ยืนยัน",
+    "save": "บันทึก"
   },
   "login": {
     "title": "เข้าสู่ระบบ",
@@ -78,7 +79,8 @@
       "payment": "ชำระค่าสมัคร",
       "uploadSlip": "อัพโหลดสลิป",
       "total": "รวมทั้งหมด",
-      "noRegistration": "คุณยังไม่ได้สมัครแข่งขันรายการนี้"
+      "noRegistration": "คุณยังไม่ได้สมัครแข่งขันรายการนี้",
+      "note": "หมายเหตุ"
     },
     "action": {
       "approve": "ผ่าน",
@@ -87,7 +89,8 @@
       "more": "เพิ่มเติม",
       "contactPerson": "ข้อมูลผู้ติดต่อ",
       "changeStatus": "แก้ไขผลประเมินมือ",
-      "paymentSlip": "ดู/อัพโหลดสลิป"
+      "paymentSlip": "ดู/อัพโหลดสลิป",
+      "note": "เพิ่มหมายเหตุ"
     },
     "participants": {
       "date": "วันที่สมัคร",
