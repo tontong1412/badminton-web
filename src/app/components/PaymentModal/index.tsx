@@ -12,7 +12,7 @@ import {
   Chip,
 } from '@mui/material'
 import { RootState } from '@/app/libs/redux/store'
-import { Dispatch, ReactNode, SetStateAction, useState } from 'react'
+import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react'
 import Transition from '../ModalTransition'
 import { useTranslation } from 'react-i18next'
 import { Event, EventTeam, Language, PaymentStatus } from '@/type'
@@ -30,7 +30,7 @@ interface PaymentModalProps {
   team: EventTeam;
   setTeam: Dispatch<SetStateAction<EventTeam|null>>;
   event: Event;
-  setEvent: Dispatch<SetStateAction<Event|undefined>>;
+  setEvent: Dispatch<SetStateAction<Event|undefined>> | ((event: Event)=>void);
   isManager: boolean;
 }
 
@@ -59,6 +59,10 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
   const [slipImage, setSlipImage] = useState<string | undefined>(team.slip)
   const [buttonLoading, setButtonLoading] = useState(false)
   const { t } = useTranslation()
+
+  useEffect(() => {
+    setSlipImage(team.slip)
+  }, [visible])
 
   const uploadSlip = async(photo: unknown) => {
     const payload : UpdateTeamPayload = {
@@ -112,12 +116,15 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
     <Dialog
       data-testid="payment-modal"
       open={visible}
-      onClose={() => setVisible(false)}
+      onClose={() => {
+        setVisible(false)
+        setSlipImage(undefined)
+      }}
       slots={{ transition: Transition }}
     >
 
       <Box
-        sx={{ width: 350, mx: 'auto' }}
+        sx={{ minWidth: 350, mx: 'auto' }}
       >
         <DialogTitle sx={{ m: 0, p: 2 }} id="contact-person-dialog-title">
           {t('tournament.registration.payment')}
@@ -197,7 +204,10 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
           </Button>
         </DialogContent>
         <DialogActions>
-          <Button variant='contained' onClick={() => setVisible(false)}>
+          <Button variant='contained' onClick={() => {
+            setSlipImage(undefined)
+            setVisible(false)
+          }}>
             {t('action.close')}
           </Button>
         </DialogActions>

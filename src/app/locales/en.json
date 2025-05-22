@@ -77,7 +77,8 @@
       "eventList": "Events",
       "payment": "Payment",
       "uploadSlip": "Upload Slip",
-      "total": "Total"
+      "total": "Total",
+      "noRegistration": "ํYou have not registered to this tournament"
     },
     "action": {
       "approve": "Approve",
