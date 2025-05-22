@@ -87,6 +87,15 @@ export enum AppMenu {
   // Venue = 'venue'
 }
 
+export enum TournamentMenu {
+  Info = 'info',
+  Participants = 'participants',
+  Draw = 'draw',
+  Matches = 'matches',
+  Organize = 'organize',
+  Me = 'me'
+}
+
 export type MatchPlayer = Omit<Player, 'paymentStatus' | 'lastMatchEnd'>
 
 export type NewPlayer = Omit<Player, 'id'>
@@ -205,6 +214,7 @@ export interface EventTeam {
   date: Date;
   shuttlecockCredit: number;
   slip?: string;
+  note?: string;
 }
 
 export interface Event {

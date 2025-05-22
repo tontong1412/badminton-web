@@ -17,7 +17,8 @@
     "register": "สมัครสมาชิก",
     "approvePayment": "จ่ายแล้ว",
     "rejectPayment": "ยังไม่จ่าย",
-    "confirm": "ยืนยัน"
+    "confirm": "ยืนยัน",
+    "save": "บันทึก"
   },
   "login": {
     "title": "เข้าสู่ระบบ",
@@ -46,6 +47,13 @@
     "registrationOpen": "เปิดรับสมัคร",
     "recent": "ล่าสุด",
     "notfound": "ไม่มีรายการแข่งขัน",
+    "menu": {
+      "info": "ข้อมูล",
+      "participants": "รายชื่อ/สาย",
+      "matches": "รายการแข่ง",
+      "manage": "จัดการ",
+      "me": "ฉัน"
+    },
     "registration": {
       "title": "สมัครแข่งขัน",
       "event": "ประเภท",
@@ -70,7 +78,9 @@
       "eventList": "รายการที่เปิดรับสมัคร",
       "payment": "ชำระค่าสมัคร",
       "uploadSlip": "อัพโหลดสลิป",
-      "total": "รวมทั้งหมด"
+      "total": "รวมทั้งหมด",
+      "noRegistration": "คุณยังไม่ได้สมัครแข่งขันรายการนี้",
+      "note": "หมายเหตุ"
     },
     "action": {
       "approve": "ผ่าน",
@@ -79,7 +89,8 @@
       "more": "เพิ่มเติม",
       "contactPerson": "ข้อมูลผู้ติดต่อ",
       "changeStatus": "แก้ไขผลประเมินมือ",
-      "paymentSlip": "ดู/อัพโหลดสลิป"
+      "paymentSlip": "ดู/อัพโหลดสลิป",
+      "note": "เพิ่มหมายเหตุ"
     },
     "participants": {
       "date": "วันที่สมัคร",

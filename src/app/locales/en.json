@@ -17,7 +17,8 @@
     "register": "Register now",
     "approvePayment": "Approve",
     "rejectPayment": "Reject",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "save": "Save"
   },
   "login": {
     "title": "Login",
@@ -46,6 +47,13 @@
     "registrationOpen": "Registration Open",
     "recent": "Recent",
     "notfound": "No tournament found",
+    "menu": {
+      "info": "Info",
+      "participants": "Entries/Draws",
+      "matches": "Matches",
+      "manage": "Manage",
+      "me": "Me"
+    },
     "registration": {
       "title": "Registration",
       "event": "Event",
@@ -70,7 +78,9 @@
       "eventList": "Events",
       "payment": "Payment",
       "uploadSlip": "Upload Slip",
-      "total": "Total"
+      "total": "Total",
+      "noRegistration": "ํYou have not registered to this tournament",
+      "note": "Note"
     },
     "action": {
       "approve": "Approve",
@@ -79,7 +89,8 @@
       "more": "More",
       "contactPerson": "Contact person",
       "changeStatus": "Change Decision",
-      "paymentSlip": "See/Upload Payment Slip"
+      "paymentSlip": "See/Upload Payment Slip",
+      "note": "Add note"
     },
     "participants": {
       "date": "Register Date",
