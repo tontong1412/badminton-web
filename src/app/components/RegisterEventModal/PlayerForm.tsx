@@ -71,10 +71,10 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
         }
       }}
       renderOption={(props, option) => {
-        // eslint-disable-next-line react/prop-types
+        // eslint-disable-next-line react/prop-types, @typescript-eslint/no-unused-vars
         const { key, ...optionProps } = props
         return (
-          <li key={key} {...optionProps}>
+          <li key={option.id} {...optionProps}>
             {option.officialName}
           </li>
         )
@@ -96,6 +96,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
             gender: 'female',
             photo: undefined,
             level: 0,
+            id: 'none'
           })
         }
 

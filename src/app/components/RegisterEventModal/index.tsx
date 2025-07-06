@@ -214,7 +214,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
       const playersArray = []
       if(player1.officialName){
         playersArray.push({
-          id: player1.id,
+          id: player1.id === 'none' ? undefined : player1.id,
           officialName: {
             [language]: player1.officialName,
             en: player1.officialNameEn,
@@ -231,7 +231,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
       }
       if(player2.officialName){
         playersArray.push({
-          id: player2.id,
+          id: player2.id === 'none' ? undefined : player2.id,
           officialName: {
             [language]: player2.officialName,
             en: player2.officialNameEn,
