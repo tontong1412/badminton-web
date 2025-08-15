@@ -4,7 +4,7 @@ import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
 import { Event, EventTeam, Language, Player, TeamStatus } from '@/type'
-import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Menu, MenuItem, Typography } from '@mui/material'
+import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Typography } from '@mui/material'
 import axios from 'axios'
 import Image from 'next/image'
 
@@ -14,6 +14,7 @@ import PlayerPopover from './PlayerPopover'
 import ContactPersonModal from '@/app/components/ContactPersonModal'
 import PaymentModal from '@/app/components/PaymentModal'
 import NoteModal from '@/app/components/NoteModal'
+import Transition from '@/app/components/ModalTransition'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -39,6 +40,8 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [showContact, setShowContact] = useState<Player | null>(null)
   const [paymentModalVisible, setPaymentModalVisible] = useState(false)
   const [noteModalVisible, setNoteModalVisible] = useState(false)
+  const [confirmWithdrawDialogVisible, setConfirmWithdrawDialogVisible] = useState(false)
+  const [withdrawButtonLoading, setWithdrawButtonLoading] = useState(false)
   useEffect(() => {
     const fetchEvent = async() => {
       try {
@@ -51,6 +54,19 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
     }
     fetchEvent()
   }, [])
+
+  const withdrawTeam = async(teamID: string) => {
+    setWithdrawButtonLoading(true)
+    const payload: {teamID: string, eventID: string} = {
+      teamID,
+      eventID
+    }
+
+    const response = await axios.post(`${SERVICE_ENDPOINT}/events/withdraw`, payload, { withCredentials:true })
+    setEvent(response.data)
+    setConfirmWithdrawDialogVisible(false)
+    setWithdrawButtonLoading(false)
+  }
 
   const updateTeam = async(teamID: string, field: string, value: unknown) => {
     const payload : UpdateTeamPayload = {
@@ -167,7 +183,37 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           setNoteModalVisible(true)
           setAnchorElMenu(null)
         }}>{t('tournament.action.note')}</MenuItem>
-      </Menu>}
+
+        {menuTeam && <MenuItem onClick={() => {
+          setConfirmWithdrawDialogVisible(true)
+          setAnchorElMenu(null)
+        }}>{t('tournament.action.withdraw')}</MenuItem>}
+      </Menu>
+      }
+      { menuTeam && <Dialog
+        open={confirmWithdrawDialogVisible}
+        onClose={() => setConfirmWithdrawDialogVisible(false)}
+        slots={{ transition: Transition }}
+      >
+        <DialogTitle id="alert-dialog-title">
+          {t('tournament.action.withdrawConfirmation')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText component={'div'} id="alert-dialog-description">
+            {menuTeam.players.map((player) => <Box  key={player.id} sx={{ display: 'flex', color: '#333' }}>
+              <Typography width={150}>{player.officialName[language]}</Typography>
+              <Typography>{player.club}</Typography>
+            </Box>)}
+            <Typography style={{ fontSize: '14px', paddingTop: 16 }}>{t('tournament.action.withdrawWarning')}</Typography>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button loading={withdrawButtonLoading} color='error' onClick={() => withdrawTeam(menuTeam.id)} >{t('action.confirm')}</Button>
+          <Button onClick={() => setConfirmWithdrawDialogVisible(false)} autoFocus>
+            {t('action.cancel')}
+          </Button>
+        </DialogActions>
+      </Dialog>}
     </Box>
   )
 
