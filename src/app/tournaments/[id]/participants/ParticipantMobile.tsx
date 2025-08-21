@@ -3,7 +3,7 @@
 import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
-import { Event, EventTeam, Language, Player, TeamStatus } from '@/type'
+import { Event, EventTeam, Language, PaymentStatus, Player, TeamStatus } from '@/type'
 import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Typography } from '@mui/material'
 import axios from 'axios'
 import Image from 'next/image'
@@ -15,6 +15,7 @@ import ContactPersonModal from '@/app/components/ContactPersonModal'
 import PaymentModal from '@/app/components/PaymentModal'
 import NoteModal from '@/app/components/NoteModal'
 import Transition from '@/app/components/ModalTransition'
+import moment from 'moment'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -55,6 +56,23 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
     fetchEvent()
   }, [])
 
+  const sortTeams = (a:EventTeam, b:EventTeam) => {
+    if(a.slipTimestamp === undefined && b.slipTimestamp === undefined){
+      return moment(a.date).diff(moment(b.date))
+    }
+    if(a.date === undefined){
+      return 1
+    }
+    if(b.date === undefined){
+      return -1
+    }
+    return moment(a.slipTimestamp).diff(moment(b.slipTimestamp))
+  }
+
+  const filterTotal = (team: EventTeam) => {
+    return team.paymentStatus === PaymentStatus.Paid || team.paymentStatus === PaymentStatus.Pending
+  }
+
   const withdrawTeam = async(teamID: string) => {
     setWithdrawButtonLoading(true)
     const payload: {teamID: string, eventID: string} = {
@@ -90,9 +108,9 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
 
   return (
     <Box>
-      <Typography sx={{ textAlign:'right' }}>{t('tournament.registration.total')} {event?.teams.length}</Typography>
+      <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>
       {
-        event?.teams.map((team) => (
+        event?.teams.sort(sortTeams).map((team) => (
           <Card key={team.id} sx={{ marginBottom: 2 }}>
             <CardHeader
               sx={{ borderBottom: '1px solid #ddd' }}

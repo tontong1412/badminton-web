@@ -107,10 +107,15 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
     return statusMatch && paymentMatch
   })
 
+  const filterTotal = (team: EventTeam) => {
+    return team.paymentStatus === PaymentStatus.Paid || team.paymentStatus === PaymentStatus.Pending
+  }
+
 
   if (!event) return null
   return (
     <>
+      <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
