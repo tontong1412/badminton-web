@@ -68,6 +68,7 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
 
   return (
     <Dialog
+      fullWidth
       data-testid="login-modal"
       open={visible}
       onClose={() => setVisible(false)}
@@ -77,7 +78,6 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
-        sx={{ maxWidth: 400, mx: 'auto' }}
       >
         <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
           {t('login.title')}

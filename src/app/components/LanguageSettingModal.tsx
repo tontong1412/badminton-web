@@ -31,10 +31,9 @@ const LanguageSettingModal = ({ visible, setVisible }: LanguageSettingModalProps
       open={visible}
       onClose={() => setVisible(false)}
       slots={{ transition: Transition }}
+      fullWidth
     >
-      <Box
-        sx={{ maxWidth: 400, mx: 'auto', minWidth: 300 }}
-      >
+      <Box>
         <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
           {t('settings.language')}
         </DialogTitle>

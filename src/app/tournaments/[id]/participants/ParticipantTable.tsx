@@ -96,6 +96,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const sortedRows: EventTeam[] | undefined = event && [...event.teams].sort((a, b) => {
     const valA = a[orderBy]
     const valB = b[orderBy]
+    if(!valA || !valB) return 0
     if (valA < valB) return order === 'asc' ? -1 : 1
     if (valA > valB) return order === 'asc' ? 1 : -1
     return 0
@@ -107,10 +108,15 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
     return statusMatch && paymentMatch
   })
 
+  const filterTotal = (team: EventTeam) => {
+    return team.paymentStatus === PaymentStatus.Paid || team.paymentStatus === PaymentStatus.Pending
+  }
+
 
   if (!event) return null
   return (
     <>
+      <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>

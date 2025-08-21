@@ -33,15 +33,14 @@ const ContactPersonModal = ({ visible, setVisible, player }: ContactPersonModalP
 
   return (
     <Dialog
+      fullWidth
       data-testid="contact-person-modal"
       open={visible}
       onClose={() => setVisible(false)}
       slots={{ transition: Transition }}
     >
 
-      <Box
-        sx={{ width: 350, mx: 'auto' }}
-      >
+      <Box>
         <DialogTitle sx={{ m: 0, p: 2 }} id="contact-person-dialog-title">
           {t('tournament.registration.contactPerson')}
         </DialogTitle>

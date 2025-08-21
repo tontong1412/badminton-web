@@ -302,6 +302,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
 
   return (
     <Dialog
+      fullWidth
       data-testid="register-event-modal"
       open={visible}
       onClose={handleCloseModal}
@@ -310,7 +311,6 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
       <Box
         component="form"
         onSubmit={handleSubmit}
-        sx={{ maxWidth: 500, minWidth: 300, mx: 'auto' }}
       >
         <DialogTitle sx={{ m: 0, p: 2 }}>
           {t('tournament.registration.title')}

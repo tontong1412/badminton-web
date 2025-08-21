@@ -115,13 +115,13 @@ const Me = () => {
     <TournamentLayout isManager={isManager}>
       <Container maxWidth="xl" sx={{ p: 2 }}>
         <Divider sx={{ pt:2, pb:2 }}><Typography variant='h5' >รายการที่สมัคร</Typography></Divider>
-        <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: '5px', overflowX: 'scroll' }}>
+        <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: '5px', overflowX: 'scroll', flexDirection:'column' }}>
           {
             myEvents.map((event) => (
               <Fragment key={event.id}>
                 {
                   event.teams.map((team) => (
-                    <Card key={team.id} sx={{ marginBottom: 2, mt:'1px', mb:'1px', ml:'1px', minWidth: '95%' }}>
+                    <Card key={team.id} sx={{ marginBottom: 2, mt:'1px', mr:'1px', ml:'1px', minWidth: '95%' }}>
                       <CardHeader
                         sx={{ borderBottom: '1px solid #ddd' }}
                         action={
@@ -141,23 +141,27 @@ const Me = () => {
                         }
                         title={<Typography variant='h5' >{t('tournament.registration.event')} {event.name[language]}</Typography>}
                       />
-                      <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-
-                          {team.players.map((p: Player) => <div key={p.id}>
-                            <Box sx={{ display: 'flex' }}>
-                              <div key={p.id}>
-                                <Typography width={150}>{p.officialName[language]}</Typography>
-                              </div>
-                              <Typography>{p.club}</Typography>
+                      <CardContent>
+                        <Box >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box >
+                              {team.players.map((p: Player) => <div key={p.id}>
+                                <Box sx={{ display: 'flex' }}>
+                                  <div key={p.id}>
+                                    <Typography width={150}>{p.officialName[language]}</Typography>
+                                  </div>
+                                  <Typography>{p.club}</Typography>
+                                </Box>
+                              </div>)}
                             </Box>
-                          </div>)}
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: '5px' }}>
-                          <div style={{ position: 'relative', width: '20px', height: 'auto' }}>
-                            <Image alt='shuttle-icon' src='/shuttlecock.png' fill style={{ objectFit: 'contain' }}/>
-                          </div>
-                          <Typography>{team.shuttlecockCredit}</Typography>
+                            <Box sx={{ display: 'flex', gap: '5px' }}>
+                              <div style={{ position: 'relative', width: '20px', height: 'auto' }}>
+                                <Image alt='shuttle-icon' src='/shuttlecock.png' fill style={{ objectFit: 'contain' }}/>
+                              </div>
+                              <Typography>{team.shuttlecockCredit}</Typography>
+                            </Box>
+                          </Box>
+                          {team.note && <Typography sx={{ pt:2 }}>{`${t('tournament.registration.note')}: ${team.note}`}</Typography>}
                         </Box>
 
                       </CardContent>

@@ -114,6 +114,7 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
 
   return (
     <Dialog
+      fullWidth
       data-testid="payment-modal"
       open={visible}
       onClose={() => {
@@ -123,13 +124,11 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
       slots={{ transition: Transition }}
     >
 
-      <Box
-        sx={{ minWidth: 350, mx: 'auto' }}
-      >
+      <Box>
         <DialogTitle sx={{ m: 0, p: 2 }} id="contact-person-dialog-title">
           {t('tournament.registration.payment')}
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ maxHeight:'600px' }}>
           <Detail title='รายการ' content={event.name[language] || '-'}/>
           {
             team.players.map((p, idx) => (
@@ -170,11 +169,11 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
             Copied
           </Alert>}
 
-          {slipImage && <div style={{ position: 'relative', width: '300px', height: '300px' }}>
+          {slipImage && <div style={{ position: 'relative', width: 'auto', height: '300px' }}>
             <Image alt='payment-slip' src={slipImage} fill style={{ objectFit: 'contain' }}/>
           </div>}
 
-          {isManager && <Box sx={{ display:'flex', justifyContent:'space-evenly', gap:1 }}>
+          {isManager && <Box sx={{ display:'flex', justifyContent:'space-evenly', gap:1, mt:2 }}>
             <Button sx={{ width:'50%' }} variant='outlined' color='error' onClick={() => updateTeam(team.id, 'paymentStatus', PaymentStatus.Unpaid)}>
               {t('action.rejectPayment')}
             </Button>

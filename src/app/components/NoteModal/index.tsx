@@ -62,6 +62,7 @@ const NoteModal = ({ visible, setVisible, event, team, setEvent, setTeam }: Note
 
   return (
     <Dialog
+      fullWidth
       data-testid="note-modal"
       open={visible}
       onClose={() => {
@@ -71,9 +72,7 @@ const NoteModal = ({ visible, setVisible, event, team, setEvent, setTeam }: Note
       slots={{ transition: Transition }}
     >
 
-      <Box
-        sx={{ minWidth: 350, mx: 'auto' }}
-      >
+      <Box>
         <DialogTitle sx={{ m: 0, p: 2 }} id="contact-person-dialog-title">
           {t('tournament.registration.note')}
         </DialogTitle>
