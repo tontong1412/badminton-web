@@ -114,6 +114,7 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
 
   return (
     <Dialog
+      fullWidth
       data-testid="payment-modal"
       open={visible}
       onClose={() => {
@@ -172,7 +173,7 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
             <Image alt='payment-slip' src={slipImage} fill style={{ objectFit: 'contain' }}/>
           </div>}
 
-          {isManager && <Box sx={{ display:'flex', justifyContent:'space-evenly', gap:1 }}>
+          {isManager && <Box sx={{ display:'flex', justifyContent:'space-evenly', gap:1, mt:2 }}>
             <Button sx={{ width:'50%' }} variant='outlined' color='error' onClick={() => updateTeam(team.id, 'paymentStatus', PaymentStatus.Unpaid)}>
               {t('action.rejectPayment')}
             </Button>
