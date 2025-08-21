@@ -96,6 +96,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const sortedRows: EventTeam[] | undefined = event && [...event.teams].sort((a, b) => {
     const valA = a[orderBy]
     const valB = b[orderBy]
+    if(!valA || !valB) return 0
     if (valA < valB) return order === 'asc' ? -1 : 1
     if (valA > valB) return order === 'asc' ? 1 : -1
     return 0
