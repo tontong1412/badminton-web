@@ -16,6 +16,7 @@ import PaymentModal from '@/app/components/PaymentModal'
 import NoteModal from '@/app/components/NoteModal'
 import Transition from '@/app/components/ModalTransition'
 import moment from 'moment'
+import ShuttlecockCreditModal from '@/app/components/ShuttlecockCreditModal'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -42,6 +43,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false)
   const [noteModalVisible, setNoteModalVisible] = useState(false)
   const [confirmWithdrawDialogVisible, setConfirmWithdrawDialogVisible] = useState(false)
+  const [shuttlecockDialogVisible, setShuttlecockDialogVisible] = useState(false)
   const [withdrawButtonLoading, setWithdrawButtonLoading] = useState(false)
   useEffect(() => {
     const fetchEvent = async() => {
@@ -172,6 +174,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
       {menuTeam && event && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={event} team={menuTeam} setEvent={setEvent} isManager={isManager} setTeam={setMenuTeam}/>}
       {menuTeam && event && <NoteModal visible={noteModalVisible} setVisible={setNoteModalVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>}
+      {menuTeam && event && <ShuttlecockCreditModal visible={shuttlecockDialogVisible} setVisible={setShuttlecockDialogVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>}
       {menuTeam && <Menu
         id="admin-menu"
         anchorEl={anchorElMenu}
@@ -201,6 +204,11 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           setNoteModalVisible(true)
           setAnchorElMenu(null)
         }}>{t('tournament.action.note')}</MenuItem>
+
+        <MenuItem onClick={() => {
+          setShuttlecockDialogVisible(true)
+          setAnchorElMenu(null)
+        }}>{t('tournament.action.shuttlecock')}</MenuItem>
 
         {menuTeam && <MenuItem onClick={() => {
           setConfirmWithdrawDialogVisible(true)
