@@ -80,7 +80,8 @@
       "uploadSlip": "Upload Slip",
       "total": "Total",
       "noRegistration": "ํYou have not registered to this tournament",
-      "note": "Note"
+      "note": "Note",
+      "shuttlecockCredit": "Shuttlecock Credit"
     },
     "action": {
       "approve": "Approve",
