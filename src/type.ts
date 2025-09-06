@@ -150,7 +150,7 @@ export type Language = 'th' | 'en';
 export type ContactMethod = 'line' | 'tel' | 'tg' | 'whatsapp' | 'email' | 'wechat' | 'facebook';
 
 export interface TournamentEvent {
-  id?: string;
+  id: string;
   name: {
     th: string;
     en: string;
