@@ -148,7 +148,7 @@ const  ResponsiveAppBar = () => {
   }
 
   return (
-    <AppBar position="fixed">
+    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           <Typography

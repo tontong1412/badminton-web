@@ -161,7 +161,9 @@ export interface TournamentEvent {
     currency: string;
   }
   prize?: string;
-  type: string;
+  type: EventType;
+  format: EventFormat;
+  limit?: number;
 }
 
 export type SimplePlayer = Pick<Player, 'id' | 'officialName' | 'displayName' | 'photo'>;

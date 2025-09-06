@@ -54,6 +54,16 @@
       "manage": "จัดการ",
       "me": "ฉัน"
     },
+    "manageEvent": {
+      "title": "รายการแข่ง",
+      "type": "ประเภท",
+      "description": "รายละเอียด",
+      "limit": "จำกัดจำนวน",
+      "fee": "ค่าสมัคร",
+      "prize": "รางวัล",
+      "format": "รูปแบบการแข่งขัน",
+      "registeredTeam": "จำนวนคู่ที่สมัคร"
+    },
     "registration": {
       "title": "สมัครแข่งขัน",
       "event": "ประเภท",
