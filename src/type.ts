@@ -150,7 +150,7 @@ export type Language = 'th' | 'en';
 export type ContactMethod = 'line' | 'tel' | 'tg' | 'whatsapp' | 'email' | 'wechat' | 'facebook';
 
 export interface TournamentEvent {
-  id: string;
+  id?: string;
   name: {
     th: string;
     en: string;
@@ -161,7 +161,9 @@ export interface TournamentEvent {
     currency: string;
   }
   prize?: string;
-  type: string;
+  type: EventType;
+  format: EventFormat;
+  limit?: number;
 }
 
 export type SimplePlayer = Pick<Player, 'id' | 'officialName' | 'displayName' | 'photo'>;

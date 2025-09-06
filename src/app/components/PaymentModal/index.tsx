@@ -128,7 +128,7 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
         <DialogTitle sx={{ m: 0, p: 2 }} id="contact-person-dialog-title">
           {t('tournament.registration.payment')}
         </DialogTitle>
-        <DialogContent dividers sx={{ maxHeight:'600px' }}>
+        <DialogContent dividers sx={{ maxHeight:'550px' }}>
           <Detail title='รายการ' content={event.name[language] || '-'}/>
           {
             team.players.map((p, idx) => (

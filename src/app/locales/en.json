@@ -54,6 +54,16 @@
       "manage": "Manage",
       "me": "Me"
     },
+    "manageEvent": {
+      "title": "Event",
+      "type": "Type",
+      "description": "Description",
+      "limit": "Quota",
+      "fee": "Fee",
+      "prize": "Prize",
+      "format": "Format",
+      "registeredTeam": "Registered Team"
+    },
     "registration": {
       "title": "Registration",
       "event": "Event",

@@ -24,6 +24,7 @@ const TournamentFooter = ({ isManager }: Props) => {
   return (
     <Box>
       <BottomNavigation
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
         className="fixed bottom-0 left-0 w-full"
         showLabels
         value={Object.values(TournamentMenu).includes(activeMenu as TournamentMenu) ? activeMenu : TournamentMenu.Info}
@@ -38,6 +39,9 @@ const TournamentFooter = ({ isManager }: Props) => {
             break
           case TournamentMenu.Me:
             router.push(`/tournaments/${params.id}/me`)
+            break
+          case TournamentMenu.Organize:
+            router.push(`/tournaments/${params.id}/organizer`)
             break
           default:
             break
