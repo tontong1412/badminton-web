@@ -239,6 +239,12 @@ export interface Event {
   type: EventType;
   status: EventStatus;
   teams: [EventTeam];
+  draw: {
+    group?: EventTeam[][];
+    ko?: (EventTeam | string)[];
+    consolation?: (EventTeam | string)[];
+    elimination?: (EventTeam |  string)[];
+  }
 }
 
 export enum EventFormat {
