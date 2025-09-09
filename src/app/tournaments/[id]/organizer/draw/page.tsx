@@ -5,7 +5,6 @@ import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import {
-  EventTeam,
   Language,
   Player,
   // Language,
@@ -13,7 +12,7 @@ import {
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Button, Divider, Tab, Tabs, TextField } from '@mui/material'
+import { Box, Tab, Tabs } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
 import {   useEffect, useState } from 'react'
@@ -22,7 +21,6 @@ import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import PlayerPopover from '../../participants/PlayerPopover'
 import ParticipantList from './ParticipantList'
-import DrawBracket from './drawBracket'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -42,10 +40,6 @@ const Organizer = () => {
   const [tabIndex, setTabIndex] = useState(0)
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
-  const [numGroup, setNumGroup] = useState(4)
-  const [numPlayoff, setNumPlayoff] = useState(8)
-  const [initialDraw, setInitialDraw] = useState<EventTeam[][]>([])
-  const [kODraw, setKODraw] = useState<EventTeam[]>([])
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
@@ -64,11 +58,6 @@ const Organizer = () => {
   }, [])
 
   useEffect(() => {
-    setNumPlayoff(numGroup * 2)
-  }, [numGroup])
-
-
-  useEffect(() => {
     if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
       setIsManager(true)
     }else{
@@ -78,34 +67,6 @@ const Organizer = () => {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
-    setKODraw([])
-  }
-
-  const onRandomDraw = async(eventID: string) => {
-    try{
-      const response = await axios.post(`${SERVICE_ENDPOINT}/events/random-draw`, {
-        eventID,
-        groupCount: numGroup,
-        qualifiedCount: numPlayoff
-      }, { withCredentials:true })
-
-      setInitialDraw(response.data.draw.group)
-      setKODraw(response.data.draw.ko)
-    } catch(error){
-      if(axios.isAxiosError(error)){
-        console.error('Axios error:', error.message)
-        if (error.response) {
-          console.error('Status:', error.response.status)
-          console.error('Data:', error.response.data)
-        }
-      }else{
-        console.error('Unexpected error:', error)
-      }
-    }
-  }
-  const onResetDraw = (eventID:string) => {
-    setInitialDraw([])
-    setKODraw([])
   }
 
 
@@ -131,29 +92,7 @@ const Organizer = () => {
             {tournament.events.map(((event, idx) => {
               return (
                 <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  <Box sx={{ display:'flex', gap:2, margin: 1 }}>
-                    <TextField
-                      autoFocus
-                      value={numGroup}
-                      onChange={(e) => setNumGroup(Number(e.target.value))}
-                      size='small'
-                      label="จำนวนกลุ่ม"
-                      variant="outlined"
-                      type='number' />
-                    <TextField
-                      value={numPlayoff}
-                      onChange={(e) => setNumPlayoff(Number(e.target.value))}
-                      size='small'
-                      label="จำนวนทีมที่เข้ารอบ"
-                      variant="outlined"
-                      type='number' />
-                    <Button sx={{ borderRadius: 10, width:'100px' }} onClick={() => onResetDraw(event.id)} color='error' variant='contained' size='large'>Reset</Button>
-                    <Button sx={{ borderRadius: 10, width:'100px'  }} onClick={() => onRandomDraw(event.id)} color='primary' variant='contained' size='large'>Random</Button>
-                    <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large'>Save</Button>
-                  </Box>
-                  <ParticipantList eventID={event.id} numGroup={numGroup} setNumGroup={setNumGroup} groupArray={initialDraw} setGroupArray={setInitialDraw}/>
-                  {kODraw.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
-                  <DrawBracket order={kODraw}/>
+                  <ParticipantList eventID={event.id}/>
                 </TabPanel>
               )
             }))}
