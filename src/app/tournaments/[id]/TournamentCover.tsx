@@ -8,6 +8,7 @@ import { CalendarMonth, LocationOn } from '@mui/icons-material'
 import { Box, Button, Container, Typography } from '@mui/material'
 import moment from 'moment'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -21,6 +22,7 @@ const TournamentCover = ({ tournament }: Props) => {
   const [loginModalVisible, setLoginModalVisible] = useState(false)
   const user = useSelector((state: RootState) => state.app.user)
   const language = useSelector((state: RootState) => state.app.language)
+  const router = useRouter()
 
   const handleClickRegister = () => {
     if(!user){
@@ -69,6 +71,7 @@ const TournamentCover = ({ tournament }: Props) => {
         </Box>
       </Container>
       <RegisterEventForm
+        onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
         tournamentLanguage={tournament.language}
         events={tournament.events}
         visible={registerModalVisible}

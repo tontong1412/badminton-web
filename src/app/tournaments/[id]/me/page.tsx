@@ -1,4 +1,5 @@
 'use client'
+import FloatingAddButton from '@/app/components/FloatingAddButton'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import LoginModal from '@/app/components/LoginModal'
 import PaymentModal from '@/app/components/PaymentModal'
@@ -45,7 +46,6 @@ const Me = () => {
       }
     }
     fetchTournament()
-    fetchMyEvents()
   }, [])
 
   useEffect(() => {
@@ -94,15 +94,16 @@ const Me = () => {
     return <TournamentLayout isManager={isManager}>
       <Container maxWidth="xl" sx={{ p: 2, textAlign: 'center' }}>
         <Typography variant='h5'>{t('tournament.registration.noRegistration')}</Typography>
-        {!user &&  <Box sx={{ paddingTop: 3 }}>
+        <Box sx={{ paddingTop: 3 }}>
           <Button
             variant='contained'
             size="large"
             onClick={handleClickRegister}
             sx={{ borderRadius: 5, backgroundColor: '#ff7961' }}>{t('tournament.registration.registerConfirm')}</Button>
-        </Box>}
+        </Box>
       </Container>
       <RegisterEventForm
+        onFinishRegister={fetchMyEvents}
         tournamentLanguage={tournament.language}
         events={tournament.events}
         visible={registerModalVisible}
@@ -110,6 +111,8 @@ const Me = () => {
       <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
     </TournamentLayout>
   }
+
+  if(!tournament) return
 
   return (
     <TournamentLayout isManager={isManager}>
@@ -184,6 +187,14 @@ const Me = () => {
         </Box>
         {selectedTeam && selectedEvent && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={selectedEvent} team={selectedTeam} setEvent={setEvent} isManager={isManager} setTeam={setSelectedTeam}/>}
       </Container>
+      <FloatingAddButton onClick={handleClickRegister}/>
+      <RegisterEventForm
+        onFinishRegister={fetchMyEvents}
+        tournamentLanguage={tournament.language}
+        events={tournament.events}
+        visible={registerModalVisible}
+        setVisible={setRegisterModalVisible}/>
+      <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
     </TournamentLayout>
   )
 
