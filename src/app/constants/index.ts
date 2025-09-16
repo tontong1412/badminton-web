@@ -144,3 +144,13 @@ export const MAP_GROUP_NAME = [
   }
 ]
 
+export const  MAP_ROUND_NAME = {
+  '2': 'Final',
+  '4': 'Semi Finals',
+  '8': 'Quarter Finals',
+  '16': 'Round 16',
+  '32': 'Round 32',
+  '64': 'Round 64',
+  '128': 'Round 128'
+}
+

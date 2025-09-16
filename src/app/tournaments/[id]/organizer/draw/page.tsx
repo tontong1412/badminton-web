@@ -20,7 +20,7 @@ import {   useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import PlayerPopover from '../../participants/PlayerPopover'
-import ParticipantList from './ParticipantList'
+import GroupDraw from './GroupDraw'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -92,7 +92,7 @@ const Organizer = () => {
             {tournament.events.map(((event, idx) => {
               return (
                 <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  <ParticipantList eventID={event.id}/>
+                  <GroupDraw eventID={event.id}/>
                 </TabPanel>
               )
             }))}

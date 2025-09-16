@@ -10,11 +10,11 @@ import PlayerPopover from '../../participants/PlayerPopover'
 import DrawBracket from './drawBracket'
 import Transition from '@/app/components/ModalTransition'
 
-interface ParticipantListProps {
+interface GroupDrawProps {
   eventID: string,
 }
 
-const ParticipantList = ({ eventID }: ParticipantListProps) => {
+const GroupDraw = ({ eventID }: GroupDrawProps) => {
   const { t } = useTranslation()
   const [event, setEvent] = useState<Event>()
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
@@ -134,8 +134,6 @@ const ParticipantList = ({ eventID }: ParticipantListProps) => {
       }
     }
   }
-
-
 
   const handleSelectChange = (group: (string|null|number), team: EventTeam, teamIndex: number) => {
     const oldGroup = groupDisplayArray[teamIndex]
@@ -278,4 +276,4 @@ const ParticipantList = ({ eventID }: ParticipantListProps) => {
   )
 }
 
-export default ParticipantList
+export default GroupDraw
