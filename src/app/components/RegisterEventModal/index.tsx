@@ -63,10 +63,11 @@ interface ContactPerson {
 }
 
 interface Props {
-  events: TournamentEvent[],
-    visible: boolean;
-    setVisible: Dispatch<SetStateAction<boolean>>;
-    tournamentLanguage: Language
+  events: TournamentEvent[];
+  visible: boolean;
+  setVisible: Dispatch<SetStateAction<boolean>>;
+  tournamentLanguage: Language;
+  onFinishRegister: (...args: unknown[]) => unknown
 }
 
 export const initialPlayer: Player = {
@@ -84,7 +85,7 @@ export const initialPlayer: Player = {
 }
 
 
-const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: Props) => {
+const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, onFinishRegister }: Props) => {
   const user = useSelector((state: RootState) => state.app.user)
   const player1UploadRef = useRef<HTMLInputElement>(null)
   const player2UploadRef = useRef<HTMLInputElement>(null)
@@ -150,7 +151,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
         },
       })
     }
-  }, [user, language])
+  }, [user, language, visible])
 
   const handleCloseModal = () => {
     setVisible(false)
@@ -266,11 +267,13 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage }: 
       await axios.post(`${SERVICE_ENDPOINT}/events/register`, registerPayload, { withCredentials: true })
       handleCloseModal()
       setButtonLoading(false)
+      onFinishRegister()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }catch(err: any){
       if(err.response.status === 409){
         alert(err.response.data.message)
         handleCloseModal()
+        onFinishRegister()
       }
       setButtonLoading(false)
     }

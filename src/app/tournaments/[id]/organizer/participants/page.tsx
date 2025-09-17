@@ -5,26 +5,37 @@ import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import {
+  Language,
   // Language,
   Tournament,
+  TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemText, Toolbar } from '@mui/material'
+import { Box, Tab, Tabs } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
 import {  useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
-import EventManagement from './EventManagement'
-const drawerWidth = 240
+import ParticipantTable from '../../participants/ParticipantTable'
+import MenuDrawer from '../MenuDrawer'
+
+const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
+  return (
+    <div role="tabpanel" hidden={value !== index}>
+      {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
+    </div>
+  )
+}
 const Organizer = () => {
   // const { t } = useTranslation()
   const user = useSelector((state: RootState) => state.app.user)
-  // const language: Language = useSelector((state: RootState) => state.app.language)
+  const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
   const [tournament, setTournament] = useState<Tournament>()
   const [isManager, setIsManager] = useState(false)
+  const [tabIndex, setTabIndex] = useState(0)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
@@ -51,44 +62,37 @@ const Organizer = () => {
     }
   }, [user, tournament])
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabIndex(newValue)
+  }
+
   if(!tournament) return
 
   return (
     <TournamentLayout isManager={isManager}>
       <Box sx={{ display: 'flex' }}>
-        <Drawer
-          sx={{
-            width: drawerWidth,
-            flexShrink: 0,
-            ['& .MuiDrawer-paper']: { width: drawerWidth, boxSizing: 'border-box' },
-          }}
-          variant="permanent"
-          anchor="left"
-        >
-          <Toolbar />
-          <Divider />
-          <List>
-            {['รายการแข่ง', 'รายชื่อ', 'จับสาย', 'จัดตารางแข่ง'].map((text) => (
-              <ListItem key={text} disablePadding>
-                <ListItemButton>
-                  <ListItemText primary={text} />
-                </ListItemButton>
-              </ListItem>
+        <MenuDrawer tournamentID={tournament.id}/>
+        <Box sx={{ width: '100%' }}>
+          <Tabs
+            value={tabIndex}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            aria-label="basic tabs example"
+          >
+            {tournament.events.map((e: TournamentEvent, idx) => (
+              <Tab key={idx} label={e.name[language]} />
             ))}
-          </List>
-          <Divider />
-          <List>
-            {['ดำเนินการแข่งขัน', 'สรุปทีมเข้ารอบ', 'สรุปผลการแข่งขัน'].map((text) => (
-              <ListItem key={text} disablePadding>
-                <ListItemButton>
-                  <ListItemText primary={text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Drawer>
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-          <EventManagement tournament={tournament} isManager={isManager} setTournament={setTournament}/>
+          </Tabs>
+          <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
+            {tournament.events.map(((event, idx) => {
+              return (
+                <TabPanel value={tabIndex} index={idx} key={event.id} >
+                  <ParticipantTable eventID={event.id} isManager={isManager} />
+                </TabPanel>
+              )
+            }))}
+          </Box>
         </Box>
       </Box>
     </TournamentLayout>

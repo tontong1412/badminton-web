@@ -41,7 +41,7 @@ const TournamentFooter = ({ isManager }: Props) => {
             router.push(`/tournaments/${params.id}/me`)
             break
           case TournamentMenu.Organize:
-            router.push(`/tournaments/${params.id}/organizer`)
+            router.push(`/tournaments/${params.id}/organizer/event-management`)
             break
           default:
             break

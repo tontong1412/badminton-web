@@ -54,6 +54,11 @@
       "manage": "Manage",
       "me": "Me"
     },
+    "draw": {
+      "editKODraw": "Edit Knock out draw",
+      "placeInGroup": "Place in group",
+      "groupName": "Group name"
+    },
     "manageEvent": {
       "title": "Event",
       "type": "Type",

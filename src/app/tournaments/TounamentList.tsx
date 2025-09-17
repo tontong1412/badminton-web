@@ -1,7 +1,7 @@
 'use client'
 import { Language, Tournament, TournamentQuery } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
-import { Box, Card, CardActionArea, CardContent, CardMedia, Container, Typography } from '@mui/material'
+import { Box, Card, CardActionArea, CardContent, CardMedia, Typography } from '@mui/material'
 import moment from 'moment'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -12,7 +12,7 @@ import { SERVICE_ENDPOINT } from '../constants'
 
 interface TournamentListProps {
   query: TournamentQuery
-  label: string
+  label?: string
 }
 
 const TournamentList = ({ query, label }: TournamentListProps) => {
@@ -47,10 +47,10 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
   if (error) return <p>Error: {error}</p>
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 3, mb: 3 }}>
-      <Typography gutterBottom variant="h5" component="div">
+    <Box maxWidth="xl" sx={{ mt: 3, mb: 3 }}>
+      {label && <Typography gutterBottom variant="h5" component="div">
         {label}
-      </Typography>
+      </Typography>}
       {tournaments.length > 0 ? (
         <Box style={{ display: 'flex', flexWrap: 'nowrap', gap: '5px', overflowX: 'scroll' }}>
           {tournaments.map((tournament: Tournament) => (
@@ -100,7 +100,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
           {t('tournament.notfound')}
         </Typography>
       )}
-    </Container>
+    </Box>
   )
 }
 

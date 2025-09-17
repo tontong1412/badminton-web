@@ -54,6 +54,11 @@
       "manage": "จัดการ",
       "me": "ฉัน"
     },
+    "draw": {
+      "editKODraw": "แก้ไขสายรอบ Knock Out",
+      "placeInGroup": "อันดับของกลุ่ม",
+      "groupName": "ชื่อกลุ่ม"
+    },
     "manageEvent": {
       "title": "รายการแข่ง",
       "type": "ประเภท",

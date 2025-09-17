@@ -11,6 +11,10 @@ import ParticipantTable from './ParticipantTable'
 import ParticipantMobile from './ParticipantMobile'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
+import FloatingAddButton from '@/app/components/FloatingAddButton'
+import RegisterEventForm from '@/app/components/RegisterEventModal'
+import LoginModal from '@/app/components/LoginModal'
+import { useRouter } from 'next/navigation'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -33,25 +37,37 @@ const ParticipantsPage = () => {
   const initialEvent = searchParams.get('event')
   const [isManager, setIsManager] = useState(false)
   const dispatch = useAppDispatch()
+  const [registerModalVisible, setRegisterModalVisible] = useState(false)
+  const [loginModalVisible, setLoginModalVisible] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Participants))
   }, [dispatch])
 
-  useEffect(() => {
-    const fetchTournament = async() => {
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-        setTournament(response.data)
-
-        if(initialEvent){
-          const eventIndex = response.data?.events.findIndex((e: Event) => e.id === initialEvent)
-          setTabIndex(eventIndex || 0)
-        }
-      } catch (error) {
-        console.error('Error fetching tournament:', error)
-      }
+  const handleClickRegister = () => {
+    if(!user){
+      setLoginModalVisible(true)
+    }else{
+      setRegisterModalVisible(true)
     }
+  }
+
+  const fetchTournament = async() => {
+    try {
+      const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
+      setTournament(response.data)
+
+      if(initialEvent){
+        const eventIndex = response.data?.events.findIndex((e: Event) => e.id === initialEvent)
+        setTabIndex(eventIndex || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching tournament:', error)
+    }
+  }
+
+  useEffect(() => {
     fetchTournament()
   }, [])
 
@@ -96,8 +112,15 @@ const ParticipantsPage = () => {
             </TabPanel>
           )
         }))}
-
       </Container>
+      <FloatingAddButton onClick={handleClickRegister}/>
+      <RegisterEventForm
+        onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
+        tournamentLanguage={tournament.language}
+        events={tournament.events}
+        visible={registerModalVisible}
+        setVisible={setRegisterModalVisible}/>
+      <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
     </TournamentLayout>
   )
 }

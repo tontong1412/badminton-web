@@ -6,6 +6,7 @@ import TournamentCover from './TournamentCover'
 import EventList from './EventList'
 import ParticipantButton from './ParticipantButton'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
+import Poster from './Poster'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -46,6 +47,7 @@ const Page = async({ params }: Props) => {
       <Box>
         <TournamentCover tournament={tournament} />
         <EventList tournament={tournament} />
+        {tournament.poster && <Poster img={tournament.poster}/>}
         <ParticipantButton id={id} />
       </Box>
     </TournamentLayout>

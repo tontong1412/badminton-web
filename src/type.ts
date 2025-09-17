@@ -108,17 +108,28 @@ export type NewTeam = Omit<Team, 'id'>
 
 export interface Match {
   id: string;
+  event?: {
+    id: string;
+    name: {
+      en?: string;
+      th?: string;
+    }
+  };
+  groupOrder?: number;
+  round?: number;
+  step?: MatchStep;
   court?: string;
   date: string;
   status: MatchStatus;
-  teamA: {
-    team: Team;
-  },
-  teamB: {
-    team: Team;
-  }
+  teamA:  Team,
+  teamB: Team,
   shuttlecockUsed: number;
   note?: string;
+}
+
+export enum MatchStep {
+  Group = 'group',
+  PlayOff = 'playoff',
 }
 
 export type NewMatch = Omit<Match, 'id'>
@@ -239,6 +250,12 @@ export interface Event {
   type: EventType;
   status: EventStatus;
   teams: [EventTeam];
+  draw: {
+    group?: EventTeam[][];
+    ko?: (EventTeam | string)[];
+    consolation?: (EventTeam | string)[];
+    elimination?: (EventTeam |  string)[];
+  }
 }
 
 export enum EventFormat {

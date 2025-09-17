@@ -28,10 +28,10 @@ const MatchCard = ({ match, setMatchList } : MatchCardProps) => {
 
       <div className='flex w-auto justify-between p-4 pb-0'>
         <div>
-          {match.teamA.team.players.map((player) => <PlayerDisplay key={player.id} player={player}/>)}
+          {match.teamA.players.map((player) => <PlayerDisplay key={player.id} player={player}/>)}
         </div>
         <div>
-          {match.teamB.team.players.map((player) => <PlayerDisplay key={player.id} player={player} reverse/>)}
+          {match.teamB.players.map((player) => <PlayerDisplay key={player.id} player={player} reverse/>)}
         </div>
       </div>
 
