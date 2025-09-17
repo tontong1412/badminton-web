@@ -17,7 +17,6 @@ import { useParams } from 'next/navigation'
 import {  useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
-import ParticipantTable from '../../participants/ParticipantTable'
 import MenuDrawer from '../MenuDrawer'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
