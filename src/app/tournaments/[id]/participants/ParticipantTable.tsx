@@ -4,7 +4,7 @@ import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app
 import { RootState } from '@/app/libs/redux/store'
 import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language } from '@/type'
 import {  FilterList } from '@mui/icons-material'
-import { Button, Chip,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { Button, Chip,  CircularProgress,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
 import { MouseEvent, useEffect, useState } from 'react'
@@ -117,7 +117,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   }
 
 
-  if (!event) return null
+  if (!event) return <CircularProgress />
   return (
     <>
       <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>

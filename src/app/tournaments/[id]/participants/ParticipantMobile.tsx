@@ -4,7 +4,7 @@ import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
 import { Event, EventTeam, Language, PaymentStatus, Player, TeamStatus } from '@/type'
-import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Typography } from '@mui/material'
+import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Typography } from '@mui/material'
 import axios from 'axios'
 import Image from 'next/image'
 
@@ -78,6 +78,8 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
     setShowPlayer(player)
     setAnchorEl(e.currentTarget)
   }
+
+  if(!event)return <CircularProgress/>
 
   return (
     <Box>
