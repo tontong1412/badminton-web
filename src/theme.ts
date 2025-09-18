@@ -18,6 +18,9 @@ const theme = createTheme({
     error: {
       main: '#ff7961',
       contrastText: '#fff',
+    },
+    warning: {
+      main: '#d1bb2bff'
     }
   },
   cssVariables: true,
