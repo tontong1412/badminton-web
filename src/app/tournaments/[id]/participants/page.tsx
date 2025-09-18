@@ -3,7 +3,7 @@ import { SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch, useSelector } from '@/app/providers'
 import { Event, Language, Tournament, TournamentMenu } from '@/type'
-import { Box, Container, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material'
+import { Box, CircularProgress, Container, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
@@ -82,45 +82,49 @@ const ParticipantsPage = () => {
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
-  if (!tournament) return null
+
   return (
-    <TournamentLayout isManager={isManager}>
-      <Container maxWidth="xl" sx={{ p: 2 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="basic tabs example"
-          >
-            {tournament.events.map((event, idx) => (
-              <Tab key={idx} label={event.name[language]} />
-            ))}
-          </Tabs>
-        </Box>
+    <TournamentLayout tournament={tournament}>
+      {tournament ?
+        <>
+          <Container maxWidth="xl" sx={{ p: 2 }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs
+                value={tabIndex}
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                aria-label="basic tabs example"
+              >
+                {tournament.events.map((event, idx) => (
+                  <Tab key={idx} label={event.name[language]} />
+                ))}
+              </Tabs>
+            </Box>
 
-        {tournament.events.map(((event, idx) => {
-          return (
-            <TabPanel value={tabIndex} index={idx} key={event.id} >
-              {
-                isMobile
-                  ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
-                  : <ParticipantTable eventID={event.id} isManager={isManager} />
-              }
+            {tournament.events.map(((event, idx) => {
+              return (
+                <TabPanel value={tabIndex} index={idx} key={event.id} >
+                  {
+                    isMobile
+                      ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
+                      : <ParticipantTable eventID={event.id} isManager={isManager} />
+                  }
 
-            </TabPanel>
-          )
-        }))}
-      </Container>
-      <FloatingAddButton onClick={handleClickRegister}/>
-      <RegisterEventForm
-        onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
-        tournamentLanguage={tournament.language}
-        events={tournament.events}
-        visible={registerModalVisible}
-        setVisible={setRegisterModalVisible}/>
-      <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
+                </TabPanel>
+              )
+            }))}
+          </Container>
+          <FloatingAddButton onClick={handleClickRegister}/>
+          <RegisterEventForm
+            onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
+            tournamentLanguage={tournament.language}
+            events={tournament.events}
+            visible={registerModalVisible}
+            setVisible={setRegisterModalVisible}/>
+          <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
+        </>
+        : <CircularProgress/>}
     </TournamentLayout>
   )
 }

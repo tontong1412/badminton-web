@@ -12,7 +12,7 @@ import {
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Tab, Tabs } from '@mui/material'
+import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
 import {   useEffect, useState } from 'react'
@@ -31,12 +31,10 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 }
 const Organizer = () => {
   // const { t } = useTranslation()
-  const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
   const [tournament, setTournament] = useState<Tournament>()
-  const [isManager, setIsManager] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
@@ -57,48 +55,38 @@ const Organizer = () => {
     fetchTournament()
   }, [])
 
-  useEffect(() => {
-    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
-      setIsManager(true)
-    }else{
-      setIsManager(false)
-    }
-  }, [user, tournament])
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
 
-
-  if(!tournament) return
-
   return (
-    <TournamentLayout isManager={isManager}>
-      <Box sx={{ display: 'flex' }}>
-        <MenuDrawer tournamentID={tournament.id}/>
-        <Box sx={{ width: '100%' }}>
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="basic tabs example"
-          >
-            {tournament.events.map((e: TournamentEvent, idx) => (
-              <Tab key={idx} label={e.name[language]} />
-            ))}
-          </Tabs>
-          <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
-            {tournament.events.map(((event, idx) => {
-              return (
-                <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  <GroupDraw eventID={event.id}/>
-                </TabPanel>
-              )
-            }))}
+    <TournamentLayout tournament={tournament}>
+      {!tournament ? <CircularProgress/> :
+        <Box sx={{ display: 'flex' }}>
+          <MenuDrawer tournamentID={tournament.id}/>
+          <Box sx={{ width: '100%' }}>
+            <Tabs
+              value={tabIndex}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              aria-label="basic tabs example"
+            >
+              {tournament.events.map((e: TournamentEvent, idx) => (
+                <Tab key={idx} label={e.name[language]} />
+              ))}
+            </Tabs>
+            <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
+              {tournament.events.map(((event, idx) => {
+                return (
+                  <TabPanel value={tabIndex} index={idx} key={event.id} >
+                    <GroupDraw eventID={event.id}/>
+                  </TabPanel>
+                )
+              }))}
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </Box>}
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
     </TournamentLayout>
   )

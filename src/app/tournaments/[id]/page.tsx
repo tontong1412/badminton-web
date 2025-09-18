@@ -43,7 +43,7 @@ const Page = async({ params }: Props) => {
   const { id } = await params
   const tournament = await getTournament(id)
   return (
-    <TournamentLayout isManager={false}>
+    <TournamentLayout tournament={tournament}>
       <Box>
         <TournamentCover tournament={tournament} />
         <EventList tournament={tournament} />

@@ -28,12 +28,10 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 }
 const Organizer = () => {
   // const { t } = useTranslation()
-  const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
   const [tournament, setTournament] = useState<Tournament>()
-  const [isManager, setIsManager] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
 
   useEffect(() => {
@@ -52,15 +50,6 @@ const Organizer = () => {
     fetchTournament()
   }, [])
 
-
-  useEffect(() => {
-    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
-      setIsManager(true)
-    }else{
-      setIsManager(false)
-    }
-  }, [user, tournament])
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
@@ -68,7 +57,7 @@ const Organizer = () => {
   if(!tournament) return
 
   return (
-    <TournamentLayout isManager={isManager}>
+    <TournamentLayout tournament={tournament}>
       <Box sx={{ display: 'flex' }}>
         <MenuDrawer tournamentID={tournament.id}/>
         <Box sx={{ width: '100%' }}>

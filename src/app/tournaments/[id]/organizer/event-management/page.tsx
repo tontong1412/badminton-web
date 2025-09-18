@@ -9,7 +9,7 @@ import {
   Tournament,
   TournamentMenu
 } from '@/type'
-import { Box } from '@mui/material'
+import { Box, CircularProgress } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
 import {  useEffect, useState } from 'react'
@@ -51,16 +51,16 @@ const Organizer = () => {
     }
   }, [user, tournament])
 
-  if(!tournament) return
-
   return (
-    <TournamentLayout isManager={isManager}>
-      <Box sx={{ display: 'flex' }}>
-        <MenuDrawer tournamentID={tournament.id}/>
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-          <EventManagement tournament={tournament} isManager={isManager} setTournament={setTournament}/>
-        </Box>
-      </Box>
+    <TournamentLayout tournament={tournament}>
+      { !tournament ? <CircularProgress/>
+        :
+        <Box sx={{ display: 'flex' }}>
+          <MenuDrawer tournamentID={tournament.id}/>
+          <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+            <EventManagement tournament={tournament} isManager={isManager} setTournament={setTournament}/>
+          </Box>
+        </Box>}
     </TournamentLayout>
   )
 
