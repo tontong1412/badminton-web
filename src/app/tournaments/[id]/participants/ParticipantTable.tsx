@@ -4,7 +4,7 @@ import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app
 import { RootState } from '@/app/libs/redux/store'
 import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language } from '@/type'
 import {  FilterList } from '@mui/icons-material'
-import { Chip,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { Button, Chip,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
 import { MouseEvent, useEffect, useState } from 'react'
@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux'
 import StatusColumn from './StatusColumn'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
+import ParticipantMenu from './ParticipantMenu'
 
 interface ParticipantTableProps {
   eventID: string;
@@ -37,6 +38,9 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const [paymentFilter, setPaymentFilter] = useState<string>('All')
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+
+  const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
+  const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
 
   useEffect(() => {
     const fetchEvent = async() => {
@@ -183,7 +187,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                   {t('tournament.participants.shuttlecockCredit')}
                 </TableSortLabel>
               </TableCell>
-              {/* <TableCell align="center">Shuttlecock Credit</TableCell> */}
+              {isManager && <TableCell></TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -214,12 +218,27 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                 <TableCell align="center">
                   {team.shuttlecockCredit}
                 </TableCell>
+                {isManager && <TableCell align="center">
+                  <Button fullWidth size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                    setAnchorElMenu(event.currentTarget)
+                    setMenuTeam(team)
+                  }}>{t('tournament.action.more')}</Button>
+                </TableCell>}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {menuTeam && event && isManager && <ParticipantMenu
+        menuTeam={menuTeam}
+        setMenuTeam={setMenuTeam}
+        anchorElMenu={anchorElMenu}
+        setAnchorElMenu={setAnchorElMenu}
+        event={event}
+        setEvent={setEvent}
+        isManager={isManager}
+      />}
     </>
   )
 }
