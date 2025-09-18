@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { Event, EventTeam,  PaymentStatus } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '@/app/constants'
+import { EventResponse } from '@/app/libs/data'
 
 interface NoteModalProps {
   visible: boolean;
@@ -22,7 +23,7 @@ interface NoteModalProps {
   team: EventTeam;
   setTeam: Dispatch<SetStateAction<EventTeam|null>>;
   event: Event;
-  setEvent: Dispatch<SetStateAction<Event|undefined>> | ((event: Event)=>void);
+  setEvent: EventResponse['mutate'];
   isManager: boolean;
 }
 
@@ -78,6 +79,7 @@ const NoteModal = ({ visible, setVisible, event, team, setEvent, setTeam }: Note
         </DialogTitle>
         <DialogContent dividers>
           <TextField
+            autoFocus
             value={note}
             label={t('tournament.registration.note')}
             onChange={(e) => setNote(e.target.value)}

@@ -5,21 +5,32 @@ import Box from '@mui/material/Box'
 import BottomNavigation from '@mui/material/BottomNavigation'
 import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import { useRouter, useParams } from 'next/navigation'
-import { TournamentMenu } from '@/type'
+import { Tournament, TournamentMenu } from '@/type'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from '@/app/providers'
 import { FormatListBulleted, InfoOutlined, Person, Polyline, Settings } from '@mui/icons-material'
+import { useEffect, useState } from 'react'
 
 interface Props {
-  isManager: boolean
+  tournament: (Tournament|undefined)
 }
 
-const TournamentFooter = ({ isManager }: Props) => {
+const TournamentFooter = ({ tournament }: Props) => {
+  const user = useSelector((state: RootState) => state.app.user)
   const router = useRouter()
   const params = useParams()
   const dispatch = useAppDispatch()
   const { t } = useTranslation()
   const activeMenu = useSelector((state: RootState) => state.app.activeMenu)
+  const [isManager, setIsManager] = useState(false)
+
+  useEffect(() => {
+    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
+      setIsManager(true)
+    }else{
+      setIsManager(false)
+    }
+  }, [user, tournament])
 
   return (
     <Box>

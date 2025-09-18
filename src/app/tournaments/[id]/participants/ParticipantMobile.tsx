@@ -3,16 +3,17 @@
 import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
-import { Event, EventTeam, Language, PaymentStatus, Player, TeamStatus } from '@/type'
+import { EventTeam, Language, PaymentStatus, Player, TeamStatus } from '@/type'
 import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Typography } from '@mui/material'
 import axios from 'axios'
 import Image from 'next/image'
 
-import { MouseEvent, useEffect, useState } from 'react'
+import { MouseEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
 import moment from 'moment'
 import ParticipantMenu from './ParticipantMenu'
+import { useEvent } from '@/app/libs/data'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -28,24 +29,12 @@ interface UpdateTeamPayload {
 
 const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const { t } = useTranslation()
-  const [event, setEvent] = useState<Event>()
   const language: Language = useSelector((state: RootState) => state.app.language)
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
   const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
-  useEffect(() => {
-    const fetchEvent = async() => {
-      try {
-        const response = await axios(`${SERVICE_ENDPOINT}/events/${eventID}`)
-        setEvent(response.data)
-      }
-      catch (error) {
-        console.error('Error fetching event:', error)
-      }
-    }
-    fetchEvent()
-  }, [])
+  const { event, mutate: setEvent } = useEvent(eventID)
 
   const sortTeams = (a:EventTeam, b:EventTeam) => {
     if(a.slipTimestamp === undefined && b.slipTimestamp === undefined){

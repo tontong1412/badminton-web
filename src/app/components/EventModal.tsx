@@ -19,12 +19,13 @@ import {
 import Transition from './ModalTransition'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
+import { TournamentResponse } from '../libs/data'
 
 interface EventModalProps {
   visible: boolean;
   setVisible: Dispatch<SetStateAction<boolean>>;
   event?: TournamentEvent;
-  setTournament: Dispatch<SetStateAction<Tournament|undefined>>;
+  setTournament: TournamentResponse['mutate']
   setEvent: Dispatch<SetStateAction<TournamentEvent|undefined>>;
   isCreating: boolean;
   tournament: Tournament;
@@ -135,9 +136,7 @@ const EventModal = ({ visible, setVisible, event, isCreating, tournament, setTou
       await axios.put(`${SERVICE_ENDPOINT}/events/${event?.id}`, newEvent, { withCredentials: true })
     }
 
-    const updatedTournament = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${tournament.id}`)
-
-    setTournament(updatedTournament.data)
+    setTournament()
     closeModal()
   }
 

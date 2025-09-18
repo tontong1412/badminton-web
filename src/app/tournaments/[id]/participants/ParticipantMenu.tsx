@@ -11,13 +11,14 @@ import ShuttlecockCreditModal from '@/app/components/ShuttlecockCreditModal'
 import Transition from '@/app/components/ModalTransition'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
+import { EventResponse } from '@/app/libs/data'
 
 interface ParticipantMenuProps {
   menuTeam: EventTeam
   setMenuTeam: Dispatch<SetStateAction<EventTeam | null>>
   anchorElMenu: null | HTMLElement
   event: Event
-  setEvent: Dispatch<SetStateAction<Event|undefined>>
+  setEvent: EventResponse['mutate']
   setAnchorElMenu: Dispatch<SetStateAction<HTMLElement | null>>
   isManager: boolean
 }
