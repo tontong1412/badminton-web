@@ -3,22 +3,21 @@ import Transition from './ModalTransition'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
 import { Dispatch, SetStateAction } from 'react'
-import { Tournament, TournamentEvent } from '@/type'
+import { TournamentEvent } from '@/type'
+import { TournamentResponse } from '../libs/data'
 
 interface ConfirmDeleteModalProps {
   visible: boolean;
   setVisible: Dispatch<SetStateAction<boolean>>;
   event?: TournamentEvent;
-  setTournament: Dispatch<SetStateAction<Tournament|undefined>>;
-  tournament: Tournament;
+  setTournament: TournamentResponse['mutate']
 }
 
-const ConfirmDeleteModal = ({ visible, setVisible, event, tournament, setTournament }:ConfirmDeleteModalProps) => {
+const ConfirmDeleteModal = ({ visible, setVisible, event, setTournament }:ConfirmDeleteModalProps) => {
   const handleDeleteEvent = async() => {
     await axios.delete(`${SERVICE_ENDPOINT}/events/${event?.id}`, { withCredentials: true })
-    const updatedTournament = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${tournament.id}`)
 
-    setTournament(updatedTournament.data)
+    setTournament()
     setVisible(false)
   }
   return (

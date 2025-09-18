@@ -25,6 +25,7 @@ import photoUtils from '@/app/libs/photo'
 import axios from 'axios'
 import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import QRCode from 'react-qr-code'
+import { EventResponse } from '@/app/libs/data'
 
 interface PaymentModalProps {
   visible: boolean;
@@ -32,7 +33,7 @@ interface PaymentModalProps {
   team: EventTeam;
   setTeam: Dispatch<SetStateAction<EventTeam|null>>;
   event: Event;
-  setEvent: Dispatch<SetStateAction<Event|undefined>> | ((event: Event)=>void);
+  setEvent: EventResponse['mutate'];
   isManager: boolean;
 }
 

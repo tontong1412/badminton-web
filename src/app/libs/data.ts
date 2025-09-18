@@ -12,14 +12,14 @@ const fetcher = (url: string, withCredentials: boolean) => axios.get(
   console.log(err)
 })
 
-interface TournmentResponse {
+export interface TournamentResponse {
   tournament: Tournament
   isLoading: boolean
   isError: boolean
   mutate: (data?: Tournament | Promise<Tournament>) => Promise<Tournament | undefined>
 }
 
-export const useTournament = (id: string|undefined): TournmentResponse => {
+export const useTournament = (id: string|undefined): TournamentResponse => {
   const { data, error, mutate } = useSWR(
     id ? `${SERVICE_ENDPOINT}/tournaments/${id}` : null,
     fetcher
@@ -33,7 +33,7 @@ export const useTournament = (id: string|undefined): TournmentResponse => {
   }
 }
 
-interface MyEventsResponse {
+export interface MyEventsResponse {
   myEvents: Event[]
   isLoading: boolean
   isError: boolean
@@ -54,7 +54,7 @@ export const useMyEvents = (tournamentID: string|undefined): MyEventsResponse =>
   }
 }
 
-interface EventResponse {
+export interface EventResponse {
   event: Event
   isLoading: boolean
   isError: boolean
