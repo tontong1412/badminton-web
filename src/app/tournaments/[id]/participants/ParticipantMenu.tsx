@@ -17,7 +17,7 @@ interface ParticipantMenuProps {
   setMenuTeam: Dispatch<SetStateAction<EventTeam | null>>
   anchorElMenu: null | HTMLElement
   event: Event
-  setEvent: Dispatch<SetStateAction<Event|undefined>>
+  setEvent: (data?: Event | Promise<Event>) => Promise<Event | undefined>
   setAnchorElMenu: Dispatch<SetStateAction<HTMLElement | null>>
   isManager: boolean
 }

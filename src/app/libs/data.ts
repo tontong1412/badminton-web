@@ -16,7 +16,7 @@ interface TournmentResponse {
   tournament: Tournament
   isLoading: boolean
   isError: boolean
-  mutate: ()=>void
+  mutate: (data?: Tournament | Promise<Tournament>) => Promise<Tournament | undefined>
 }
 
 export const useTournament = (id: string|undefined): TournmentResponse => {
@@ -37,7 +37,7 @@ interface MyEventsResponse {
   myEvents: Event[]
   isLoading: boolean
   isError: boolean
-  mutate: ()=>void
+  mutate: (data?: Event | Promise<Event>) => Promise<Event | undefined>
 }
 
 export const useMyEvents = (tournamentID: string|undefined): MyEventsResponse => {
@@ -48,6 +48,27 @@ export const useMyEvents = (tournamentID: string|undefined): MyEventsResponse =>
 
   return {
     myEvents: data,
+    isLoading: !error && !data,
+    isError: error,
+    mutate
+  }
+}
+
+interface EventResponse {
+  event: Event
+  isLoading: boolean
+  isError: boolean
+  mutate: (data?: Event | Promise<Event>) => Promise<Event | undefined>
+}
+
+export const useEvent = (id: string|undefined): EventResponse => {
+  const { data, error, mutate } = useSWR(
+    id ? `${SERVICE_ENDPOINT}/events/${id}` : null,
+    fetcher
+  )
+
+  return {
+    event: data,
     isLoading: !error && !data,
     isError: error,
     mutate
