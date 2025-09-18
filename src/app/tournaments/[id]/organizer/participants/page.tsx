@@ -1,24 +1,22 @@
 'use client'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
-import {  SERVICE_ENDPOINT } from '@/app/constants'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import {
   Language,
   // Language,
-  Tournament,
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Tab, Tabs } from '@mui/material'
-import axios from 'axios'
+import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
 import { useParams } from 'next/navigation'
 import {  useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import ParticipantTable from '../../participants/ParticipantTable'
 import MenuDrawer from '../MenuDrawer'
+import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -33,26 +31,13 @@ const Organizer = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [tournament, setTournament] = useState<Tournament>()
   const [isManager, setIsManager] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
+  const { tournament } = useTournament(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
   }, [dispatch])
-
-  useEffect(() => {
-    const fetchTournament = async() => {
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-        setTournament(response.data)
-      } catch (error) {
-        console.error('Error fetching tournament:', error)
-      }
-    }
-    fetchTournament()
-  }, [])
-
 
   useEffect(() => {
     if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
@@ -66,35 +51,35 @@ const Organizer = () => {
     setTabIndex(newValue)
   }
 
-  if(!tournament) return
-
   return (
-    <TournamentLayout isManager={isManager}>
-      <Box sx={{ display: 'flex' }}>
-        <MenuDrawer tournamentID={tournament.id}/>
-        <Box sx={{ width: '100%' }}>
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="basic tabs example"
-          >
-            {tournament.events.map((e: TournamentEvent, idx) => (
-              <Tab key={idx} label={e.name[language]} />
-            ))}
-          </Tabs>
-          <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
-            {tournament.events.map(((event, idx) => {
-              return (
-                <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  <ParticipantTable eventID={event.id} isManager={isManager} />
-                </TabPanel>
-              )
-            }))}
+    <TournamentLayout tournament={tournament}>
+      {!tournament
+        ? <CircularProgress/>
+        : <Box sx={{ display: 'flex' }}>
+          <MenuDrawer tournamentID={tournament.id}/>
+          <Box sx={{ width: '100%' }}>
+            <Tabs
+              value={tabIndex}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              aria-label="basic tabs example"
+            >
+              {tournament.events.map((e: TournamentEvent, idx) => (
+                <Tab key={idx} label={e.name[language]} />
+              ))}
+            </Tabs>
+            <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
+              {tournament.events.map(((event, idx) => {
+                return (
+                  <TabPanel value={tabIndex} index={idx} key={event.id} >
+                    <ParticipantTable eventID={event.id} isManager={isManager} />
+                  </TabPanel>
+                )
+              }))}
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </Box>}
     </TournamentLayout>
   )
 

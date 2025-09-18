@@ -1,23 +1,21 @@
 'use client'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
-import {  SERVICE_ENDPOINT } from '@/app/constants'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import {
   Language,
   // Language,
-  Tournament,
   TournamentEvent,
   TournamentMenu
 } from '@/type'
 import { Box, Tab, Tabs, Typography } from '@mui/material'
-import axios from 'axios'
 import { useParams } from 'next/navigation'
 import {  useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
+import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -31,24 +29,12 @@ const Organizer = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [tournament, setTournament] = useState<Tournament>()
   const [tabIndex, setTabIndex] = useState(0)
+  const { tournament } = useTournament(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
   }, [dispatch])
-
-  useEffect(() => {
-    const fetchTournament = async() => {
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-        setTournament(response.data)
-      } catch (error) {
-        console.error('Error fetching tournament:', error)
-      }
-    }
-    fetchTournament()
-  }, [])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)

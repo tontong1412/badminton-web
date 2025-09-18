@@ -4,18 +4,19 @@ import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import LoginModal from '@/app/components/LoginModal'
 import PaymentModal from '@/app/components/PaymentModal'
 import RegisterEventForm from '@/app/components/RegisterEventModal'
-import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
+import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS } from '@/app/constants'
+import { useMyEvents, useTournament } from '@/app/libs/data'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
-import { Event, EventTeam, Language, Player, TeamStatus, Tournament, TournamentMenu } from '@/type'
+import { Event, EventTeam, Language, Player, TeamStatus, TournamentMenu } from '@/type'
 import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Container, Divider, Typography } from '@mui/material'
-import axios from 'axios'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
+
 
 const Me = () => {
   const { t } = useTranslation()
@@ -23,30 +24,18 @@ const Me = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [tournament, setTournament] = useState<Tournament>()
   const [isManager, setIsManager] = useState(false)
-  const [myEvents, setMyEvents] = useState<Event[]>([])
   const [paymentModalVisible, setPaymentModalVisible] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<EventTeam | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [loginModalVisible, setLoginModalVisible] = useState(false)
   const [registerModalVisible, setRegisterModalVisible] = useState(false)
+  const { tournament }  = useTournament(params.id as string)
+  const { myEvents, mutate: fetchMyEvents } = useMyEvents(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Me))
   }, [dispatch])
-
-  useEffect(() => {
-    const fetchTournament = async() => {
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-        setTournament(response.data)
-      } catch (error) {
-        console.error('Error fetching tournament:', error)
-      }
-    }
-    fetchTournament()
-  }, [])
 
   useEffect(() => {
     fetchMyEvents()
@@ -59,18 +48,6 @@ const Me = () => {
       setIsManager(false)
     }
   }, [user, tournament])
-
-  const fetchMyEvents = async() => {
-    if(user){
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/events/my-events?tournamentID=${params.id}`, { withCredentials: true })
-        setMyEvents(response.data)
-      } catch (error){
-        console.log('Error fetching my events:', error)
-        setMyEvents([])
-      }
-    }
-  }
 
   const setEvent = () => {
     fetchMyEvents()
@@ -93,7 +70,7 @@ const Me = () => {
   }, [myEvents])
 
   const renderContent = () => {
-    if(!tournament){
+    if(!tournament || !myEvents){
       return <CircularProgress/>
     }else if(myEvents.length < 1){
       return (<>
