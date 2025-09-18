@@ -205,7 +205,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
       player1UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if(!player2.photoPreview){
+    if(!player2.photoPreview && events.find((ev) => ev.id === event)?.type === 'double'){
       player2UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
