@@ -49,10 +49,6 @@ const Me = () => {
     }
   }, [user, tournament])
 
-  const setEvent = () => {
-    fetchMyEvents()
-  }
-
   const handleClickRegister = () => {
     if(!user){
       setLoginModalVisible(true)
@@ -157,7 +153,7 @@ const Me = () => {
               ))
             }
           </Box>
-          {selectedTeam && selectedEvent && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={selectedEvent} team={selectedTeam} setEvent={setEvent} isManager={isManager} setTeam={setSelectedTeam}/>}
+          {selectedTeam && selectedEvent && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={selectedEvent} team={selectedTeam} setEvent={fetchMyEvents} isManager={isManager} setTeam={setSelectedTeam}/>}
         </Container>
       )
     }
@@ -168,7 +164,7 @@ const Me = () => {
       {renderContent()}
       <FloatingAddButton onClick={handleClickRegister}/>
       {tournament && <RegisterEventForm
-        onFinishRegister={fetchMyEvents}
+        onFinishRegister={() => fetchMyEvents()}
         tournamentLanguage={tournament.language}
         events={tournament.events}
         visible={registerModalVisible}
