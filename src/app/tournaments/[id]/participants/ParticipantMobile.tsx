@@ -4,19 +4,15 @@ import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
 import { Event, EventTeam, Language, PaymentStatus, Player, TeamStatus } from '@/type'
-import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Typography } from '@mui/material'
+import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Typography } from '@mui/material'
 import axios from 'axios'
 import Image from 'next/image'
 
 import { MouseEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
-import ContactPersonModal from '@/app/components/ContactPersonModal'
-import PaymentModal from '@/app/components/PaymentModal'
-import NoteModal from '@/app/components/NoteModal'
-import Transition from '@/app/components/ModalTransition'
 import moment from 'moment'
-import ShuttlecockCreditModal from '@/app/components/ShuttlecockCreditModal'
+import ParticipantMenu from './ParticipantMenu'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -38,13 +34,6 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
   const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
-  const [contactPersonModalVisible, setContactPersonModalVisible] = useState(false)
-  const [showContact, setShowContact] = useState<Player | null>(null)
-  const [paymentModalVisible, setPaymentModalVisible] = useState(false)
-  const [noteModalVisible, setNoteModalVisible] = useState(false)
-  const [confirmWithdrawDialogVisible, setConfirmWithdrawDialogVisible] = useState(false)
-  const [shuttlecockDialogVisible, setShuttlecockDialogVisible] = useState(false)
-  const [withdrawButtonLoading, setWithdrawButtonLoading] = useState(false)
   useEffect(() => {
     const fetchEvent = async() => {
       try {
@@ -75,19 +64,6 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
     return team.paymentStatus === PaymentStatus.Paid || team.paymentStatus === PaymentStatus.Pending
   }
 
-  const withdrawTeam = async(teamID: string) => {
-    setWithdrawButtonLoading(true)
-    const payload: {teamID: string, eventID: string} = {
-      teamID,
-      eventID
-    }
-
-    const response = await axios.post(`${SERVICE_ENDPOINT}/events/withdraw`, payload, { withCredentials:true })
-    setEvent(response.data)
-    setConfirmWithdrawDialogVisible(false)
-    setWithdrawButtonLoading(false)
-  }
-
   const updateTeam = async(teamID: string, field: string, value: unknown) => {
     const payload : UpdateTeamPayload = {
       eventID,
@@ -101,11 +77,6 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
     setShowPlayer(player)
     setAnchorEl(e.currentTarget)
-  }
-
-  const handleCloseMenu = () => {
-    setAnchorElMenu(null)
-    setMenuTeam(null)
   }
 
   return (
@@ -170,76 +141,16 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           </Card>
         ))
       }
-      {showContact && <ContactPersonModal visible={contactPersonModalVisible} setVisible={setContactPersonModalVisible} player={showContact}/>}
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
-      {menuTeam && event && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={event} team={menuTeam} setEvent={setEvent} isManager={isManager} setTeam={setMenuTeam}/>}
-      {menuTeam && event && <NoteModal visible={noteModalVisible} setVisible={setNoteModalVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>}
-      {menuTeam && event && <ShuttlecockCreditModal visible={shuttlecockDialogVisible} setVisible={setShuttlecockDialogVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>}
-      {menuTeam && <Menu
-        id="admin-menu"
-        anchorEl={anchorElMenu}
-        open={Boolean(anchorElMenu)}
-        onClose={handleCloseMenu}
-      >
-        <MenuItem onClick={() => {
-          handleCloseMenu()
-          setContactPersonModalVisible(true)
-          setShowContact(menuTeam.contactPerson)
-        }}>{t('tournament.action.contactPerson')}
-        </MenuItem>
-
-        {(menuTeam && menuTeam.status !== TeamStatus.Idle) && <MenuItem onClick={async() => {
-          if(menuTeam){
-            await updateTeam(menuTeam.id, 'status', TeamStatus.Idle)
-          }
-          handleCloseMenu()
-        }}>{t('tournament.action.changeStatus')}</MenuItem>}
-
-        <MenuItem onClick={() => {
-          setPaymentModalVisible(true)
-          setAnchorElMenu(null)
-        }}>{t('tournament.action.paymentSlip')}</MenuItem>
-
-        <MenuItem onClick={() => {
-          setNoteModalVisible(true)
-          setAnchorElMenu(null)
-        }}>{t('tournament.action.note')}</MenuItem>
-
-        <MenuItem onClick={() => {
-          setShuttlecockDialogVisible(true)
-          setAnchorElMenu(null)
-        }}>{t('tournament.action.shuttlecock')}</MenuItem>
-
-        {menuTeam && <MenuItem onClick={() => {
-          setConfirmWithdrawDialogVisible(true)
-          setAnchorElMenu(null)
-        }}>{t('tournament.action.withdraw')}</MenuItem>}
-      </Menu>
-      }
-      { menuTeam && <Dialog
-        open={confirmWithdrawDialogVisible}
-        onClose={() => setConfirmWithdrawDialogVisible(false)}
-        slots={{ transition: Transition }}
-      >
-        <DialogTitle id="alert-dialog-title">
-          {t('tournament.action.withdrawConfirmation')}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText component={'div'} id="alert-dialog-description">
-            {menuTeam.players.map((player) => <Box  key={player.id} sx={{ display: 'flex', color: '#333' }}>
-              <Typography width={150}>{player.officialName[language]}</Typography>
-              <Typography>{player.club}</Typography>
-            </Box>)}
-            <Typography style={{ fontSize: '14px', paddingTop: 16 }}>{t('tournament.action.withdrawWarning')}</Typography>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button loading={withdrawButtonLoading} color='error' onClick={() => withdrawTeam(menuTeam.id)} >{t('action.confirm')}</Button>
-          <Button onClick={() => setConfirmWithdrawDialogVisible(false)} autoFocus>
-            {t('action.cancel')}
-          </Button>
-        </DialogActions>
-      </Dialog>}
+      {menuTeam && event && isManager && <ParticipantMenu
+        menuTeam={menuTeam}
+        setMenuTeam={setMenuTeam}
+        anchorElMenu={anchorElMenu}
+        setAnchorElMenu={setAnchorElMenu}
+        event={event}
+        setEvent={setEvent}
+        isManager={isManager}
+      />}
     </Box>
   )
 
