@@ -1,7 +1,7 @@
 import useSWR from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
-import { Event, Tournament } from '@/type'
+import { Event, Player, Tournament } from '@/type'
 
 const fetcher = (url: string, withCredentials: boolean) => axios.get(
   url,
@@ -69,6 +69,27 @@ export const useEvent = (id: string|undefined): EventResponse => {
 
   return {
     event: data,
+    isLoading: !error && !data,
+    isError: error,
+    mutate
+  }
+}
+
+export interface PlayersResponse {
+  players: Player[]
+  isLoading: boolean
+  isError: boolean
+  mutate: (data?: Player | Promise<Player>) => Promise<Player | undefined>
+}
+
+export const usePlayers = (): PlayersResponse => {
+  const { data, error, mutate } = useSWR(
+    `${SERVICE_ENDPOINT}/players`,
+    fetcher
+  )
+
+  return {
+    players: data,
     isLoading: !error && !data,
     isError: error,
     mutate

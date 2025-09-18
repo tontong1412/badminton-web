@@ -32,6 +32,7 @@ import { useSelector } from '@/app/providers'
 import { ContactMethod, Language, TournamentEvent } from '@/type'
 import { useTranslation } from 'react-i18next'
 import photoUtils from '@/app/libs/photo'
+import { usePlayers } from '@/app/libs/data'
 
 export interface Player {
   id?: string;
@@ -93,7 +94,8 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
   const language: Language = useSelector((state: RootState) => state.app.language)
   const [buttonLoading, setButtonLoading] = useState(false)
   const [event, setEvent] = useState('')
-  const [playerList, setPlayerList] = useState([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [playerList, setPlayerList] = useState<any>([])
   const [filteredPlayerList, setFilteredPlayerList] = useState<Player[]>([])
   const [player1, setPlayer1] = useState<Player>(initialPlayer)
   const [player2, setPlayer2] = useState<Player>(initialPlayer)
@@ -107,6 +109,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
     },
   })
   const [social, setSocial] = useState<ContactMethod>('line')
+  const { players } = usePlayers()
 
   useEffect(() => {
     const filterArray: string[] = []
@@ -122,11 +125,9 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
   }, [player1, player2])
 
   useEffect(() => {
-    const fetchPlayers = async() => {
-      // Fetch players from API or any data source
-      const players = await axios.get(`${SERVICE_ENDPOINT}/players`)
+    if(players){
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const formattedPlayerList = players.data.map((p: any) => ({
+      const formattedPlayerList = players?.map((p: any) => ({
         ...p,
         officialName: p.officialName[language] || p.officialName['en'],
         displayName: p.displayName[language] || p.displayName['en'],
@@ -136,8 +137,8 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
       setPlayerList(formattedPlayerList)
       setFilteredPlayerList(formattedPlayerList)
     }
-    fetchPlayers()
-  }, [language])
+
+  }, [language, players])
 
   useEffect(() => {
     if(user){
