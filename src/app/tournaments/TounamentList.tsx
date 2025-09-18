@@ -1,7 +1,7 @@
 'use client'
 import { Language, Tournament, TournamentQuery } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
-import { Box, Card, CardActionArea, CardContent, CardMedia, Typography } from '@mui/material'
+import { Box, Card, CardActionArea, CardContent, CardMedia, CircularProgress, Typography } from '@mui/material'
 import moment from 'moment'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -27,9 +27,6 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
     const fetchTournaments = async() => {
       try {
         const response = await fetch(`${SERVICE_ENDPOINT}/tournaments?tab=${query}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch tournaments')
-        }
         const data = await response.json()
         setTournaments(data)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,11 +40,11 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
     fetchTournaments()
   }, [])
 
-  if (loading) return <p>Loading...</p>
+  if (loading) return <CircularProgress/>
   if (error) return <p>Error: {error}</p>
 
   return (
-    <Box maxWidth="xl" sx={{ mt: 3, mb: 3 }}>
+    <Box maxWidth="xl" sx={{ mt: 1, mb: 3 }}>
       {label && <Typography gutterBottom variant="h5" component="div">
         {label}
       </Typography>}
@@ -57,7 +54,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
             <Card
               key={tournament.id}
               onClick={() => router.push(`/tournaments/${tournament.id}`)}
-              sx={{ mt:'1px', mb:'1px', ml:'1px', display: 'flex', minWidth: 380, maxWidth: 400 }}>
+              sx={{ mt:'1px', mb:'1px', ml:'1px', display: 'flex', minWidth: 350, maxWidth: 400 }}>
               <CardActionArea sx={{ display: 'flex' }}>
                 <CardMedia
                   component="img"
