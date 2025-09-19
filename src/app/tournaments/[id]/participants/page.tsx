@@ -1,10 +1,8 @@
 'use client'
-import { SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch, useSelector } from '@/app/providers'
-import { Event, Language, Tournament, TournamentMenu } from '@/type'
-import { Box, Container, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material'
-import axios from 'axios'
+import { Language, TournamentEvent, TournamentMenu } from '@/type'
+import { Box, CircularProgress, Container, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import ParticipantTable from './ParticipantTable'
@@ -15,6 +13,7 @@ import FloatingAddButton from '@/app/components/FloatingAddButton'
 import RegisterEventForm from '@/app/components/RegisterEventModal'
 import LoginModal from '@/app/components/LoginModal'
 import { useRouter } from 'next/navigation'
+import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -24,13 +23,11 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
   )
 }
 
-
 const ParticipantsPage = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const user = useSelector((state: RootState) => state.app.user)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [tournament, setTournament] = useState<Tournament>()
   const [tabIndex, setTabIndex] = useState(0)
   const params = useParams()
   const searchParams = useSearchParams()
@@ -40,6 +37,7 @@ const ParticipantsPage = () => {
   const [registerModalVisible, setRegisterModalVisible] = useState(false)
   const [loginModalVisible, setLoginModalVisible] = useState(false)
   const router = useRouter()
+  const { tournament, isLoading } = useTournament(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Participants))
@@ -53,22 +51,11 @@ const ParticipantsPage = () => {
     }
   }
 
-  const fetchTournament = async() => {
-    try {
-      const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-      setTournament(response.data)
-
-      if(initialEvent){
-        const eventIndex = response.data?.events.findIndex((e: Event) => e.id === initialEvent)
-        setTabIndex(eventIndex || 0)
-      }
-    } catch (error) {
-      console.error('Error fetching tournament:', error)
-    }
-  }
-
   useEffect(() => {
-    fetchTournament()
+    if(initialEvent){
+      const eventIndex = tournament.events.findIndex((e:TournamentEvent) => e.id === initialEvent)
+      setTabIndex(eventIndex || 0)
+    }
   }, [])
 
   useEffect(() => {
@@ -82,45 +69,49 @@ const ParticipantsPage = () => {
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
-  if (!tournament) return null
+
   return (
-    <TournamentLayout isManager={isManager}>
-      <Container maxWidth="xl" sx={{ p: 2 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="basic tabs example"
-          >
-            {tournament.events.map((event, idx) => (
-              <Tab key={idx} label={event.name[language]} />
-            ))}
-          </Tabs>
-        </Box>
+    <TournamentLayout tournament={tournament}>
+      {isLoading
+        ? <CircularProgress/>
+        : <>
+          <Container maxWidth="xl" sx={{ p: 2 }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs
+                value={tabIndex}
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                aria-label="basic tabs example"
+              >
+                {tournament.events.map((event, idx) => (
+                  <Tab key={idx} label={event.name[language]} />
+                ))}
+              </Tabs>
+            </Box>
 
-        {tournament.events.map(((event, idx) => {
-          return (
-            <TabPanel value={tabIndex} index={idx} key={event.id} >
-              {
-                isMobile
-                  ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
-                  : <ParticipantTable eventID={event.id} isManager={isManager} />
-              }
+            {tournament.events.map(((event, idx) => {
+              return (
+                <TabPanel value={tabIndex} index={idx} key={event.id} >
+                  {
+                    isMobile
+                      ? <ParticipantMobile eventID={event.id} isManager={isManager}/>
+                      : <ParticipantTable eventID={event.id} isManager={isManager} />
+                  }
 
-            </TabPanel>
-          )
-        }))}
-      </Container>
-      <FloatingAddButton onClick={handleClickRegister}/>
-      <RegisterEventForm
-        onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
-        tournamentLanguage={tournament.language}
-        events={tournament.events}
-        visible={registerModalVisible}
-        setVisible={setRegisterModalVisible}/>
-      <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
+                </TabPanel>
+              )
+            }))}
+          </Container>
+          <FloatingAddButton onClick={handleClickRegister}/>
+          <RegisterEventForm
+            onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
+            tournamentLanguage={tournament.language}
+            events={tournament.events}
+            visible={registerModalVisible}
+            setVisible={setRegisterModalVisible}/>
+          <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
+        </>}
     </TournamentLayout>
   )
 }

@@ -22,6 +22,7 @@ import { Event, EventTeam, Language } from '@/type'
 import { useSelector } from 'react-redux'
 import axios from 'axios'
 import {  SERVICE_ENDPOINT } from '@/app/constants'
+import { EventResponse } from '@/app/libs/data'
 
 interface ShuttlecockCreditModalProps {
   visible: boolean;
@@ -29,7 +30,7 @@ interface ShuttlecockCreditModalProps {
   team: EventTeam;
   setTeam: Dispatch<SetStateAction<EventTeam|null>>;
   event: Event;
-  setEvent: Dispatch<SetStateAction<Event|undefined>> | ((event: Event)=>void);
+  setEvent: EventResponse['mutate'];
   isManager: boolean;
 }
 

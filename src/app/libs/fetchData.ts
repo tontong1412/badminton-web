@@ -27,12 +27,8 @@ export const createMatch = (teamA: NewTeam, teamB: NewTeam) => {
   const teamBWithID: Team = { ...teamB, id: uuid() }
   const newMatch: Match = {
     id: uuid(),
-    teamA: {
-      team: teamAWithID
-    },
-    teamB: {
-      team: teamBWithID
-    },
+    teamA: teamAWithID,
+    teamB:  teamBWithID,
     date: moment().toISOString(),
     status: MatchStatus.Waiting,
     shuttlecockUsed: 0

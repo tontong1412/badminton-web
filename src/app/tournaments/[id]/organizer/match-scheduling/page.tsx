@@ -9,7 +9,6 @@ import {
   Match,
   MatchStep,
   // Language,
-  Tournament,
   TournamentEvent,
   TournamentMenu
 } from '@/type'
@@ -24,6 +23,7 @@ import moment from 'moment'
 import MatchCard from './MatchCard'
 import { Add, AddAPhoto, AddBoxRounded, AddCircle, ArrowDropDown, Drafts, ExpandLess, ExpandMore, Groups, Inbox, Send, SportsScore, StarBorder } from '@mui/icons-material'
 import { Courgette } from 'next/font/google'
+import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -34,12 +34,9 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 }
 const Organizer = () => {
   // const { t } = useTranslation()
-  const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [tournament, setTournament] = useState<Tournament>()
-  const [isManager, setIsManager] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
   const [numCourt, setNumCourt] = useState(8)
   const [matchDuration, setMatchDuration] = useState(25)
@@ -51,6 +48,7 @@ const Organizer = () => {
   const [tableRowData, setTableRowData ] = useState<(Match | null | string)[][]>([])
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(-1)
   const [selectedCourt, setSelectedCourt] = useState(-1)
+  const { tournament } = useTournament(params.id as string)
   const open = Boolean(anchorEl)
   const handleClose = () => {
     setAnchorEl(null)
@@ -66,15 +64,6 @@ const Organizer = () => {
   }, [dispatch])
 
   useEffect(() => {
-    const fetchTournament = async() => {
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-        setTournament(response.data)
-      } catch (error) {
-        console.error('Error fetching tournament:', error)
-      }
-    }
-    fetchTournament()
     generateTimeSlots(matchDuration)
   }, [])
 
@@ -124,15 +113,6 @@ const Organizer = () => {
     getMatches(eventID)
   }, [tabIndex])
 
-
-  useEffect(() => {
-    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
-      setIsManager(true)
-    }else{
-      setIsManager(false)
-    }
-  }, [user, tournament])
-
   useEffect(() => {
     generateTimeSlots(matchDuration)
   }, [matchDuration, numCourt])
@@ -140,22 +120,6 @@ const Organizer = () => {
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
-
-  // const generateTimeSlots = (stepMinutes: number): string[][] => {
-  //   const slots: string[][] = []
-  //   const totalMinutes = 24 * 60 // full day
-
-  //   for (let m = 0; m < totalMinutes; m += stepMinutes) {
-  //     const hours = Math.floor(m / 60)
-  //     const minutes = m % 60
-  //     slots.push(
-  //       [`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-  //         , ...Array.from({ length:numCourt }, (_, i) => `Court ${(i + 1)}`)]
-  //     )
-  //   }
-
-  //   return slots
-  // }
 
   const onSelectCell = (e:MouseEvent<HTMLButtonElement>, timeSlot:number, court:number) => {
     setAnchorEl(e.currentTarget)
@@ -240,6 +204,7 @@ const Organizer = () => {
 
     return days
   }
+
   const onChangeDay = (
     event: React.MouseEvent<HTMLElement>,
     newDay: number,
@@ -248,6 +213,7 @@ const Organizer = () => {
   }
 
   const onAddMatchToSchedule = () => {
+    setAnchorEl(null)
     const groupStageMatches: Match[] = eventMatches.filter((m: Match) => m.step === MatchStep.Group)
     const tempTableRowData = [...tableRowData]
     let tempCourt = selectedCourt
@@ -272,8 +238,8 @@ const Organizer = () => {
         console.log('new round')
       }
     }
-
     setTableRowData(tempTableRowData)
+
   }
 
   // const onAddMatchToSchedule = (obj: unknown, key: string, timeSlot:number, court: number) => {
@@ -329,7 +295,7 @@ const Organizer = () => {
   if(!tournament) return
 
   return (
-    <TournamentLayout isManager={isManager}>
+    <TournamentLayout tournament={tournament}>
       <Box sx={{ display: 'flex' }}>
         <MenuDrawer tournamentID={tournament.id}/>
         <Box sx={{ width: '100%' }}>
@@ -349,7 +315,7 @@ const Organizer = () => {
               label="เวลาต่อแมตช์ (นาที)"
               variant="outlined"
               type='number' />
-            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large'>Reset</Button>
+            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration)}>Reset</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large'>Auto</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large'>Save</Button>
           </Box>
@@ -435,13 +401,14 @@ const Organizer = () => {
           horizontal: 'left',
         }}
       >
-        <Box sx={{ p:3, minWidth: 300 }}>
+        <Box sx={{ p:3, minWidth: 300, display:'flex', justifyContent: 'space-around' }}>
           {Object.entries(matchInIterationFormat).map(([key, value]) => {
             return (
               <Button key={`step-${key}`} onClick={() => onAddMatchToSchedule()}>{key}</Button>
               // <Button key={`step-${key}`} onClick={() => onAddMatchToSchedule(matchInIterationFormat, key, selectedTimeSlot, selectedCourt)}>{key}</Button>
             )
           })}
+          <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
         </Box>
         {/* <List
           sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}

@@ -10,6 +10,7 @@ import {
   Alert,
   Divider,
   Chip,
+  Typography,
 } from '@mui/material'
 import { RootState } from '@/app/libs/redux/store'
 import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react'
@@ -23,6 +24,8 @@ import imageCompression from 'browser-image-compression'
 import photoUtils from '@/app/libs/photo'
 import axios from 'axios'
 import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
+import QRCode from 'react-qr-code'
+import { EventResponse } from '@/app/libs/data'
 
 interface PaymentModalProps {
   visible: boolean;
@@ -30,7 +33,7 @@ interface PaymentModalProps {
   team: EventTeam;
   setTeam: Dispatch<SetStateAction<EventTeam|null>>;
   event: Event;
-  setEvent: Dispatch<SetStateAction<Event|undefined>> | ((event: Event)=>void);
+  setEvent: EventResponse['mutate'];
   isManager: boolean;
 }
 
@@ -151,27 +154,40 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
 
           <Divider sx={{ pt: 2, pb: 2 }}>ช่องทางการชำระเงิน</Divider>
 
-          <Detail title='ช่องทาง' content={event.tournament.payment.bank}/>
-          <Detail title='เลขบัญชี' content={<div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>{event.tournament.payment.code}
-            <div onClick={() => {
-              navigator.clipboard.writeText(event.tournament.payment.code).then(() => {
-                setCopyAlertOpen(true)
-                setTimeout(() => {
-                  setCopyAlertOpen(false)
-                }, 2000)
-              })
-            }}><CopyAll />
-            </div>
-          </div>}/>
-          <Detail title='ชื่อบัญชี' content={event.tournament.payment.name}/>
+          {event.tournament.payment.code.length > 64 ?
+            <Box sx={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+              <QRCode value={event.tournament.payment.code} />
+              <Typography variant='h6'>{event.tournament.payment.name}</Typography>
+            </Box>
+            :
+            <>
+              <Detail title='ช่องทาง' content={event.tournament.payment.bank}/>
+              <Detail title='เลขบัญชี' content={<div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>{event.tournament.payment.code}
+                <div onClick={() => {
+                  navigator.clipboard.writeText(event.tournament.payment.code).then(() => {
+                    setCopyAlertOpen(true)
+                    setTimeout(() => {
+                      setCopyAlertOpen(false)
+                    }, 2000)
+                  })
+                }}><CopyAll />
+                </div>
+              </div>}/>
+              <Detail title='ชื่อบัญชี' content={event.tournament.payment.name}/>
+            </>
+          }
+
 
           {copyAlertOpen && <Alert  icon={<Check fontSize="inherit" />} severity="success">
             Copied
           </Alert>}
 
-          {slipImage && <div style={{ position: 'relative', width: 'auto', height: '300px' }}>
-            <Image alt='payment-slip' src={slipImage} fill style={{ objectFit: 'contain' }}/>
-          </div>}
+          {slipImage && <Box>
+            <Divider sx={{ mt:2, mb:2 }}>หลักฐานการโอนเงิน</Divider>
+            <div style={{ position: 'relative', width: 'auto', height: '300px' }}>
+              <Image alt='payment-slip' src={slipImage} fill style={{ objectFit: 'contain' }}/>
+            </div>
+          </Box>}
 
           {isManager && <Box sx={{ display:'flex', justifyContent:'space-evenly', gap:1, mt:2 }}>
             <Button sx={{ width:'50%' }} variant='outlined' color='error' onClick={() => updateTeam(team.id, 'paymentStatus', PaymentStatus.Unpaid)}>

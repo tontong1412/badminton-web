@@ -2,7 +2,7 @@ import { Divider, Drawer, List, ListItem, ListItemButton, ListItemText, Toolbar 
 
 const drawerWidth = 240
 
-const organierMenu = [
+const organizerMenu = [
   {
     title: 'รายการแข่ง',
     action: '/event-management'
@@ -33,7 +33,7 @@ const MenuDrawer = ({ tournamentID }: {tournamentID: string}) => {
     <Toolbar />
     <Divider />
     <List>
-      {organierMenu.map((menu) => (
+      {organizerMenu.map((menu) => (
         <ListItem key={menu.title} disablePadding >
           <ListItemButton href={`/tournaments/${tournamentID}/organizer/${menu.action}`}>
             <ListItemText primary={menu.title} />
@@ -44,6 +44,16 @@ const MenuDrawer = ({ tournamentID }: {tournamentID: string}) => {
     <Divider />
     <List>
       {['ดำเนินการแข่งขัน', 'สรุปทีมเข้ารอบ', 'สรุปผลการแข่งขัน'].map((text) => (
+        <ListItem key={text} disablePadding>
+          <ListItemButton>
+            <ListItemText primary={text} />
+          </ListItemButton>
+        </ListItem>
+      ))}
+    </List>
+    <Divider />
+    <List>
+      {['ผู้จัดการ', 'กรรมการ'].map((text) => (
         <ListItem key={text} disablePadding>
           <ListItemButton>
             <ListItemText primary={text} />

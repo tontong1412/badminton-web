@@ -3,17 +3,18 @@
 import ConfirmDeleteModal from '@/app/components/ConfirmDeleteModal'
 import EventModal from '@/app/components/EventModal'
 import FloatingAddButton from '@/app/components/FloatingAddButton'
+import { TournamentResponse } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
-import {   Language, Tournament, TournamentEvent } from '@/type'
-import {  Button,  Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
-import { Dispatch, SetStateAction, useState } from 'react'
+import { Language, Tournament, TournamentEvent } from '@/type'
+import { Button,  Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 
 interface EventManagementProps {
   tournament: Tournament;
   isManager: boolean;
-  setTournament:Dispatch<SetStateAction<Tournament|undefined>>
+  setTournament:TournamentResponse['mutate']
 }
 
 
@@ -85,7 +86,7 @@ const EventManagement = ({ tournament, setTournament }: EventManagementProps) =>
         setChosenEvent(undefined)
       }}/>
       <EventModal visible={visible} setVisible={setVisible} isCreating={isCreating} tournament={tournament} setTournament={setTournament} event={chosenEvent} setEvent={setChosenEvent}/>
-      <ConfirmDeleteModal visible={deleteDialogVisible} setVisible={setDeleteDialogVisible} tournament={tournament} setTournament={setTournament} event={chosenEvent}/>
+      <ConfirmDeleteModal visible={deleteDialogVisible} setVisible={setDeleteDialogVisible} setTournament={setTournament} event={chosenEvent}/>
     </>
   )
 }

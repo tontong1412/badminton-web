@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux'
 import PlayerPopover from '../../participants/PlayerPopover'
 import DrawBracket from './drawBracket'
 import Transition from '@/app/components/ModalTransition'
+import { useEvent } from '@/app/libs/data'
 
 interface GroupDrawProps {
   eventID: string,
@@ -16,7 +17,6 @@ interface GroupDrawProps {
 
 const GroupDraw = ({ eventID }: GroupDrawProps) => {
   const { t } = useTranslation()
-  const [event, setEvent] = useState<Event>()
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const language: Language = useSelector((state: RootState) => state.app.language)
@@ -25,32 +25,20 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
   const [numPlayoff, setNumPlayoff] = useState(8)
   const [numGroup, setNumGroup] = useState(4)
   const [confirmVisible, setConfirmVisible] = useState(false)
-
-  const fetchEvent = async() => {
-    try {
-      const response = await axios(`${SERVICE_ENDPOINT}/events/${eventID}`)
-      setEvent(response.data)
-      const numGroupTemp = Math.floor(response.data.teams.length / 3)
-      setNumGroup(numGroupTemp)
-      setDraw(response.data.draw)
-    }
-    catch (error) {
-      console.error('Error fetching event:', error)
-    }
-  }
+  const { event } = useEvent(eventID)
 
   useEffect(() => {
     setNumPlayoff(numGroup * 2)
   }, [numGroup])
 
   useEffect(() => {
-    fetchEvent()
-  }, [])
-
-  useEffect(() => {
     if(event){
       const initDisplayArray = event.teams.map(() => -1)
       setGroupDisplayArray(initDisplayArray)
+
+      const numGroupTemp = Math.floor(event.teams.length / 4)
+      setNumGroup(numGroupTemp)
+      setDraw(event.draw)
     }
 
   }, [event])

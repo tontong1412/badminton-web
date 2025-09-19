@@ -1,6 +1,5 @@
 'use client'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
-import {  SERVICE_ENDPOINT } from '@/app/constants'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
@@ -8,12 +7,10 @@ import {
   Language,
   Player,
   // Language,
-  Tournament,
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Tab, Tabs } from '@mui/material'
-import axios from 'axios'
+import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
 import { useParams } from 'next/navigation'
 import {   useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
@@ -21,6 +18,7 @@ import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import PlayerPopover from '../../participants/PlayerPopover'
 import GroupDraw from './GroupDraw'
+import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -31,74 +29,50 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 }
 const Organizer = () => {
   // const { t } = useTranslation()
-  const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [tournament, setTournament] = useState<Tournament>()
-  const [isManager, setIsManager] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+  const { tournament } = useTournament(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
   }, [dispatch])
 
-  useEffect(() => {
-    const fetchTournament = async() => {
-      try {
-        const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments/${params.id}`)
-        setTournament(response.data)
-      } catch (error) {
-        console.error('Error fetching tournament:', error)
-      }
-    }
-    fetchTournament()
-  }, [])
-
-  useEffect(() => {
-    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
-      setIsManager(true)
-    }else{
-      setIsManager(false)
-    }
-  }, [user, tournament])
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
 
-
-  if(!tournament) return
-
   return (
-    <TournamentLayout isManager={isManager}>
-      <Box sx={{ display: 'flex' }}>
-        <MenuDrawer tournamentID={tournament.id}/>
-        <Box sx={{ width: '100%' }}>
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="basic tabs example"
-          >
-            {tournament.events.map((e: TournamentEvent, idx) => (
-              <Tab key={idx} label={e.name[language]} />
-            ))}
-          </Tabs>
-          <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
-            {tournament.events.map(((event, idx) => {
-              return (
-                <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  <GroupDraw eventID={event.id}/>
-                </TabPanel>
-              )
-            }))}
+    <TournamentLayout tournament={tournament}>
+      {!tournament ? <CircularProgress/> :
+        <Box sx={{ display: 'flex' }}>
+          <MenuDrawer tournamentID={tournament.id}/>
+          <Box sx={{ width: '100%' }}>
+            <Tabs
+              value={tabIndex}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              aria-label="basic tabs example"
+            >
+              {tournament.events.map((e: TournamentEvent, idx) => (
+                <Tab key={idx} label={e.name[language]} />
+              ))}
+            </Tabs>
+            <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
+              {tournament.events.map(((event, idx) => {
+                return (
+                  <TabPanel value={tabIndex} index={idx} key={event.id} >
+                    <GroupDraw eventID={event.id}/>
+                  </TabPanel>
+                )
+              }))}
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </Box>}
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
     </TournamentLayout>
   )

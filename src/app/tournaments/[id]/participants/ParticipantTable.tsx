@@ -2,16 +2,18 @@
 
 import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
-import { PaymentStatus, TeamStatus, Event, EventTeam, Player, Language } from '@/type'
+import { PaymentStatus, TeamStatus, EventTeam, Player, Language } from '@/type'
 import {  FilterList } from '@mui/icons-material'
-import { Chip,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { Button, Chip,  CircularProgress,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
-import { MouseEvent, useEffect, useState } from 'react'
+import { MouseEvent, useState } from 'react'
 import { useSelector } from 'react-redux'
 import StatusColumn from './StatusColumn'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
+import ParticipantMenu from './ParticipantMenu'
+import { useEvent } from '@/app/libs/data'
 
 interface ParticipantTableProps {
   eventID: string;
@@ -27,7 +29,6 @@ interface UpdateTeamPayload {
 
 const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const { t } = useTranslation()
-  const [event, setEvent] = useState<Event>()
   const language: Language = useSelector((state: RootState) => state.app.language)
   const [orderBy, setOrderBy] = useState<Exclude<keyof EventTeam, 'slip' | 'note'>>('date')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
@@ -38,18 +39,9 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const [showPlayer, setShowPlayer] = useState<Player | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    const fetchEvent = async() => {
-      try {
-        const response = await axios(`${SERVICE_ENDPOINT}/events/${eventID}`)
-        setEvent(response.data)
-      }
-      catch (error) {
-        console.error('Error fetching event:', error)
-      }
-    }
-    fetchEvent()
-  }, [])
+  const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
+  const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
+  const { event, mutate: setEvent } = useEvent(eventID)
 
   const handleSort = (property: Exclude<keyof EventTeam, 'slip' | 'note'>) => {
     const isAsc = orderBy === property && order === 'asc'
@@ -113,7 +105,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   }
 
 
-  if (!event) return null
+  if (!event) return <CircularProgress />
   return (
     <>
       <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>
@@ -175,7 +167,6 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
               </TableCell>
               <TableCell align="center">
                 <TableSortLabel
-                  // align="center"
                   active={orderBy === 'shuttlecockCredit'}
                   direction={orderBy === 'shuttlecockCredit' ? order : 'asc'}
                   onClick={() => handleSort('shuttlecockCredit')}
@@ -183,7 +174,8 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                   {t('tournament.participants.shuttlecockCredit')}
                 </TableSortLabel>
               </TableCell>
-              {/* <TableCell align="center">Shuttlecock Credit</TableCell> */}
+              <TableCell >{t('tournament.registration.note')}</TableCell>
+              {isManager && <TableCell></TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -214,12 +206,30 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                 <TableCell align="center">
                   {team.shuttlecockCredit}
                 </TableCell>
+                <TableCell>
+                  {team.note}
+                </TableCell>
+                {isManager && <TableCell align="center">
+                  <Button fullWidth size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                    setAnchorElMenu(event.currentTarget)
+                    setMenuTeam(team)
+                  }}>{t('tournament.action.more')}</Button>
+                </TableCell>}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
       {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {menuTeam && event && isManager && <ParticipantMenu
+        menuTeam={menuTeam}
+        setMenuTeam={setMenuTeam}
+        anchorElMenu={anchorElMenu}
+        setAnchorElMenu={setAnchorElMenu}
+        event={event}
+        setEvent={setEvent}
+        isManager={isManager}
+      />}
     </>
   )
 }
