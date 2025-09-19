@@ -52,11 +52,11 @@ const ParticipantsPage = () => {
   }
 
   useEffect(() => {
-    if(initialEvent){
+    if(tournament && initialEvent){
       const eventIndex = tournament.events.findIndex((e:TournamentEvent) => e.id === initialEvent)
       setTabIndex(eventIndex || 0)
     }
-  }, [])
+  }, [tournament])
 
   useEffect(() => {
     if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
