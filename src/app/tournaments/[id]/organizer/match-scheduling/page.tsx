@@ -250,27 +250,36 @@ const Organizer = () => {
     let tempTimeSlot = selectedTimeSlot
     let currentRound = matches[0].round
     let currentGroup = matches[0].groupOrder
+    let offset = 0
     while(matches.length > 0){
       if(matches[0].groupOrder !== currentGroup){
+        offset = tempCourt - selectedCourt
         tempCourt = selectedCourt
         tempTimeSlot = selectedTimeSlot
         currentGroup = matches[0].groupOrder
+        currentRound = matches[0].round
       }
       if(matches[0].round === currentRound){
-        if(tempTableRowData[tempTimeSlot][tempCourt] !== null){
+        if(tempTableRowData[tempTimeSlot][tempCourt + offset] !== null){
           tempCourt++
+          if((tempCourt + offset) > numCourt){
+            tempCourt = 1
+            tempTimeSlot++
+            offset = 0
+          }
           continue
         }
-        tempTableRowData[tempTimeSlot][tempCourt] = matches.shift() ?? 'no match'
+        tempTableRowData[tempTimeSlot][tempCourt + offset] = matches.shift() ?? 'no match'
         tempCourt++
-        if(tempCourt > numCourt){
+        if((tempCourt + offset) > numCourt + 1){
           tempCourt = 1
           tempTimeSlot++
+          offset = 0
         }
       }else {
         currentRound = matches[0].round ?? -1
         tempCourt = selectedCourt
-        tempTableRowData[tempTimeSlot += 2][tempCourt] = matches.shift() ?? 'no match'
+        tempTableRowData[tempTimeSlot += 2][tempCourt + offset] = matches.shift() ?? 'no match'
         console.log('new round')
       }
     }
@@ -278,35 +287,6 @@ const Organizer = () => {
 
     handleClose()
   }
-  // const onAddMatchToSchedule = () => {
-  //   setAnchorEl(null)
-  //   const groupStageMatches: Match[] = eventMatches.filter((m: Match) => m.step === MatchStep.Group)
-  //   const tempTableRowData = [...tableRowData]
-  //   let tempCourt = selectedCourt
-  //   let tempTimeSlot = selectedTimeSlot
-  //   let currentRound = 0
-  //   while(groupStageMatches.length > 0){
-  //     if(groupStageMatches[0].round === currentRound){
-  //       if(tempTableRowData[tempTimeSlot][tempCourt] !== null){
-  //         tempCourt++
-  //         continue
-  //       }
-  //       tempTableRowData[tempTimeSlot][tempCourt] = groupStageMatches.shift() ?? 'no match'
-  //       tempCourt++
-  //       if(tempCourt > numCourt){
-  //         tempCourt = 1
-  //         tempTimeSlot++
-  //       }
-  //     }else {
-  //       currentRound = groupStageMatches[0].round ?? -1
-  //       tempCourt = selectedCourt
-  //       tempTableRowData[tempTimeSlot += 2][tempCourt] = groupStageMatches.shift() ?? 'no match'
-  //       console.log('new round')
-  //     }
-  //   }
-  //   setTableRowData(tempTableRowData)
-
-  // }
 
   const getAllGroupMatches = (data: MatchData['group']) => {
     console.log(data)
@@ -327,10 +307,8 @@ const Organizer = () => {
 
     // 4. Flatten the result one more time to get a single array of matches
     const flattedMatches = allMatches.flat()
-    console.log('--------------------')
-    console.log(flattedMatches[0])
 
-    return flattedMatches
+    return flattedMatches.sort(sortMatch)
   }
 
 
