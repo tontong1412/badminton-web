@@ -21,7 +21,7 @@ import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import moment from 'moment'
 import MatchCard from './MatchCard'
-import { AddCircle, ArrowDropDown, Drafts, ExpandLess, ExpandMore, Groups, Inbox, Send, SportsScore, StarBorder } from '@mui/icons-material'
+import { AddCircle, ArrowBackIos, ArrowDropDown, Drafts, ExpandLess, ExpandMore, Groups, Inbox, Send, SportsScore, StarBorder } from '@mui/icons-material'
 import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
@@ -56,20 +56,15 @@ const Organizer = () => {
   const [eventMatches, setEventMatches] = useState([])
   const [selectedDay, setSelectedDay] = useState(0)
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
-  const [openNestedList, setOpenNestedList] = useState({})
-  const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({})
+  const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({ group:{}, playoff:{} })
   const [tableRowData, setTableRowData ] = useState<(Match | null | string)[][]>([])
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(-1)
   const [selectedCourt, setSelectedCourt] = useState(-1)
   const { tournament } = useTournament(params.id as string)
 
-
   const [step, setStep] = useState<string | null>(null)
   const [group, setGroup] = useState<string | null>(null)
   const [round, setRound] = useState<string | null>(null)
-
-
-
 
   const open = Boolean(anchorEl)
   const handleClose = () => {
@@ -78,11 +73,6 @@ const Organizer = () => {
     setGroup(null)
     setRound(null)
   }
-
-  const handleClickList = (key) => {
-    setOpenNestedList((prevState) => ({ ...prevState, [key]: !prevState[key] }))
-  }
-
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
@@ -126,6 +116,11 @@ const Organizer = () => {
     }, {})
     setMatchInIterationFormat(iteratableMatch)
     console.log(JSON.stringify(iteratableMatch, null, 1))
+  }
+
+  const onGenerateMatches = async(eventID:string) => {
+    await axios.post(`${SERVICE_ENDPOINT}/events/generate-matches`, { eventID }, { withCredentials :true })
+    getMatches(eventID)
   }
 
   useEffect(() => {
@@ -334,6 +329,7 @@ const Organizer = () => {
 
   const renderPopOver = () => {
     if(!step && !group && !round){
+      if(Object.keys(matchInIterationFormat).length < 1) return <Typography>Please generate match first</Typography>
       return (
         <Box>
           {Object.entries(matchInIterationFormat).map(([key, value]) => {
@@ -348,20 +344,22 @@ const Organizer = () => {
       if(round){
         return (
           <Box>
+            <Button key={'round-back'} onClick={() => setRound(null)}><ArrowBackIos/></Button>
             {matchInIterationFormat[MatchStep.PlayOff][round].map((match, i) => {
               if(match.round === undefined) return
               return <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[MatchStep.PlayOff][round].length})`}</Button>
             })}
-            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat[MatchStep.PlayOff][round])}>All</Button>
+            <Button key={'round-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat[MatchStep.PlayOff][round])}>All</Button>
           </Box>
         )
       }else{
         return (
           <Box>
+            <Button key={'round-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
             {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key, value]) => {
               return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
             })}
-            <Button key={'round-all'} onClick={() => console.log('add')}>All</Button>
+            <Button key={'match-all'} onClick={() => console.log('add')}>All</Button>
           </Box>
         )
       }
@@ -369,6 +367,7 @@ const Organizer = () => {
       if(!group){
         return (
           <Box>
+            <Button key={'step-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
             {Object.entries(matchInIterationFormat['group']).map(([key, value]) => {
               return (
                 <Button key={`group-${key}`} onClick={() => setGroup(key)}>{key}</Button>
@@ -381,15 +380,17 @@ const Organizer = () => {
         if(!round){
           return (
             <Box>
-              {Object.entries(matchInIterationFormat['group'][group]).map(([key, value]) => {
+              <Button key={'round-back'} onClick={() => setGroup(null)}><ArrowBackIos/></Button>
+              {Object.entries(matchInIterationFormat[MatchStep.Group][group]).map(([key, value]) => {
                 return <Button key={`round-${key}`} onClick={() => setRound(key)}>{`Round ${Number(key) + 1}`}</Button>
               })}
-              <Button key={'step-all'} onClick={() => onAddMatchToSchedule(getAllMatchesFromGroup(matchInIterationFormat['group'][group]))}>All</Button>
+              <Button key={'round-all'} onClick={() => onAddMatchToSchedule(getAllMatchesFromGroup(matchInIterationFormat['group'][group]))}>All</Button>
             </Box>
           )
         }
         return (
           <Box>
+            <Button key={'match-back'} onClick={() => setRound(null)}><ArrowBackIos/></Button>
             {matchInIterationFormat['group'][group][round].map((match, i) => {
               if(match.round === undefined) return
               return (
@@ -398,7 +399,7 @@ const Organizer = () => {
                 </Button>
               )
             })}
-            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat['group'][group][round])}>All</Button>
+            <Button key={'match-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat['group'][group][round])}>All</Button>
           </Box>
         )
 
@@ -451,26 +452,30 @@ const Organizer = () => {
             {tournament.events.map(((event, idx) => {
               return (
                 <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  <Accordion>
-                    <AccordionSummary expandIcon={<ArrowDropDown />}>
-                      <Typography component="span">{`Matches in group stage (${eventMatches.filter((a:Match) => a.step === MatchStep.Group).length})`}</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
-                        {eventMatches.filter((a:Match) => a.step === MatchStep.Group).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
-                      </Box>
-                    </AccordionDetails>
-                  </Accordion>
-                  <Accordion>
-                    <AccordionSummary expandIcon={<ArrowDropDown />}>
-                      <Typography component="span">{`Matches in play off stage (${eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).length})`}</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
-                        {eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
-                      </Box>
-                    </AccordionDetails>
-                  </Accordion>
+                  {eventMatches.length < 1
+                    ? <Button variant='contained' onClick={() => onGenerateMatches(event.id)}>Generate Matches</Button>
+                    : <><Accordion>
+                      <AccordionSummary expandIcon={<ArrowDropDown />}>
+                        <Typography component="span">{`Matches in group stage (${eventMatches.filter((a:Match) => a.step === MatchStep.Group).length})`}</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
+                          {eventMatches.filter((a:Match) => a.step === MatchStep.Group).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion>
+                    <Accordion>
+                      <AccordionSummary expandIcon={<ArrowDropDown />}>
+                        <Typography component="span">{`Matches in play off stage (${eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).length})`}</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
+                          {eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion></>
+                  }
+
                 </TabPanel>
               )
             }))}
