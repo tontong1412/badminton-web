@@ -181,18 +181,22 @@ const Organizer = () => {
 
   }
 
-  const renderTableCell = (match: (Match | null | string)) => {
+  const renderTableCell = (match: (Match | null | string), i: number, j: number) => {
     if (typeof match === 'string'){
       return match
     }else if(match === null){
-      return <AddCircle/>
+      return <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}><AddCircle/></Button>
     }else {
-      if(match.round === undefined || match.groupOrder === undefined) return
+      if(match.round === undefined) return
+
       return (
-        <Box>
-          <Typography>Group {MAP_GROUP_NAME[match.groupOrder].NAME}</Typography>
-          <Typography>Round {match.round + 1}</Typography>
-        </Box>
+        <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}>
+          <Box>
+            <Typography>{match.event?.name[language]}</Typography>
+            {match.groupOrder !== undefined ? <Typography>Group {MAP_GROUP_NAME[match.groupOrder].NAME}</Typography> : null}
+            <Typography>{match.step === MatchStep.Group ? `Round ${match.round + 1}` : MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}</Typography>
+          </Box>
+        </Button>
       )
     }
   }
@@ -239,85 +243,116 @@ const Organizer = () => {
     setSelectedDay(newDay)
   }
 
-  const onAddMatchToSchedule = () => {
-    setAnchorEl(null)
-    const groupStageMatches: Match[] = eventMatches.filter((m: Match) => m.step === MatchStep.Group)
+  const onAddMatchToSchedule = (matches: Match[]) => {
+    console.log(matches)
     const tempTableRowData = [...tableRowData]
     let tempCourt = selectedCourt
     let tempTimeSlot = selectedTimeSlot
-    let currentRound = 0
-    while(groupStageMatches.length > 0){
-      if(groupStageMatches[0].round === currentRound){
+    let currentRound = matches[0].round
+    let currentGroup = matches[0].groupOrder
+    while(matches.length > 0){
+      if(matches[0].groupOrder !== currentGroup){
+        tempCourt = selectedCourt
+        tempTimeSlot = selectedTimeSlot
+        currentGroup = matches[0].groupOrder
+      }
+      if(matches[0].round === currentRound){
         if(tempTableRowData[tempTimeSlot][tempCourt] !== null){
           tempCourt++
           continue
         }
-        tempTableRowData[tempTimeSlot][tempCourt] = groupStageMatches.shift() ?? 'no match'
+        tempTableRowData[tempTimeSlot][tempCourt] = matches.shift() ?? 'no match'
         tempCourt++
         if(tempCourt > numCourt){
           tempCourt = 1
           tempTimeSlot++
         }
       }else {
-        currentRound = groupStageMatches[0].round ?? -1
+        currentRound = matches[0].round ?? -1
         tempCourt = selectedCourt
-        tempTableRowData[tempTimeSlot += 2][tempCourt] = groupStageMatches.shift() ?? 'no match'
+        tempTableRowData[tempTimeSlot += 2][tempCourt] = matches.shift() ?? 'no match'
         console.log('new round')
       }
     }
     setTableRowData(tempTableRowData)
 
+    handleClose()
+  }
+  // const onAddMatchToSchedule = () => {
+  //   setAnchorEl(null)
+  //   const groupStageMatches: Match[] = eventMatches.filter((m: Match) => m.step === MatchStep.Group)
+  //   const tempTableRowData = [...tableRowData]
+  //   let tempCourt = selectedCourt
+  //   let tempTimeSlot = selectedTimeSlot
+  //   let currentRound = 0
+  //   while(groupStageMatches.length > 0){
+  //     if(groupStageMatches[0].round === currentRound){
+  //       if(tempTableRowData[tempTimeSlot][tempCourt] !== null){
+  //         tempCourt++
+  //         continue
+  //       }
+  //       tempTableRowData[tempTimeSlot][tempCourt] = groupStageMatches.shift() ?? 'no match'
+  //       tempCourt++
+  //       if(tempCourt > numCourt){
+  //         tempCourt = 1
+  //         tempTimeSlot++
+  //       }
+  //     }else {
+  //       currentRound = groupStageMatches[0].round ?? -1
+  //       tempCourt = selectedCourt
+  //       tempTableRowData[tempTimeSlot += 2][tempCourt] = groupStageMatches.shift() ?? 'no match'
+  //       console.log('new round')
+  //     }
+  //   }
+  //   setTableRowData(tempTableRowData)
+
+  // }
+
+  const getAllGroupMatches = (data: MatchData['group']) => {
+    console.log(data)
+    // 1. Get the 'group' object
+    const groupData = data
+
+    // 2. Get all the top-level values (the objects for group 'A', 'B', etc.)
+    const groupObjects = Object.values(groupData)
+
+    console.log(groupObjects)
+
+    // 3. Get all the arrays of matches from each group and flatten them.
+    //    `flatMap` is a convenient way to map and flatten in one step.
+    const allMatches = groupObjects.flatMap((group) => {
+    // Get the arrays of matches from each individual group (e.g., group 'A' or 'B')
+      return Object.values(group)
+    })
+
+    // 4. Flatten the result one more time to get a single array of matches
+    const flattedMatches = allMatches.flat()
+    console.log('--------------------')
+    console.log(flattedMatches[0])
+
+    return flattedMatches
   }
 
-  // const onAddMatchToSchedule = (obj: unknown, key: string, timeSlot:number, court: number) => {
-  //   console.log('obj', obj)
-  //   console.log('key', key)
-  //   if(Array.isArray(obj[key])){
-  //     console.log('is array')
-  //     const teamArray = [...obj[key]]
-  //     const tempTableRowData = [...tableRowData]
-  //     while(teamArray.length > 0){
-  //       if(tempTableRowData[timeSlot][court] === null){
-  //         tempTableRowData[timeSlot][court] = teamArray.shift()
-  //         court++
-  //         if(court >= numCourt){
-  //           timeSlot++
-  //           court = 0
-  //         }
-  //       }
-  //     }
-  //     console.log(tempTableRowData[timeSlot])
-  //     setTableRowData(tempTableRowData)
-  //     return
-  //   }
-  //   Object.entries(obj[key]).map(([objKey, objValue ]) => {
-  //     console.log('objKey', objKey)
-  //     console.log('objValue', objValue)
-  //     if(Array.isArray(objValue)){
-  //       console.log('is array')
-  //       const teamArray = [...objValue]
-  //       const tempTableRowData = [...tableRowData]
-  //       while(teamArray.length > 0){
-  //         if(tempTableRowData[timeSlot][court] === null){
-  //           tempTableRowData[timeSlot][court] = teamArray.shift()
-  //           court++
-  //           if(court >= numCourt){
-  //             timeSlot++
-  //             court = 0
-  //           }
-  //         }
-  //       }
-  //       // setTableRowData(tempTableRowData)
-  //     }else{
-  //       Object.entries(objValue).map(([nestedObjKey, nestedObjValue]) => {
-  //         console.log('----------------')
-  //         console.log(nestedObjKey, nestedObjValue)
-  //         onAddMatchToSchedule(objValue, nestedObjKey, timeSlot, court)
 
-  //       })
-  //     }
-  //   })
-  // }
+  const getAllMatchesFromGroup = (data:MatchData['group'][string]): Match[] => {
+  // 1. Get the object for the specific group (e.g., 'A')
+    const group = data
+
+    // 2. Check if the group exists to avoid errors
+    if (!group) {
+      return []
+    }
+
+    // 3. Get all the values (the nested arrays of matches)
+    const nestedArrays = Object.values(group)
+
+    // 4. Use `flat()` to flatten the array of arrays into a single array
+    const allMatches = nestedArrays.flat()
+
+    // 5. Sort array
+    const sortedMatches = allMatches.sort(sortMatch)
+    return sortedMatches
+  }
 
   const renderPopOver = () => {
     if(!step && !group && !round){
@@ -326,7 +361,7 @@ const Organizer = () => {
           {Object.entries(matchInIterationFormat).map(([key, value]) => {
             return <Button key={`step-${key}`} onClick={() => setStep(key)}>{key}</Button>
           })}
-          <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+          <Button key={'step-all'} onClick={() => console.log('add')}>All</Button>
         </Box>
       )
     }
@@ -337,9 +372,9 @@ const Organizer = () => {
           <Box>
             {matchInIterationFormat[MatchStep.PlayOff][round].map((match, i) => {
               if(match.round === undefined) return
-              return <Button key={`match-${match.id}`} onClick={() => console.log(match)}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[MatchStep.PlayOff][round].length})`}</Button>
+              return <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[MatchStep.PlayOff][round].length})`}</Button>
             })}
-            <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat[MatchStep.PlayOff][round])}>All</Button>
           </Box>
         )
       }else{
@@ -348,7 +383,7 @@ const Organizer = () => {
             {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key, value]) => {
               return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
             })}
-            <Button key={'round-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+            <Button key={'round-all'} onClick={() => console.log('add')}>All</Button>
           </Box>
         )
       }
@@ -356,22 +391,22 @@ const Organizer = () => {
       if(!group){
         return (
           <Box>
-            {Object.entries(matchInIterationFormat[step as MatchStep]).map(([key, value]) => {
+            {Object.entries(matchInIterationFormat['group']).map(([key, value]) => {
               return (
                 <Button key={`group-${key}`} onClick={() => setGroup(key)}>{key}</Button>
               )
             })}
-            <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(getAllGroupMatches(matchInIterationFormat['group']))}>All</Button>
           </Box>
         )
       }else{
         if(!round){
           return (
             <Box>
-              {Object.entries(matchInIterationFormat[step as MatchStep][group]).map(([key, value]) => {
+              {Object.entries(matchInIterationFormat['group'][group]).map(([key, value]) => {
                 return <Button key={`round-${key}`} onClick={() => setRound(key)}>{`Round ${Number(key) + 1}`}</Button>
               })}
-              <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+              <Button key={'step-all'} onClick={() => onAddMatchToSchedule(getAllMatchesFromGroup(matchInIterationFormat['group'][group]))}>All</Button>
             </Box>
           )
         }
@@ -380,11 +415,12 @@ const Organizer = () => {
             {matchInIterationFormat['group'][group][round].map((match, i) => {
               if(match.round === undefined) return
               return (
-                <Button key={`match-${match.id}`} onClick={() => console.log(match)}>{`Round ${match.round + 1} (${i + 1}/${matchInIterationFormat['group'][group][round].length})`}</Button>
-              // <Button key={`step-${key}`} onClick={() => onAddMatchToSchedule(matchInIterationFormat, key, selectedTimeSlot, selectedCourt)}>{key}</Button>
+                <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>
+                  {`Round ${match.round + 1} (${i + 1}/${matchInIterationFormat['group'][group][round].length})`}
+                </Button>
               )
             })}
-            <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat['group'][group][round])}>All</Button>
           </Box>
         )
 
@@ -466,7 +502,7 @@ const Organizer = () => {
               <TableHead>
                 <TableRow>
                   {
-                    ['เวลา/คอร์ด', ...Array.from({ length:numCourt }, (_, i) => `Court ${(i + 1)}`)].map((court) => <TableCell key={`court-${court}`}>{court}</TableCell>)
+                    ['เวลา/คอร์ด', ...Array.from({ length:numCourt }, (_, i) => `Court ${(i + 1)}`)].map((court) => <TableCell align='center' key={`court-${court}`}>{court}</TableCell>)
                   }
                 </TableRow>
               </TableHead>
@@ -476,10 +512,8 @@ const Organizer = () => {
                     <TableRow key={`timeSlot-${i}`}>
                       {
                         timeSlot.map((match, j) => (
-                          <TableCell key={`match-${j}`}>
-                            <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}>
-                              {renderTableCell(match)}
-                            </Button>
+                          <TableCell key={`match-${j}`} align='center'>
+                            {renderTableCell(match, i, j)}
                           </TableCell>
 
                         ))
