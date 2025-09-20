@@ -21,8 +21,7 @@ import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import moment from 'moment'
 import MatchCard from './MatchCard'
-import { Add, AddAPhoto, AddBoxRounded, AddCircle, ArrowDropDown, Drafts, ExpandLess, ExpandMore, Groups, Inbox, Send, SportsScore, StarBorder } from '@mui/icons-material'
-import { Courgette } from 'next/font/google'
+import { AddCircle, ArrowDropDown, Drafts, ExpandLess, ExpandMore, Groups, Inbox, Send, SportsScore, StarBorder } from '@mui/icons-material'
 import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
@@ -31,6 +30,20 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
       {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
     </div>
   )
+}
+
+
+interface Group {
+  [key: string]: { // This index signature allows for keys like 'A' and 'B'
+    [key: string]: Match[]; // Each key ('0', '1', '2', etc.) maps to an array of strings
+  };
+}
+interface Playoff {
+  [key: string]: Match[];
+}
+interface MatchData {
+  group: Group;
+  playoff: Playoff;
 }
 const Organizer = () => {
   // const { t } = useTranslation()
@@ -44,14 +57,26 @@ const Organizer = () => {
   const [selectedDay, setSelectedDay] = useState(0)
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const [openNestedList, setOpenNestedList] = useState({})
-  const [matchInIterationFormat, setMatchInIterationFormat] = useState({})
+  const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({})
   const [tableRowData, setTableRowData ] = useState<(Match | null | string)[][]>([])
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(-1)
   const [selectedCourt, setSelectedCourt] = useState(-1)
   const { tournament } = useTournament(params.id as string)
+
+
+  const [step, setStep] = useState<string | null>(null)
+  const [group, setGroup] = useState<string | null>(null)
+  const [round, setRound] = useState<string | null>(null)
+
+
+
+
   const open = Boolean(anchorEl)
   const handleClose = () => {
     setAnchorEl(null)
+    setStep(null)
+    setGroup(null)
+    setRound(null)
   }
 
   const handleClickList = (key) => {
@@ -70,7 +95,7 @@ const Organizer = () => {
   const getMatches = async(eventID: string) => {
     const response = await axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${eventID}&status=waiting`)
     setEventMatches(response.data)
-    const iteratableMatch = response.data.reduce((prev, match:Match) => {
+    const iteratableMatch: MatchData = response.data.reduce((prev, match:Match) => {
       const accumulater = { ...prev }
       if(!match.step) return accumulater
       if(!accumulater[match.step]){
@@ -80,19 +105,21 @@ const Organizer = () => {
       if(match.round === undefined) return accumulater
 
       if(match.step === MatchStep.Group){
-        if(!accumulater[match.step][match.round]){
-          accumulater[match.step][match.round] = {}
-        }
         if(match.groupOrder === undefined) return accumulater
-        if(!accumulater[match.step][match.round][MAP_GROUP_NAME[match.groupOrder].NAME]){
-          accumulater[match.step][match.round][MAP_GROUP_NAME[match.groupOrder].NAME] = []
+
+        if(!accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME]){
+          accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME] = {}
         }
-        accumulater[match.step][match.round][MAP_GROUP_NAME[match.groupOrder].NAME].push('match')
+
+        if(!accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME][match.round]){
+          accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME][match.round] = []
+        }
+        accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME][match.round].push(match)
       }else if(match.step === MatchStep.PlayOff){
         if(!accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]]){
           accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]] = []
         }
-        accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]].push('match')
+        accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]].push(match)
       }
       return accumulater
 
@@ -292,6 +319,79 @@ const Organizer = () => {
   //   })
   // }
 
+  const renderPopOver = () => {
+    if(!step && !group && !round){
+      return (
+        <Box>
+          {Object.entries(matchInIterationFormat).map(([key, value]) => {
+            return <Button key={`step-${key}`} onClick={() => setStep(key)}>{key}</Button>
+          })}
+          <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+        </Box>
+      )
+    }
+
+    if(step === MatchStep.PlayOff){
+      if(round){
+        return (
+          <Box>
+            {matchInIterationFormat[MatchStep.PlayOff][round].map((match, i) => {
+              if(match.round === undefined) return
+              return <Button key={`match-${match.id}`} onClick={() => console.log(match)}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[MatchStep.PlayOff][round].length})`}</Button>
+            })}
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+          </Box>
+        )
+      }else{
+        return (
+          <Box>
+            {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key, value]) => {
+              return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
+            })}
+            <Button key={'round-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+          </Box>
+        )
+      }
+    }else if(step === MatchStep.Group){
+      if(!group){
+        return (
+          <Box>
+            {Object.entries(matchInIterationFormat[step as MatchStep]).map(([key, value]) => {
+              return (
+                <Button key={`group-${key}`} onClick={() => setGroup(key)}>{key}</Button>
+              )
+            })}
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+          </Box>
+        )
+      }else{
+        if(!round){
+          return (
+            <Box>
+              {Object.entries(matchInIterationFormat[step as MatchStep][group]).map(([key, value]) => {
+                return <Button key={`round-${key}`} onClick={() => setRound(key)}>{`Round ${Number(key) + 1}`}</Button>
+              })}
+              <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+            </Box>
+          )
+        }
+        return (
+          <Box>
+            {matchInIterationFormat['group'][group][round].map((match, i) => {
+              if(match.round === undefined) return
+              return (
+                <Button key={`match-${match.id}`} onClick={() => console.log(match)}>{`Round ${match.round + 1} (${i + 1}/${matchInIterationFormat['group'][group][round].length})`}</Button>
+              // <Button key={`step-${key}`} onClick={() => onAddMatchToSchedule(matchInIterationFormat, key, selectedTimeSlot, selectedCourt)}>{key}</Button>
+              )
+            })}
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+          </Box>
+        )
+
+      }
+    }
+  }
+
   if(!tournament) return
 
   return (
@@ -402,13 +502,7 @@ const Organizer = () => {
         }}
       >
         <Box sx={{ p:3, minWidth: 300, display:'flex', justifyContent: 'space-around' }}>
-          {Object.entries(matchInIterationFormat).map(([key, value]) => {
-            return (
-              <Button key={`step-${key}`} onClick={() => onAddMatchToSchedule()}>{key}</Button>
-              // <Button key={`step-${key}`} onClick={() => onAddMatchToSchedule(matchInIterationFormat, key, selectedTimeSlot, selectedCourt)}>{key}</Button>
-            )
-          })}
-          <Button key={'step-all'} onClick={() => onAddMatchToSchedule()}>All</Button>
+          {renderPopOver()}
         </Box>
         {/* <List
           sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
