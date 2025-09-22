@@ -62,6 +62,8 @@ const Organizer = () => {
   const [selectedCourt, setSelectedCourt] = useState(-1)
   const { tournament } = useTournament(params.id as string)
 
+  const [tableRowDataHistory, setTableRowDataHistory] = useState<(Match | null | string)[][][]>([])
+
   const [step, setStep] = useState<string | null>(null)
   const [group, setGroup] = useState<string | null>(null)
   const [round, setRound] = useState<string | null>(null)
@@ -115,7 +117,6 @@ const Organizer = () => {
 
     }, {})
     setMatchInIterationFormat(iteratableMatch)
-    console.log(JSON.stringify(iteratableMatch, null, 1))
   }
 
   const onGenerateMatches = async(eventID:string) => {
@@ -239,6 +240,12 @@ const Organizer = () => {
   }
 
   const onAddMatchToSchedule = (matches: Match[]) => {
+    // save history before modify
+    const tempHistory = [...tableRowDataHistory]
+    const deepCopyTableRowData = JSON.parse(JSON.stringify(tableRowData))
+    tempHistory.push(deepCopyTableRowData)
+    setTableRowDataHistory(tempHistory)
+
     console.log(matches)
     const tempTableRowData = [...tableRowData]
     let tempCourt = selectedCourt
@@ -335,7 +342,7 @@ const Organizer = () => {
           {Object.entries(matchInIterationFormat).map(([key, value]) => {
             return <Button key={`step-${key}`} onClick={() => setStep(key)}>{key}</Button>
           })}
-          <Button key={'step-all'} onClick={() => console.log('add')}>All</Button>
+          {/* <Button key={'step-all'} onClick={() => console.log('add')}>All</Button> */}
         </Box>
       )
     }
@@ -359,7 +366,7 @@ const Organizer = () => {
             {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key, value]) => {
               return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
             })}
-            <Button key={'match-all'} onClick={() => console.log('add')}>All</Button>
+            {/* <Button key={'match-all'} onClick={() => console.log('add')}>All</Button> */}
           </Box>
         )
       }
@@ -407,6 +414,14 @@ const Organizer = () => {
     }
   }
 
+  const onUndo = () => {
+    const tempHistory = [...tableRowDataHistory]
+    const history = tempHistory.pop()
+    if(history === undefined) return
+    setTableRowData(history)
+    setTableRowDataHistory(tempHistory)
+  }
+
   if(!tournament) return
 
   return (
@@ -414,6 +429,9 @@ const Organizer = () => {
       <Box sx={{ display: 'flex' }}>
         <MenuDrawer tournamentID={tournament.id}/>
         <Box sx={{ width: '100%' }}>
+          <ToggleButtonGroup aria-label="Basic button group" sx={{ m:1 }} value={selectedDay} onChange={onChangeDay} exclusive>
+            {getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d, i) => <ToggleButton key={`day-${i}`} value={i}>{moment(d).format('ddd, DD.MM')}</ToggleButton>)}
+          </ToggleButtonGroup>
           <Box sx={{ display:'flex', gap:2, margin: 1, pt:2 }}>
             <TextField
               autoFocus
@@ -431,12 +449,10 @@ const Organizer = () => {
               variant="outlined"
               type='number' />
             <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration)}>Reset</Button>
-            <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large'>Auto</Button>
+            <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' disabled={tableRowDataHistory.length < 1} onClick={onUndo}>Undo</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large'>Save</Button>
           </Box>
-          <ToggleButtonGroup aria-label="Basic button group" value={selectedDay} onChange={onChangeDay} exclusive>
-            {getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d, i) => <ToggleButton key={`day-${i}`} value={i}>{moment(d).format('ddd, DD.MM')}</ToggleButton>)}
-          </ToggleButtonGroup>
+
           <Tabs
             value={tabIndex}
             onChange={handleTabChange}
@@ -448,7 +464,7 @@ const Organizer = () => {
               <Tab key={idx} label={e.name[language]} />
             ))}
           </Tabs>
-          <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
+          <Box component="main" sx={{ flexGrow: 1, p: 1, pt:0 }}>
             {tournament.events.map(((event, idx) => {
               return (
                 <TabPanel value={tabIndex} index={idx} key={event.id} >
@@ -521,42 +537,6 @@ const Organizer = () => {
         <Box sx={{ p:3, minWidth: 300, display:'flex', justifyContent: 'space-around' }}>
           {renderPopOver()}
         </Box>
-        {/* <List
-          sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
-          component="nav"
-          aria-labelledby="nested-list-subheader"
-        >
-          {Object.entries(matchInIterationFormat).map(([stepKey, step]) => (
-            <>
-              <ListItemButton key={`step-${stepKey}`} onClick={() => handleClickList(`step-${stepKey}`)}>
-                <ListItemText primary={stepKey} />
-                {openNestedList[`step-${stepKey}`] ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-              <Collapse in={openNestedList[`step-${stepKey}`]} timeout="auto" unmountOnExit>
-                <List>
-                  {Object.entries(step).map(([roundKey, round]) => (
-                    <>
-                      <ListItemButton key={`step-${stepKey}-round-${roundKey}`} onClick={() => handleClickList(`step-${stepKey}-round-${roundKey}`)}>
-                        <ListItemText primary={roundKey} />
-                        {openNestedList[`step-${stepKey}-round-${roundKey}`] ? <ExpandLess /> : <ExpandMore />}
-                      </ListItemButton>
-                      <Collapse in={openNestedList[`step-${stepKey}`]} timeout="auto" unmountOnExit>
-                        <List>
-                          {Object.entries(round).map(([groupKey, group]) => (
-                            <ListItemButton key={`step-${stepKey}-round-${roundKey}-group-${groupKey}`} onClick={() => handleClickList(`step-${stepKey}-round-${roundKey}-group-${groupKey}`)}>
-                              <ListItemText primary={groupKey} />
-                              {openNestedList[`step-${stepKey}-round-${roundKey}-group-${groupKey}`] ? <ExpandLess /> : <ExpandMore />}
-                            </ListItemButton>
-                          ))}
-                        </List>
-                      </Collapse>
-                    </>
-                  ))}
-                </List>
-              </Collapse>
-            </>
-          ))}
-        </List> */}
       </Popover>
     </TournamentLayout>
   )
