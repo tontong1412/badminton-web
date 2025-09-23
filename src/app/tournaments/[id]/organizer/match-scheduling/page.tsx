@@ -12,16 +12,16 @@ import {
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Accordion, AccordionDetails, AccordionSummary, Avatar, Box, Button, Collapse, Divider, List, ListItem, ListItemAvatar, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Paper, Popover, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Paper, Popover, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
-import React, {  ElementType, Fragment, MouseEvent, useEffect, useState } from 'react'
+import React, { MouseEvent, useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import moment from 'moment'
 import MatchCard from './MatchCard'
-import { AddCircle, ArrowBackIos, ArrowDropDown, Drafts, ExpandLess, ExpandMore, Groups, Inbox, Send, SportsScore, StarBorder } from '@mui/icons-material'
+import { AddCircle, ArrowBackIos, ArrowDropDown } from '@mui/icons-material'
 import { useTournament } from '@/app/libs/data'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
@@ -54,7 +54,7 @@ const Organizer = () => {
   const [numCourt, setNumCourt] = useState(8)
   const [matchDuration, setMatchDuration] = useState(25)
   const [eventMatches, setEventMatches] = useState([])
-  const [selectedDay, setSelectedDay] = useState(0)
+  const [selectedDay, setSelectedDay] = useState<string|null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({ group:{}, playoff:{} })
   const [tableRowData, setTableRowData ] = useState<(Match | null | string)[][]>([])
@@ -127,6 +127,7 @@ const Organizer = () => {
   useEffect(() => {
     if(tournament){
       getMatches(tournament.events[tabIndex].id)
+      setSelectedDay(getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate))[0].toISOString())
     }
   }, [tournament])
 
@@ -197,6 +198,32 @@ const Organizer = () => {
     }
   }
 
+  const onSaveSchedule = async() => {
+
+    const matches = tableRowData.reduce((accumulator: {id: string, date: string}[], currentTimeSlot: (Match | null | string)[]) => {
+
+      for(let i = 1;i < currentTimeSlot.length; i++){
+        if(typeof currentTimeSlot[i] === 'string' || currentTimeSlot[i] === null) {
+          continue
+        }
+        console.log(selectedDay)
+        const date = moment(selectedDay)
+          .set('hour', Number(currentTimeSlot[0]?.toString().split('.')[0]))
+          .set('minute', Number(currentTimeSlot[0]?.toString().split('.')[1]))
+          .toISOString()
+        const match: Match = currentTimeSlot[i] as Match
+
+        accumulator.push({ id: match.id, date })
+      }
+      return accumulator
+    }, [])
+
+    await axios.post(`${SERVICE_ENDPOINT}/matches/schedule`, {
+      tournamentID: tournament.id,
+      matches,
+    }, { withCredentials:true })
+  }
+
   const generateTimeSlots = (
     stepMinutes: number,
     startHour = 9,
@@ -234,7 +261,7 @@ const Organizer = () => {
 
   const onChangeDay = (
     event: React.MouseEvent<HTMLElement>,
-    newDay: number,
+    newDay: string,
   ) => {
     setSelectedDay(newDay)
   }
@@ -246,7 +273,7 @@ const Organizer = () => {
     tempHistory.push(deepCopyTableRowData)
     setTableRowDataHistory(tempHistory)
 
-    console.log(matches)
+
     const tempTableRowData = [...tableRowData]
     let tempCourt = selectedCourt
     let tempTimeSlot = selectedTimeSlot
@@ -282,7 +309,6 @@ const Organizer = () => {
         currentRound = matches[0].round ?? -1
         tempCourt = selectedCourt
         tempTableRowData[tempTimeSlot += 2][tempCourt + offset] = matches.shift() ?? 'no match'
-        console.log('new round')
       }
     }
     setTableRowData(tempTableRowData)
@@ -291,7 +317,6 @@ const Organizer = () => {
   }
 
   const getAllGroupMatches = (data: MatchData['group']) => {
-    console.log(data)
     // 1. Get the 'group' object
     const groupData = data
 
@@ -314,7 +339,7 @@ const Organizer = () => {
   }
 
 
-  const getAllMatchesFromGroup = (data:MatchData['group'][string]): Match[] => {
+  const getAllMatchesFromGroup = (data:MatchData[MatchStep.Group][string]): Match[] => {
   // 1. Get the object for the specific group (e.g., 'A')
     const group = data
 
@@ -430,7 +455,7 @@ const Organizer = () => {
         <MenuDrawer tournamentID={tournament.id}/>
         <Box sx={{ width: '100%' }}>
           <ToggleButtonGroup aria-label="Basic button group" sx={{ m:1 }} value={selectedDay} onChange={onChangeDay} exclusive>
-            {getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d, i) => <ToggleButton key={`day-${i}`} value={i}>{moment(d).format('ddd, DD.MM')}</ToggleButton>)}
+            {getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d, i) => <ToggleButton key={`day-${i}`} value={d.toISOString()}>{moment(d).format('ddd, DD.MM')}</ToggleButton>)}
           </ToggleButtonGroup>
           <Box sx={{ display:'flex', gap:2, margin: 1, pt:2 }}>
             <TextField
@@ -450,7 +475,7 @@ const Organizer = () => {
               type='number' />
             <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration)}>Reset</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' disabled={tableRowDataHistory.length < 1} onClick={onUndo}>Undo</Button>
-            <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large'>Save</Button>
+            <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' onClick={onSaveSchedule}>Save</Button>
           </Box>
 
           <Tabs
