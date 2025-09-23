@@ -107,6 +107,7 @@ export interface Team {
 export type NewTeam = Omit<Team, 'id'>
 
 export interface Match {
+  matchNumber?: number;
   id: string;
   event?: {
     id: string;

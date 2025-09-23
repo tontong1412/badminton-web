@@ -206,10 +206,10 @@ const Organizer = () => {
         if(typeof currentTimeSlot[i] === 'string' || currentTimeSlot[i] === null) {
           continue
         }
-        console.log(selectedDay)
+
         const date = moment(selectedDay)
-          .set('hour', Number(currentTimeSlot[0]?.toString().split('.')[0]))
-          .set('minute', Number(currentTimeSlot[0]?.toString().split('.')[1]))
+          .set('hour', Number(currentTimeSlot[0]?.toString().split(':')[0]))
+          .set('minute', Number(currentTimeSlot[0]?.toString().split(':')[1]))
           .toISOString()
         const match: Match = currentTimeSlot[i] as Match
 
@@ -217,6 +217,7 @@ const Organizer = () => {
       }
       return accumulator
     }, [])
+
 
     await axios.post(`${SERVICE_ENDPOINT}/matches/schedule`, {
       tournamentID: tournament.id,
