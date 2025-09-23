@@ -4,7 +4,7 @@ import { useTournament } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import { Language, TournamentEvent } from '@/type'
-import { Box, CircularProgress, Tab, Tabs, Typography } from '@mui/material'
+import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
@@ -28,7 +28,6 @@ const DrawPage = () => {
       {!tournament
         ? <CircularProgress/>
         : <Box sx={{ display: 'flex' }}>
-          <MenuDrawer tournamentID={tournament.id}/>
           <Box sx={{ width: '100%' }}>
             <Tabs
               value={tabIndex}

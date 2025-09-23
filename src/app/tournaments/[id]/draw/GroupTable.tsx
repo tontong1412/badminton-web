@@ -27,13 +27,24 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
     const tableRow = event.draw.group[group].map((teamA) => {
       return (
         <TableRow key={`row-team-${teamA.id}`}>
-          <TableCell key={`team-${teamA.id}`}>{teamA.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
+          <TableCell key={`team-${teamA.id}`}
+            scope="row"
+            sx={{
+              borderRight: '1px solid #e0e0e0',
+              position: 'sticky',
+              left: 0,
+              zIndex: 1, // Stay on top of scrolling content
+              backgroundColor: 'white', // Match your table background
+            }}
+          >
+            {teamA.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}
+          </TableCell>
           {
             event?.draw?.group?.[group]?.map((teamB) => {
               const match = matchesInGroup.find((m) => (m.teamA.id === teamA.id && m.teamB.id === teamB.id) || (m.teamA.id === teamB.id && m.teamB.id === teamA.id))
-              if(!match) return <TableCell align='center' key={'match-x'}>X</TableCell>
+              if(!match) return <TableCell sx={{ borderRight: '1px solid #e0e0e0' }} align='center' key={'match-x'}>X</TableCell>
               return (
-                <TableCell align='center' key={`match-${match.id}`}>
+                <TableCell align='center' key={`match-${match.id}`} sx={{ borderRight: '1px solid #e0e0e0' }}>
                   <Typography>{`#${match.matchNumber}`}</Typography>
                   <Typography>{moment(match.date).format('D/MM/YYYY')}</Typography>
                   <Typography>{moment(match.date).format('HH.mm')}</Typography>
@@ -41,32 +52,54 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
               )
             })
           }
+          <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0' }}>
+            {'score'}
+          </TableCell>
+          <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0' }}>
+            {'dif'}
+          </TableCell>
         </TableRow>
       )
     })
     return tableRow
   }
+
+
   if(!event?.draw?.group) return
   return (
     <Box>
       {event.draw.group.map((group, i) => {
         // Iteration for each group
         return (
-          <TableContainer key={`group-${i}`} component={Paper} sx={{ mt:3 }}>
+          <TableContainer key={`group-${i}`} component={Paper} sx={{ mt:3, overflow: 'auto' }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{`Group ${MAP_GROUP_NAME[i].NAME}`}</TableCell>
+                  <TableCell
+                    sx={{
+                      backgroundColor: '#80644f',
+                      color: 'white',
+                      borderRight: '1px solid #e0e0e0',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 100, // Ensure it's on top of everything
+                      minWidth: 180
+                    }}>{`Group ${MAP_GROUP_NAME[i].NAME}`}</TableCell>
                   {
                     group.map((team, i) => {
                       // Iteration for team in each group
                       return (
-                        <TableCell key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
+                        <TableCell sx={{
+                          minWidth:180,
+                          borderRight: '1px solid #e0e0e0',
+                          color: 'white',
+                          backgroundColor: '#80644f',
+                        }} key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
                       )
                     })
                   }
-                  <TableCell>Score</TableCell>
-                  <TableCell>Diff</TableCell>
+                  <TableCell sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Score</TableCell>
+                  <TableCell sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Diff</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
