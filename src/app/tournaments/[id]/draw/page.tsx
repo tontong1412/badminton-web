@@ -2,21 +2,18 @@
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import { useTournament } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
-import { useAppDispatch } from '@/app/providers'
-import { Language, TournamentEvent } from '@/type'
+import { Language, MatchStep, TournamentEvent } from '@/type'
 import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
-import MenuDrawer from '../organizer/MenuDrawer'
 import TabPanel from '@/app/components/TabPanel'
 import GroupTable from './GroupTable'
+import Bracket from './Bracket'
 
 const DrawPage = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
-  const dispatch = useAppDispatch()
-  const [isManager, setIsManager] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
   const { tournament } = useTournament(params.id as string)
 
@@ -46,6 +43,7 @@ const DrawPage = () => {
                 return (
                   <TabPanel value={tabIndex} index={idx} key={event.id} >
                     <GroupTable eventID={event.id}/>
+                    <Bracket eventID={event.id} step={MatchStep.PlayOff}/>
                   </TabPanel>
                 )
               }))}

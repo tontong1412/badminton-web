@@ -106,6 +106,13 @@ export interface Team {
 }
 export type NewTeam = Omit<Team, 'id'>
 
+export interface MatchTeam {
+  id: string;
+  players: MatchPlayer[];
+  scoreSet: number;
+  score: number;
+}
+
 export interface Match {
   matchNumber?: number;
   id: string;
@@ -122,10 +129,12 @@ export interface Match {
   court?: string;
   date: string;
   status: MatchStatus;
-  teamA:  Team,
-  teamB: Team,
+  teamA:  MatchTeam,
+  teamB: MatchTeam,
   shuttlecockUsed: number;
   note?: string;
+  bracketOrder?: number;
+  scoreLabel: string[];
 }
 
 export enum MatchStep {

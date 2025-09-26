@@ -157,7 +157,7 @@ const Organizer = () => {
       return a.step === MatchStep.Group ? -1 : 1
     }
 
-    if(!a.round || !b.round) return 0
+    if(a.round === undefined || b.round === undefined) return 0
 
 
     if (a.step === MatchStep.Group) {
@@ -172,7 +172,10 @@ const Organizer = () => {
       }
     }
 
-    if(!a.groupOrder || !b.groupOrder) return 0
+    if(a.groupOrder === undefined || b.groupOrder === undefined) {
+      if(a.bracketOrder === undefined || b.bracketOrder === undefined) return 0
+      return a.bracketOrder - b.bracketOrder
+    }
 
     return a.groupOrder - b.groupOrder
 
@@ -192,6 +195,7 @@ const Organizer = () => {
             <Typography>{match.event?.name[language]}</Typography>
             {match.groupOrder !== undefined ? <Typography>Group {MAP_GROUP_NAME[match.groupOrder].NAME}</Typography> : null}
             <Typography>{match.step === MatchStep.Group ? `Round ${match.round + 1}` : MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}</Typography>
+            {match.bracketOrder !== undefined && <Typography>{`Bracket  ${match.bracketOrder}`}</Typography>}
           </Box>
         </Button>
       )
@@ -281,6 +285,8 @@ const Organizer = () => {
     let currentRound = matches[0].round
     let currentGroup = matches[0].groupOrder
     let offset = 0
+
+    matches.sort(sortMatch)
     while(matches.length > 0){
       if(matches[0].groupOrder !== currentGroup){
         offset = tempCourt - selectedCourt

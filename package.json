@@ -36,6 +36,7 @@
     "react-i18next": "^15.4.1",
     "react-qr-code": "^2.0.18",
     "react-redux": "^9.2.0",
+    "sass": "^1.93.2",
     "styled-components": "^6.1.15",
     "swr": "^2.3.6",
     "uuid": "^11.1.0"

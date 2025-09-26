@@ -1,0 +1,299 @@
+// SASS Variables (SCSS syntax)
+$color-theme:       #80644f;
+$color-heading:     #363636;
+$color-content:     #777;
+$color-background:  #f0f2f2;
+$color-footer:      black;
+$color-news:        #4549a8;
+$color-community:   #ccc;
+$color-release:     #80644f;
+$color-winner:      #80644f;
+$color-border:      #c0c0c8;
+$font-content:      "Roboto Slab", serif;
+
+.bracket{
+  // background: $color-background; // Uncommented and converted
+  display: inline-block;
+  white-space: nowrap;
+  // font-size: 0;
+  overflow: scroll;
+  padding-top:20px;
+  width:100%;
+  padding-right: 20px;
+
+  .round{
+    display: inline-block;
+    vertical-align: middle;
+
+    .winners{
+      & > div{
+        display: inline-block;
+        vertical-align: middle;
+
+        &.matchups{
+          .matchup{
+            &:last-child{
+              margin-bottom: 0 !important;
+            }
+
+            .participants{
+              border-radius: 0.25rem;
+              overflow: hidden;
+              border: 1px solid $color-border; // Variable converted
+
+              .group{
+                display: flex;
+
+                &:not(:last-child){
+                  border-bottom: thin solid white;
+                }
+                box-sizing: content-box;
+
+                .detail-score{
+                  color: $color-content; // Variable converted
+                  background: white;
+                  width: 2rem;
+                  height: 3rem;
+                  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+                  p{
+                    text-align: center;
+                    margin: 0;
+                    line-height: 3;
+                    font-size: 1rem;
+                  }
+                }
+
+                .detail-date{
+                  white-space: pre-wrap;
+                  color: $color-content; // Variable converted
+                  background: white;
+                  width: 6rem;
+                  height: 3rem;
+                  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+                  p{
+                    margin: 0;
+                    text-align: center;
+                    font-size: 1rem;
+                  }
+                }
+
+                .detail-time{
+                  color: $color-content; // Variable converted
+                  background: white;
+                  width: 6rem;
+                  height: 3rem;
+                  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+                  p{
+                    line-height: 3;
+                    margin: 0;
+                    text-align: center;
+                    font-size: 1rem;
+                  }
+                }
+
+                .participant{
+                  box-sizing: border-box;
+                  padding-left: 5px;
+                  padding-top:3px;
+                  color: $color-content; // Variable converted
+                  border-left: 0.25rem solid $color-content; // Variable converted
+                  background: white;
+                  width: 12rem;
+                  height: 3rem;
+                  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+
+                  &.winner{
+                    color: $color-release; // Variable converted
+                    border-color: $color-winner; // Variable converted
+                  }
+
+                  &.loser{
+                    color: $color-community; // Variable converted
+                    border-color: $color-community; // Variable converted
+                  }
+
+                  .single{
+                    margin: 0 1.25rem;
+                    line-height: 3;
+                    font-size: 1rem;
+                  }
+
+                  .double{
+                    margin: 0 1.25rem;
+                    line-height: 1.5;
+                    font-size: 1rem;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        &.connector{
+          &.filled{
+            .line, &.bottom .merger:after, &.top .merger:before{
+              border-color: $color-release; // Variable converted
+            }
+          }
+
+          .line, .merger{
+            box-sizing: border-box;
+            width: 2rem;
+            display: inline-block;
+            vertical-align: top;
+          }
+
+          .line{
+            border-bottom: thin solid $color-border; // Variable converted
+            height: 5rem;
+          }
+
+          .merger{
+            position: relative;
+            height: 8rem;
+
+            &:before, &:after{
+              content: "";
+              display: block;
+              box-sizing: border-box;
+              width: 100%;
+              height: 50%;
+              border: 0 solid;
+              border-color: $color-border; // Variable converted
+            }
+
+            &:before{
+              border-right-width: thin;
+              border-top-width: thin;
+            }
+
+            &:after{
+              border-right-width: thin;
+              border-bottom-width: thin;
+            }
+          }
+        }
+      }
+    }
+
+    &.round0{
+      .winners{
+        &:not(:last-child){
+          margin-bottom: 2rem;
+        }
+        .matchups{
+          .matchup{
+            &:not(:last-child){
+              margin-bottom: 2rem
+            }
+            .participants {
+              .participant{}
+            }
+          }
+        }
+        .connector{
+          .merger{
+            height: 8rem
+          }
+          .line{
+            height: 4rem
+          }
+        }
+      }
+    }
+
+    &.round1{
+      .winners{
+        &:not(:last-child){
+          margin-bottom: 10rem;
+        }
+        .matchups{
+          .matchup{
+            &:not(:last-child){
+              margin-bottom: 10rem
+            }
+            .participants {
+              .participant{}
+            }
+          }
+        }
+        .connector{
+          .merger{
+            height: 16rem
+          }
+          .line{
+            height: 8rem
+          }
+        }
+      }
+    }
+
+    &.round2{
+      .winners{
+        &:not(:last-child){
+          margin-bottom: 26rem;
+        }
+        .matchups{
+          .matchup{
+            &:not(:last-child){
+              margin-bottom:26rem
+            }
+            .participants{
+              .participant{}
+            }
+          }
+        }
+        .connector{
+          .merger{
+            height: 32rem
+          }
+          .line{
+            height: 16rem
+          }
+        }
+      }
+    }
+
+    &.round3{
+      .winners{
+        &:not(:last-child){
+          margin-bottom: 58rem;
+        }
+        .matchups{
+          .matchup{
+            &:not(:last-child){
+              margin-bottom: 58rem
+            }
+            .participants{
+              .participant{}
+            }
+          }
+        }
+        .connector{
+          .merger{
+            height: 64rem
+          }
+          .line{
+            height: 32rem
+          }
+        }
+      }
+    }
+
+    
+
+    &.finals{
+      .winners{
+        .matchups{
+          .matchup
+            .participants{
+              .participant{}
+            }
+        }
+      }
+    }
+
+    &.champion{}
+  }
+}
+
