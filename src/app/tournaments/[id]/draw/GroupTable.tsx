@@ -89,17 +89,19 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
                     group.map((team, i) => {
                       // Iteration for team in each group
                       return (
-                        <TableCell sx={{
-                          minWidth:180,
-                          borderRight: '1px solid #e0e0e0',
-                          color: 'white',
-                          backgroundColor: '#80644f',
-                        }} key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
+                        <TableCell
+                          align='center'
+                          sx={{
+                            minWidth:180,
+                            borderRight: '1px solid #e0e0e0',
+                            color: 'white',
+                            backgroundColor: '#80644f',
+                          }} key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
                       )
                     })
                   }
-                  <TableCell sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Score</TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Diff</TableCell>
+                  <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Score</TableCell>
+                  <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Diff</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
