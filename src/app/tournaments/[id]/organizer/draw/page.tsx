@@ -16,7 +16,7 @@ import {   useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
-import PlayerPopover from '../../participants/PlayerPopover'
+import PlayerPopover from '../../draw/PlayerPopover'
 import GroupDraw from './GroupDraw'
 import { useTournament } from '@/app/libs/data'
 

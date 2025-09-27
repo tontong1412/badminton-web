@@ -46,7 +46,7 @@ const TournamentFooter = ({ tournament }: Props) => {
             router.push(`/tournaments/${params.id}`)
             break
           case TournamentMenu.Participants:
-            router.push(`/tournaments/${params.id}/participants`)
+            router.push(`/tournaments/${params.id}/draw`)
             break
           case TournamentMenu.Me:
             router.push(`/tournaments/${params.id}/me`)

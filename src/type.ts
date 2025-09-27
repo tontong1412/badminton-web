@@ -188,6 +188,15 @@ export interface TournamentEvent {
 }
 
 export type SimplePlayer = Pick<Player, 'id' | 'officialName' | 'displayName' | 'photo'>;
+
+export enum TournamentStatus {
+  Preparation = 'preparation',
+  RegistrationOpen = 'registrationOpen',
+  RegistrationClose = 'registrationClose',
+  SchedulePublished = 'schedulePublished',
+  Ongoing = 'ongoing',
+  Finished = 'finished'
+}
 export interface Tournament {
   id: string;
   name: {
@@ -212,6 +221,7 @@ export interface Tournament {
     name: string,
     bank: string
   },
+  status: TournamentStatus
 }
 
 export interface displayData {
