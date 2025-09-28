@@ -1,4 +1,4 @@
-import { Match, MatchStatus, NewTeam, Player, Team } from '@/type'
+import { Match, MatchStatus, MatchTeam, Player } from '@/type'
 import moment from 'moment'
 import { v1 as uuid } from 'uuid'
 
@@ -22,16 +22,18 @@ export const fetchMatches = (): Match[] => {
   return matches as Match[]
 }
 
-export const createMatch = (teamA: NewTeam, teamB: NewTeam) => {
-  const teamAWithID: Team = { ...teamA, id: uuid() }
-  const teamBWithID: Team = { ...teamB, id: uuid() }
+export const createMatch = (teamA: MatchTeam, teamB: MatchTeam) => {
+  const teamAWithID: MatchTeam = { ...teamA, id: uuid() }
+  const teamBWithID: MatchTeam = { ...teamB, id: uuid() }
   const newMatch: Match = {
     id: uuid(),
     teamA: teamAWithID,
     teamB:  teamBWithID,
     date: moment().toISOString(),
     status: MatchStatus.Waiting,
-    shuttlecockUsed: 0
+    shuttlecockUsed: 0,
+    scoreLabel: [],
+    skip: false,
   }
   const matches = JSON.parse(localStorage.getItem('matches') || '[]')
   matches.push(newMatch)

@@ -135,8 +135,8 @@ export interface Match {
   note?: string;
   bracketOrder?: number;
   scoreLabel: string[];
-  skip: boolean;
-  umpire: SimplePlayer;
+  skip?: boolean;
+  umpire?: SimplePlayer;
 }
 
 export enum MatchStep {
