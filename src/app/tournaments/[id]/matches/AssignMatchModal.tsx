@@ -8,7 +8,7 @@ import { Language, Match, MatchStatus, MatchStep, SimplePlayer } from '@/type'
 import { ExpandMore } from '@mui/icons-material'
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, InputLabel, MenuItem, Radio, RadioGroup, Select, TextField, Typography } from '@mui/material'
 import axios from 'axios'
-import { Dispatch, SetStateAction, useEffect, useState } from 'react'
+import { Dispatch, FormEvent, SetStateAction, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 
@@ -40,7 +40,7 @@ const AssignMatchModal = ({ visible, setVisible, tournamentID, match }: AssignMa
   const [status, setStatus] = useState(MatchStatus.Playing)
   const [shuttlecockUsed, setShuttlecockUsed] = useState<string>(match.shuttlecockUsed?.toString() ?? '')
 
-  const handleSubmit = async(e) => {
+  const handleSubmit = async(e: FormEvent) => {
     e.preventDefault()
     setButtonLoading(true)
     const umpire = tournament.umpires.find((u) => u.id === umpireID)

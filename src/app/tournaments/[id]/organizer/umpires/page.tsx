@@ -21,11 +21,11 @@ import axios from 'axios'
 
 const Umpire = () => {
   // const { t } = useTranslation()
-  const user = useSelector((state: RootState) => state.app.user)
+  // const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [isManager, setIsManager] = useState(false)
+  // const [isManager, setIsManager] = useState(false)
   const { tournament, mutate: setTournament } = useTournament(params.id as string)
   const { players: playerList } = usePlayers()
   const [selectedUser, setSelectedUser] = useState<SimplePlayer | null>(null)
@@ -35,13 +35,13 @@ const Umpire = () => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
   }, [dispatch])
 
-  useEffect(() => {
-    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
-      setIsManager(true)
-    }else{
-      setIsManager(false)
-    }
-  }, [user, tournament])
+  // useEffect(() => {
+  //   if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
+  //     setIsManager(true)
+  //   }else{
+  //     setIsManager(false)
+  //   }
+  // }, [user, tournament])
 
   const handleAddManager = async() => {
     setButtonLoading(true)

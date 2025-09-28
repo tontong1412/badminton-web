@@ -4,33 +4,24 @@ import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import {
-  Language,
-  SimplePlayer,
   TournamentMenu
 } from '@/type'
-import { Autocomplete, Avatar, Box, Button, CircularProgress, Divider, IconButton, List, ListItem, ListItemAvatar, ListItemText, TextField, Typography } from '@mui/material'
+import { Box, CircularProgress } from '@mui/material'
 import { useParams } from 'next/navigation'
 import {  useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
-import { usePlayers, useTournament } from '@/app/libs/data'
-import { Delete } from '@mui/icons-material'
-import { SERVICE_ENDPOINT } from '@/app/constants'
-import axios from 'axios'
+import { useTournament } from '@/app/libs/data'
 import MatchListTable from '../../matches/MatchListTable'
 
 const RunMatch = () => {
   // const { t } = useTranslation()
   const user = useSelector((state: RootState) => state.app.user)
-  const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
   const [isManager, setIsManager] = useState(false)
-  const { tournament, mutate: setTournament } = useTournament(params.id as string)
-  const { players: playerList } = usePlayers()
-  const [selectedUser, setSelectedUser] = useState<SimplePlayer | null>(null)
-  const [buttonLoading, setButtonLoading] = useState(false)
+  const { tournament } = useTournament(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))

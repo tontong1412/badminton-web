@@ -1,9 +1,7 @@
-import {  Language, Match  } from '@/type'
+import {  Match  } from '@/type'
 import { Menu, MenuItem } from '@mui/material'
 import { Dispatch, SetStateAction, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSelector } from 'react-redux'
-import { RootState } from '@/app/libs/redux/store'
 import AssignMatchModal from './AssignMatchModal'
 
 interface MatchMenuProps {
@@ -15,11 +13,11 @@ interface MatchMenuProps {
   tournamentID: string
 }
 
-const MatchMenu = ({ match, setMatch, anchorElMenu, setAnchorElMenu, isManager, tournamentID }:MatchMenuProps) => {
+const MatchMenu = ({ match, setMatch, anchorElMenu, setAnchorElMenu, tournamentID }:MatchMenuProps) => {
   const { t } = useTranslation()
-  const language: Language = useSelector((state: RootState) => state.app.language)
+  // const language: Language = useSelector((state: RootState) => state.app.language)
   const [announceModalVisible, setAnnounceModalVisible] = useState(false)
-  const [scoreModalVisible, setScoreModalVisible] = useState(false)
+  // const [scoreModalVisible, setScoreModalVisible] = useState(false)
 
 
   const handleCloseMenu = () => {
@@ -43,7 +41,7 @@ const MatchMenu = ({ match, setMatch, anchorElMenu, setAnchorElMenu, isManager, 
 
         <MenuItem onClick={() => {
           setAnchorElMenu(null)
-          setScoreModalVisible(true)
+          // setScoreModalVisible(true)
         }}>{t('tournament.matchList.action.editResult')}
         </MenuItem>
       </Menu>

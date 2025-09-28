@@ -87,16 +87,17 @@ const Organizer = () => {
   const getMatches = async(eventID: string) => {
     const response = await axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${eventID}&status=waiting`)
     setEventMatches(response.data)
-    const iteratableMatch: MatchData = response.data.reduce((prev, match:Match) => {
+    const iteratableMatch: MatchData = response.data.reduce((prev: MatchData, match:Match) => {
       const accumulater = { ...prev }
       if(!match.step) return accumulater
       if(!accumulater[match.step]){
         accumulater[match.step] = {}
       }
-      accumulater[match.step] = { ...accumulater[match.step] }
+
       if(match.round === undefined) return accumulater
 
       if(match.step === MatchStep.Group){
+        accumulater[MatchStep.Group] = { ...accumulater[MatchStep.Group] }
         if(match.groupOrder === undefined) return accumulater
 
         if(!accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME]){
@@ -108,6 +109,7 @@ const Organizer = () => {
         }
         accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME][match.round].push(match)
       }else if(match.step === MatchStep.PlayOff){
+        accumulater[MatchStep.PlayOff] = { ...accumulater[MatchStep.PlayOff] }
         if(!accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]]){
           accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]] = []
         }
@@ -371,7 +373,7 @@ const Organizer = () => {
       if(Object.keys(matchInIterationFormat).length < 1) return <Typography>Please generate match first</Typography>
       return (
         <Box>
-          {Object.entries(matchInIterationFormat).map(([key, value]) => {
+          {Object.entries(matchInIterationFormat).map(([key]) => {
             return <Button key={`step-${key}`} onClick={() => setStep(key)}>{key}</Button>
           })}
           {/* <Button key={'step-all'} onClick={() => console.log('add')}>All</Button> */}
@@ -395,7 +397,7 @@ const Organizer = () => {
         return (
           <Box>
             <Button key={'round-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
-            {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key, value]) => {
+            {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key]) => {
               return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
             })}
             {/* <Button key={'match-all'} onClick={() => console.log('add')}>All</Button> */}
@@ -407,7 +409,7 @@ const Organizer = () => {
         return (
           <Box>
             <Button key={'step-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
-            {Object.entries(matchInIterationFormat['group']).map(([key, value]) => {
+            {Object.entries(matchInIterationFormat['group']).map(([key]) => {
               return (
                 <Button key={`group-${key}`} onClick={() => setGroup(key)}>{key}</Button>
               )

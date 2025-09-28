@@ -1,12 +1,12 @@
 'use client'
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import { useMatchesTournament, useTournament } from '@/app/libs/data'
-import { RootState } from '@/app/libs/redux/store'
+// import { RootState } from '@/app/libs/redux/store'
 import { MatchStatus, TournamentMenu } from '@/type'
 import { Box, CircularProgress, ToggleButton, ToggleButtonGroup, Typography, useMediaQuery } from '@mui/material'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useSelector } from 'react-redux'
+// import { useSelector } from 'react-redux'
 import theme from '@/theme'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { useAppDispatch } from '@/app/providers'
@@ -19,21 +19,21 @@ const MatchesPage = () => {
   const { tournament } = useTournament(params.id as string)
   const [status, setStatus] = useState<MatchStatus>(MatchStatus.Waiting)
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [isManager, setIsManager] = useState(false)
-  const user = useSelector((state: RootState) => state.app.user)
+  // const [isManager, setIsManager] = useState(false)
+  // const user = useSelector((state: RootState) => state.app.user)
   const { matches } = useMatchesTournament(params.id as string)
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Matches))
   }, [dispatch])
 
-  useEffect(() => {
-    if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
-      setIsManager(true)
-    }else{
-      setIsManager(false)
-    }
-  }, [user, tournament])
+  // useEffect(() => {
+  //   if(user && tournament && tournament.managers?.map((m) => m.id)?.includes(user?.player.id)){
+  //     setIsManager(true)
+  //   }else{
+  //     setIsManager(false)
+  //   }
+  // }, [user, tournament])
 
   const handleStatus = (
     event: React.MouseEvent<HTMLElement>,
