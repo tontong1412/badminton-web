@@ -1,6 +1,6 @@
 import { Divider, Drawer, List, ListItem, ListItemButton, ListItemText, Toolbar } from '@mui/material'
 
-const drawerWidth = 240
+const drawerWidth = 200
 
 const organizerMenu = [
   {
@@ -20,6 +20,34 @@ const organizerMenu = [
     action: '/match-scheduling'
   },
 ]
+
+const PersonelMenu = [
+  {
+    title: 'ผู้จัดการ',
+    action: '/managers'
+  },
+  {
+    title: 'กรรมการ',
+    action: '/umpires'
+  }
+]
+
+
+const duringTournamentMenu = [
+  {
+    title: 'ดำเนินการแข่งขัน',
+    action: '/run-match'
+  },
+  {
+    title: 'สรุปทีมเข้ารอบ',
+    action: '/round-up'
+  },
+  {
+    title: 'สรุปผลการแข่งขัน',
+    action: '/result'
+  },
+]
+
 const MenuDrawer = ({ tournamentID }: {tournamentID: string}) => {
   return (<Drawer
     sx={{
@@ -43,20 +71,20 @@ const MenuDrawer = ({ tournamentID }: {tournamentID: string}) => {
     </List>
     <Divider />
     <List>
-      {['ดำเนินการแข่งขัน', 'สรุปทีมเข้ารอบ', 'สรุปผลการแข่งขัน'].map((text) => (
-        <ListItem key={text} disablePadding>
-          <ListItemButton>
-            <ListItemText primary={text} />
+      {duringTournamentMenu.map((menu) => (
+        <ListItem key={menu.title} disablePadding >
+          <ListItemButton href={`/tournaments/${tournamentID}/organizer/${menu.action}`}>
+            <ListItemText primary={menu.title} />
           </ListItemButton>
         </ListItem>
       ))}
     </List>
     <Divider />
     <List>
-      {['ผู้จัดการ', 'กรรมการ'].map((text) => (
-        <ListItem key={text} disablePadding>
-          <ListItemButton>
-            <ListItemText primary={text} />
+      {PersonelMenu.map((menu) => (
+        <ListItem key={menu.title} disablePadding >
+          <ListItemButton href={`/tournaments/${tournamentID}/organizer/${menu.action}`}>
+            <ListItemText primary={menu.title} />
           </ListItemButton>
         </ListItem>
       ))}

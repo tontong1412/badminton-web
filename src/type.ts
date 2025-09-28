@@ -106,7 +106,16 @@ export interface Team {
 }
 export type NewTeam = Omit<Team, 'id'>
 
+export interface MatchTeam {
+  id: string;
+  players: MatchPlayer[];
+  scoreSet: number;
+  score: number;
+}
+
+export type NewMatchTeam = Omit<MatchTeam, 'id'>
 export interface Match {
+  matchNumber?: number;
   id: string;
   event?: {
     id: string;
@@ -121,10 +130,14 @@ export interface Match {
   court?: string;
   date: string;
   status: MatchStatus;
-  teamA:  Team,
-  teamB: Team,
+  teamA:  MatchTeam,
+  teamB: MatchTeam,
   shuttlecockUsed: number;
   note?: string;
+  bracketOrder?: number;
+  scoreLabel: string[];
+  skip?: boolean;
+  umpire?: SimplePlayer;
 }
 
 export enum MatchStep {
@@ -178,6 +191,15 @@ export interface TournamentEvent {
 }
 
 export type SimplePlayer = Pick<Player, 'id' | 'officialName' | 'displayName' | 'photo'>;
+
+export enum TournamentStatus {
+  Preparation = 'preparation',
+  RegistrationOpen = 'registrationOpen',
+  RegistrationClose = 'registrationClose',
+  SchedulePublished = 'schedulePublished',
+  Ongoing = 'ongoing',
+  Finished = 'finished'
+}
 export interface Tournament {
   id: string;
   name: {
@@ -190,6 +212,7 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   managers: SimplePlayer[];
+  umpires: SimplePlayer[];
   venue: {
     name: {
       th: string;
@@ -202,6 +225,7 @@ export interface Tournament {
     name: string,
     bank: string
   },
+  status: TournamentStatus
 }
 
 export interface displayData {

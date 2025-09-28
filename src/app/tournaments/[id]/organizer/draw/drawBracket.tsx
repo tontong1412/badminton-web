@@ -66,7 +66,7 @@ const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
                 }}>
                 <div style={{ display:'flex' }}>
                   <div style={{ marginRight: '5px', width: '20px' }}>{i + 1}</div>
-                  <div>{(typeof team === 'string') ? team : team.id}</div>
+                  <div>{(typeof team === 'string' || team === null) ? team : team.id}</div>
                 </div>
                 {setDraw && <div style={{ marginRight: '10px' }} onClick={() => onClickEdit(i)}>< Edit/></div>}
               </div>
