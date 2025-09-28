@@ -79,9 +79,9 @@ const DrawPage = () => {
 
   const renderContent = (eventID: string) => {
     const canPublishDraw = tournament.status === TournamentStatus.SchedulePublished || tournament.status === TournamentStatus.Ongoing || tournament.status === TournamentStatus.Finished
-    if(content === MatchStep.Group && canPublishDraw){
+    if(content === MatchStep.Group && (canPublishDraw || isManager)){
       return <GroupTable eventID={eventID} />
-    }else if(content === MatchStep.PlayOff && canPublishDraw){
+    }else if(content === MatchStep.PlayOff && (canPublishDraw || isManager)){
       return <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
     } else if (content === 'list'){
       return (

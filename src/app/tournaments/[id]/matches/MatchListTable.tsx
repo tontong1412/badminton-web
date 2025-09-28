@@ -82,7 +82,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
               <TableCell align="center"> {t('tournament.matchList.team')} </TableCell>
               <TableCell align="center"> {t('tournament.matchList.result')} </TableCell>
               <TableCell align="center">{t('tournament.matchList.team')}</TableCell>
-              <TableCell align="center">{t('tournament.matchList.action.title')}</TableCell>
+              {isManager && <TableCell align="center">{t('tournament.matchList.action.title')}</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>

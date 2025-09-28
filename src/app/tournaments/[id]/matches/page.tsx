@@ -74,7 +74,7 @@ const MatchesPage = () => {
               </Box>
             </Box>
           </Box>
-          : <MatchListTable tournamentID={tournament.id} isManager={isManager}/>
+          : <MatchListTable tournamentID={tournament.id} isManager={false}/>
       }
     </TournamentLayout>
   )
