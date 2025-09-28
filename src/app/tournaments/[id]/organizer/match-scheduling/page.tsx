@@ -422,7 +422,7 @@ const Organizer = () => {
           return (
             <Box>
               <Button key={'round-back'} onClick={() => setGroup(null)}><ArrowBackIos/></Button>
-              {Object.entries(matchInIterationFormat[MatchStep.Group][group]).map(([key, value]) => {
+              {Object.entries(matchInIterationFormat[MatchStep.Group][group]).map(([key]) => {
                 return <Button key={`round-${key}`} onClick={() => setRound(key)}>{`Round ${Number(key) + 1}`}</Button>
               })}
               <Button key={'round-all'} onClick={() => onAddMatchToSchedule(getAllMatchesFromGroup(matchInIterationFormat['group'][group]))}>All</Button>
