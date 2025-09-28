@@ -1,4 +1,4 @@
-import { PaymentStatusDisplay, TeamStatusDisplay } from '@/type'
+import { MatchStatus, PaymentStatusDisplay, TeamStatusDisplay } from '@/type'
 
 export const MAP_LEVEL_TO_LABEL = [
   'casual',
@@ -153,4 +153,10 @@ export const  MAP_ROUND_NAME = {
   '64': 'Round 64',
   '128': 'Round 128'
 }
+
+export const MAP_STATUS_COLOR = {
+  [MatchStatus.Waiting]: 'warning',
+  [MatchStatus.Playing]: 'info',
+  [MatchStatus.Finished]: 'success',
+} as const
 

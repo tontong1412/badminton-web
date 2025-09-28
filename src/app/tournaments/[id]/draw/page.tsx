@@ -18,6 +18,7 @@ import RegisterEventForm from '@/app/components/RegisterEventModal'
 import LoginModal from '@/app/components/LoginModal'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { useAppDispatch } from '@/app/providers'
+import { Block } from '@mui/icons-material'
 
 const DrawPage = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
@@ -77,9 +78,10 @@ const DrawPage = () => {
   }
 
   const renderContent = (eventID: string) => {
-    if(content === MatchStep.Group){
+    const canPublishDraw = tournament.status === TournamentStatus.SchedulePublished || tournament.status === TournamentStatus.Ongoing || tournament.status === TournamentStatus.Finished
+    if(content === MatchStep.Group && canPublishDraw){
       return <GroupTable eventID={eventID} />
-    }else if(content === MatchStep.PlayOff){
+    }else if(content === MatchStep.PlayOff && canPublishDraw){
       return <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
     } else if (content === 'list'){
       return (
@@ -99,6 +101,11 @@ const DrawPage = () => {
           <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
         </>
       )
+    }else {
+      return <Box sx={{ color: 'GrayText', display: 'flex', flexDirection:'column', alignItems: 'center', mt:5 }} >
+        <Block sx={{ fontSize: 100 }}/>
+        <Typography variant='h6' align='center'>Draw is not yet published</Typography>
+      </Box>
     }
   }
 

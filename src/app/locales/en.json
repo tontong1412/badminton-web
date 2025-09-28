@@ -118,6 +118,31 @@
       "status": "Decision",
       "paymentStatus": "Payment Status",
       "shuttlecockCredit": "Shuttlecock Credit"
+    },
+    "matchList": {
+      "matchNumber": "Match",
+      "status": "Status",
+      "event": "Event",
+      "schedule": "Schedule",
+      "round": "Round",
+      "team": "Team",
+      "result": "Result",
+      "action": {
+        "title": "Action",
+        "editDetail": "Edit detail",
+        "editResult": "Edit result",
+        "announce": "Announce"
+      },
+      "announce": {
+        "title": "Assign match",
+        "court": "Court",
+        "event": "Event",
+        "team": "Team",
+        "round": "Round",
+        "vs": "vs",
+        "umpire": "Umpire",
+        "shuttlecockUsed": "Shuttlecock used"
+      }
     }
   },
   "player": {

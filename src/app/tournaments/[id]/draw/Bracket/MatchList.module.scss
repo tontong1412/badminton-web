@@ -1,0 +1,116 @@
+$color-release:     #80644f;
+$color-winner:      #80644f;
+$color-border:      #c0c0c8;
+$color-content:     #777;
+$color-community:   #ccc;
+
+.match-list {
+  max-width: 400px;
+
+  &.matchups {
+    margin-top: 10px;
+
+    .matchup {
+      &:last-child {
+        margin-bottom: 0 !important;
+      }
+
+      .participants {
+        border-radius: 0.25rem;
+        overflow: hidden;
+        border: 1px solid $color-border; // Less @color-border converted to SCSS $color-border
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        
+        .group {
+          display: flex;
+
+          &:not(:last-child) {
+            border-bottom: thin solid white;
+          }
+
+          box-sizing: content-box;
+
+          .detail-score {
+            color: $color-content; // Less @color-content converted
+            background: white;
+            width: 10%;
+            height: 3rem;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+
+            p {
+              text-align: center;
+              margin: 0;
+              line-height: 3;
+              font-size: 1rem;
+            }
+          }
+
+          .detail-date {
+            white-space: pre-wrap;
+            color: $color-content; // Less @color-content converted
+            background: white;
+            width: 30%;
+            height: 3rem;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+
+            p {
+              margin: 0;
+              text-align: center;
+              font-size: 1rem;
+            }
+          }
+
+          .detail-time {
+            color: $color-content; // Less @color-content converted
+            background: white;
+            width: 30%;
+            height: 3rem;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+
+            p {
+              line-height: 3;
+              margin: 0;
+              text-align: center;
+              font-size: 1rem;
+            }
+          }
+
+          .participant {
+            box-sizing: border-box;
+            padding-left: 5px;
+            padding-top: 3px;
+            color: $color-content; // Less @color-content converted
+            border-left: 0.25rem solid $color-content; // Less @color-content converted
+            background: white;
+            width: 70%;
+            height: 3rem;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+
+            &.winner {
+              color: $color-release; // Less @color-release converted
+              border-color: $color-winner; // Less @color-winner converted
+            }
+
+            &.loser {
+              color: $color-community; // Less @color-community converted
+              border-color: $color-community; // Less @color-community converted
+            }
+
+            .single {
+              margin: 0 1.25rem;
+              line-height: 3;
+              font-size: 1rem;
+            }
+
+            .double {
+              margin: 0 1.25rem;
+              line-height: 1.5;
+              font-size: 1rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}

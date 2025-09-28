@@ -103,10 +103,24 @@ export interface MatchesResponse {
   mutate: (data?: Match | Promise<Match>) => Promise<Match | undefined>
 }
 
-export const useMatches = (eventID: (string | undefined)): MatchesResponse => {
+export const useMatchesEvent = (eventID: (string | undefined)): MatchesResponse => {
 
   const { data, error, mutate } = useSWR(
     `${SERVICE_ENDPOINT}/matches?eventID=${eventID}`,
+    fetcher
+  )
+
+  return {
+    matches: data,
+    isLoading: !error && !data,
+    isError: error,
+    mutate
+  }
+}
+
+export const useMatchesTournament = (tournamentID: (string | undefined)): MatchesResponse => {
+  const { data, error, mutate } = useSWR(
+    `${SERVICE_ENDPOINT}/matches?tournamentID=${tournamentID}`,
     fetcher
   )
 

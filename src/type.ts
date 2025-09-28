@@ -135,6 +135,8 @@ export interface Match {
   note?: string;
   bracketOrder?: number;
   scoreLabel: string[];
+  skip: boolean;
+  umpire: SimplePlayer;
 }
 
 export enum MatchStep {
@@ -209,6 +211,7 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   managers: SimplePlayer[];
+  umpires: SimplePlayer[];
   venue: {
     name: {
       th: string;

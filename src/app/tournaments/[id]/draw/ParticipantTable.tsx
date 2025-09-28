@@ -83,8 +83,6 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
     setAnchorEl(e.currentTarget)
   }
 
-
-
   const sortedRows: EventTeam[] | undefined = event && [...event.teams].sort((a, b) => {
     const valA = a[orderBy]
     const valB = b[orderBy]
@@ -109,7 +107,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   return (
     <>
       <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
         <Table size="small">
           <TableHead>
             <TableRow>

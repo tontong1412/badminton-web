@@ -1,12 +1,11 @@
 'use client'
 
 import { MAP_GROUP_NAME } from '@/app/constants'
-import { useEvent, useMatches } from '@/app/libs/data'
+import { useEvent, useMatchesEvent } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
 import { Language, MatchStep } from '@/type'
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
 import moment from 'moment'
-import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 
 interface GroupTableProps {
@@ -15,8 +14,7 @@ interface GroupTableProps {
 
 const GroupTable = ({ eventID }: GroupTableProps) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
-  const { t } = useTranslation()
-  const { matches } = useMatches(eventID)
+  const { matches } = useMatchesEvent(eventID)
   const { event } = useEvent(eventID)
 
 
@@ -77,8 +75,7 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
                 <TableRow>
                   <TableCell
                     sx={{
-                      backgroundColor: '#80644f',
-                      color: 'white',
+                      backgroundColor: '#e0e0e0',
                       borderRight: '1px solid #e0e0e0',
                       position: 'sticky',
                       left: 0,
@@ -86,7 +83,7 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
                       minWidth: 180
                     }}>{`Group ${MAP_GROUP_NAME[i].NAME}`}</TableCell>
                   {
-                    group.map((team, i) => {
+                    group.map((team) => {
                       // Iteration for team in each group
                       return (
                         <TableCell
@@ -94,14 +91,13 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
                           sx={{
                             minWidth:180,
                             borderRight: '1px solid #e0e0e0',
-                            color: 'white',
-                            backgroundColor: '#80644f',
+                            backgroundColor: '#e0e0e0',
                           }} key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
                       )
                     })
                   }
-                  <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Score</TableCell>
-                  <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#80644f', color: 'white' }}>Diff</TableCell>
+                  <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#e0e0e0' }}>Score</TableCell>
+                  <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0', backgroundColor: '#e0e0e0' }}>Diff</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

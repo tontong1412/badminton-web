@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import MatchUp from './MatchUp'
 import { Match, MatchStep } from '@/type'
-import { useMatches } from '@/app/libs/data'
+import { useMatchesEvent } from '@/app/libs/data'
 import { CircularProgress } from '@mui/material'
 import styles from './Bracket.module.scss'
 
@@ -15,8 +15,8 @@ const Winner = ({ matches }: { matches: Match[] }) => {
   return (
     <div className={styles.winners}>
       <div className={styles.matchups}>
-        <MatchUp match={matches[0]} />
-        <MatchUp match={matches[1]} />
+        <MatchUp match={matches[0]} style='bracket' />
+        <MatchUp match={matches[1]} style='bracket' />
       </div>
       <Connector />
     </div>
@@ -52,7 +52,7 @@ interface BracketProps {
 }
 const Bracket = ({ eventID, step }: BracketProps) => {
   const [bracket, setBracket] = useState<{ [key: string]: Match[] }>()
-  const { matches, isLoading, isError } = useMatches(eventID)
+  const { matches, isLoading, isError } = useMatchesEvent(eventID)
 
   useEffect(() => {
     if (matches) {
@@ -67,9 +67,6 @@ const Bracket = ({ eventID, step }: BracketProps) => {
       <div className={styles.bracket}>
         {
           roundArray.map((round, roundIndex) => {
-            console.log(round)
-            console.log(styles[round])
-            console.log(styles.winners)
             return (
               <section key={`round-${roundIndex}`} className={`${styles.round} ${styles[round]}`}>
                 {
@@ -78,11 +75,10 @@ const Bracket = ({ eventID, step }: BracketProps) => {
                       const matchArray = [bracket[round][index - 1], matches]
                       return <Winner key={index + 1} matches={matchArray} />
                     } else if (round === 'finals') {
-                      console.log('------------')
                       return (
                         <div key={index + 1} className={styles.winners}>
                           <div className={styles.matchups}>
-                            <MatchUp match={matches} />
+                            <MatchUp match={matches} style='bracket'/>
                           </div>
                         </div>
                       )

@@ -119,6 +119,31 @@
       "status": "ประเมินมือ",
       "paymentStatus": "ค่าสมัคร",
       "shuttlecockCredit": "คูปองลูก"
+    },
+    "matchList": {
+      "matchNumber": "แมตช์",
+      "status": "สถานะ",
+      "event": "ประเภท",
+      "schedule": "เวลา",
+      "round": "รอบ",
+      "team": "ผู้เข้าแข่งขัน",
+      "result": "ผลการแข่งขัน",
+      "action": {
+        "title": "Action",
+        "editDetail": "แก้ไขข้อมูล",
+        "editResult": "แก้ไขผล",
+        "announce": "ลงสนาม"
+      },
+      "announce": {
+        "title": "ลงทำการแข่งขัน",
+        "court": "สนาม",
+        "event": "ประเภท",
+        "team": "ผู้เข้าแข่งขัน",
+        "round": "รอบ",
+        "vs": "พบกับ",
+        "umpire": "กรรมการ",
+        "shuttlecockUsed": "จำนวนลูกที่ใช้"
+      }
     }
   },
   "player": {
