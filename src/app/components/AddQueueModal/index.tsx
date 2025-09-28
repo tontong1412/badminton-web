@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent, Dispatch, SetStateAction, useEffect, SyntheticEvent } from 'react'
-import { GameType, Match, NewTeam, Player } from '@/type'
+import { GameType, Match, NewMatchTeam, Player } from '@/type'
 import {
   TextField,
   Box,
@@ -51,13 +51,13 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    const teamA: NewTeam = { players: [] }
+    const teamA: NewMatchTeam = { players: [], scoreSet: 0, score: 0  }
     if(player1)
       teamA.players.push(player1)
     if(player2)
       teamA.players.push(player2)
 
-    const teamB: NewTeam = { players:[] }
+    const teamB: NewMatchTeam = { players:[], scoreSet: 0, score: 0 }
     if(player3)
       teamB.players.push(player3)
     if(player4)

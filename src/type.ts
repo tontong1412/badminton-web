@@ -113,6 +113,7 @@ export interface MatchTeam {
   score: number;
 }
 
+export type NewMatchTeam = Omit<MatchTeam, 'id'>
 export interface Match {
   matchNumber?: number;
   id: string;

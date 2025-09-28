@@ -1,4 +1,4 @@
-import { Match, MatchStatus, MatchTeam, Player } from '@/type'
+import { Match, MatchStatus, MatchTeam, NewMatchTeam, Player } from '@/type'
 import moment from 'moment'
 import { v1 as uuid } from 'uuid'
 
@@ -22,7 +22,7 @@ export const fetchMatches = (): Match[] => {
   return matches as Match[]
 }
 
-export const createMatch = (teamA: MatchTeam, teamB: MatchTeam) => {
+export const createMatch = (teamA: NewMatchTeam, teamB: NewMatchTeam) => {
   const teamAWithID: MatchTeam = { ...teamA, id: uuid() }
   const teamBWithID: MatchTeam = { ...teamB, id: uuid() }
   const newMatch: Match = {
