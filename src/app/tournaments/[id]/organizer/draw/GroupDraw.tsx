@@ -55,7 +55,7 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
     if(draw.group.length > 0){
       const tempGroupDisplayArray = [...groupDisplayArray]
       for(let g = 0;g < draw.group.length;g++){
-        for(let t = 0;t < draw.group[g].length;t++){
+        for(let t = 0;t < draw.group[g]?.length;t++){
           const idx = event.teams.findIndex((team) => team.id === draw.group?.[g][t].id)
           tempGroupDisplayArray[idx] = g
         }
@@ -224,14 +224,17 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
           </Table>
           {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
         </TableContainer>
-        {draw.group && draw.group.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
+        {draw.group && draw.group?.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
         <Box sx={{ display:'flex', flexWrap: 'wrap', gap:2, width:'50%', overflow:'scroll', p:1, pt:0, maxHeight: 500 }}>
           {
-            draw.group?.map((group, i) => <Card key={i} sx={{ width:'300px' }}>
+            draw.group?.map((group, i) => <Card key={i} sx={{ width:'320px' }}>
               <CardHeader title={MAP_GROUP_NAME[i].NAME} sx={{ borderBottom: '1px solid #ddd' }}/>
               {
                 group?.map((team, j) => <CardContent key={j}>
-                  {team?.players.map((p) => <Typography key={p.id}>{p.officialName[language]}</Typography>)}
+                  {team?.players.map((p) => <Box key={p.id} display={'flex'}>
+                    <Typography width={150}>{p.officialName[language]}</Typography>
+                    <Typography >{p.club}</Typography>
+                  </Box>)}
                 </CardContent>)
               }
             </Card>)
