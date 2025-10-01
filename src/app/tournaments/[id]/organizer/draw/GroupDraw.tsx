@@ -224,7 +224,7 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
           </Table>
           {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
         </TableContainer>
-        {draw.group && draw.group?.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
+        {draw.group && draw.group.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
         <Box sx={{ display:'flex', flexWrap: 'wrap', gap:2, width:'50%', overflow:'scroll', p:1, pt:0, maxHeight: 500 }}>
           {
             draw.group?.map((group, i) => <Card key={i} sx={{ width:'320px' }}>
