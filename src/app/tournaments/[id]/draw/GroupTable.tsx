@@ -3,10 +3,12 @@
 import { MAP_GROUP_NAME } from '@/app/constants'
 import { useEvent, useMatchesEvent } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
-import { Language, MatchStep } from '@/type'
+import { Language, MatchStep, Player } from '@/type'
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
 import moment from 'moment'
 import { useSelector } from 'react-redux'
+import PlayerPopover from './PlayerPopover'
+import { MouseEvent, useState } from 'react'
 
 interface GroupTableProps {
   eventID: string
@@ -16,6 +18,13 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const { matches } = useMatchesEvent(eventID)
   const { event } = useEvent(eventID)
+  const [showPlayer, setShowPlayer] = useState<Player | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+
+  const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
+    setShowPlayer(player)
+    setAnchorEl(e.currentTarget)
+  }
 
 
   const generateTableRow = (group:number) => {
@@ -35,7 +44,9 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
               backgroundColor: 'white', // Match your table background
             }}
           >
-            {teamA.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}
+            {teamA.players.map((p) => <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
+              <Typography >{p.officialName[language]}</Typography>
+            </div>)}
           </TableCell>
           {
             event?.draw?.group?.[group]?.map((teamB) => {
@@ -107,6 +118,7 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
           </TableContainer>
         )
       })}
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
     </Box>
   )
 }
