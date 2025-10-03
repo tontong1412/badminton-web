@@ -3,6 +3,7 @@ import { Menu, MenuItem } from '@mui/material'
 import { Dispatch, SetStateAction, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import AssignMatchModal from './AssignMatchModal'
+import SetscoreModal from './SetScoreModal'
 
 interface MatchMenuProps {
   match: Match
@@ -17,7 +18,7 @@ const MatchMenu = ({ match, setMatch, anchorElMenu, setAnchorElMenu, tournamentI
   const { t } = useTranslation()
   // const language: Language = useSelector((state: RootState) => state.app.language)
   const [announceModalVisible, setAnnounceModalVisible] = useState(false)
-  // const [scoreModalVisible, setScoreModalVisible] = useState(false)
+  const [scoreModalVisible, setScoreModalVisible] = useState(false)
 
 
   const handleCloseMenu = () => {
@@ -41,7 +42,7 @@ const MatchMenu = ({ match, setMatch, anchorElMenu, setAnchorElMenu, tournamentI
 
         <MenuItem onClick={() => {
           setAnchorElMenu(null)
-          // setScoreModalVisible(true)
+          setScoreModalVisible(true)
         }}>{t('tournament.matchList.action.editResult')}
         </MenuItem>
       </Menu>
@@ -51,6 +52,15 @@ const MatchMenu = ({ match, setMatch, anchorElMenu, setAnchorElMenu, tournamentI
         tournamentID={tournamentID}
         match={match}
       />}
+      {
+        scoreModalVisible &&
+        <SetscoreModal
+          visible={scoreModalVisible}
+          setVisible={setScoreModalVisible}
+          tournamentID={tournamentID}
+          match={match}
+        />
+      }
     </>
   )
 }
