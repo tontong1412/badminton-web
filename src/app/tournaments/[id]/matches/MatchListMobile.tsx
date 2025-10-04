@@ -31,7 +31,7 @@ const MatchListMobile = ({ tournamentID, status }: MatchListMobileProps) => {
   return (
     <Box>
       {matches.filter((m) => m.status === status && !m.skip).sort(sortMatch)?.map((match) =>
-        <div key={match.id} onClick={() => router.push(`/match/${match.id}`)} className={`${styles['match-list']} ${styles.matchups}`}>
+        <div key={match.id} onClick={() => router.push(`/matches/${match.id}`)} className={`${styles['match-list']} ${styles.matchups}`}>
           <div style={{
             backgroundColor: '#80644f',
             borderTopLeftRadius: '0.25rem',

@@ -132,3 +132,25 @@ export const useMatchesTournament = (tournamentID: (string | undefined)): Matche
   }
 }
 
+export interface MatchResponse {
+  match: Match
+  isLoading: boolean
+  isError: boolean
+  mutate: (data?: Match | Promise<Match>) => Promise<Match | undefined>
+}
+
+export const useMatch = (id: (string | undefined)): MatchResponse => {
+
+  const { data, error, mutate } = useSWR(
+    `${SERVICE_ENDPOINT}/matches/${id}`,
+    fetcher
+  )
+
+  return {
+    match: data,
+    isLoading: !error && !data,
+    isError: error,
+    mutate
+  }
+}
+

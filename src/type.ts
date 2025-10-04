@@ -111,6 +111,9 @@ export interface MatchTeam {
   players: MatchPlayer[];
   scoreSet: number;
   score: number;
+  serving: number;
+  isServing: boolean;
+  receiving: number;
 }
 
 export type NewMatchTeam = Omit<MatchTeam, 'id'>
