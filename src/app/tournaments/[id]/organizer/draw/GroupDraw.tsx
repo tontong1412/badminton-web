@@ -70,13 +70,18 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
   }, [draw.group])
 
   const onResetDraw = async(eventID:string) => {
-    setDraw({})
+    setDraw({
+      ...draw,
+      group: [],
+    })
     if(event){
       const initDisplayArray = event?.teams.map(() => -1)
       setGroupDisplayArray(initDisplayArray)
     }
     await axios.put(`${SERVICE_ENDPOINT}/events/${eventID}`, {
-      draw: {}
+      '$set': {
+        'draw.group':[]
+      }
     }, { withCredentials:true })
 
     setConfirmVisible(false)

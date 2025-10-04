@@ -4,14 +4,14 @@ import Header from './Header'
 import MainContent from './Content'
 
 
-const Layout = ({ children }: {children:ReactNode}) => {
+const Layout = ({ children, noFooter }: {children:ReactNode, noFooter?: boolean}) => {
   return (
     <div>
       <Header />
-      <MainContent>
+      <MainContent noFooter={noFooter}>
         {children}
       </MainContent>
-      <Footer/>
+      {!noFooter  && <Footer/>}
     </div>
   )
 }

@@ -51,11 +51,11 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
   return (
     <Box sx={{ m:2 }}>
       <TableContainer component={Paper} sx={{ maxHeight: 700 }}>
-        <Table size="small" stickyHeader>
+        <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
           <TableHead>
             <TableRow>
-              <TableCell align="center">{t('tournament.matchList.matchNumber')}</TableCell>
-              <TableCell align="center">
+              <TableCell align="center" sx={{ width: 50 }}>{t('tournament.matchList.matchNumber')}</TableCell>
+              <TableCell align="center" sx={{ width: 100 }}>
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {t('tournament.matchList.status')}
                   <Tooltip title="Filter by status">
@@ -75,14 +75,14 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                   }
                 </Menu>
               </TableCell>
-              <TableCell align="center">{t('tournament.matchList.event')}</TableCell>
-              <TableCell align="center">{t('tournament.matchList.schedule')}</TableCell>
-              <TableCell align="center">{t('tournament.matchList.round')}</TableCell>
+              <TableCell align="center" sx={{ width: 80 }}>{t('tournament.matchList.event')}</TableCell>
+              <TableCell align="center" sx={{ width: 80 }}>{t('tournament.matchList.schedule')}</TableCell>
+              <TableCell align="center" sx={{ width: 100 }}>{t('tournament.matchList.round')}</TableCell>
 
               <TableCell align="center"> {t('tournament.matchList.team')} </TableCell>
-              <TableCell align="center"> {t('tournament.matchList.result')} </TableCell>
+              <TableCell align="center" sx={{ width: 80 }}> {t('tournament.matchList.result')} </TableCell>
               <TableCell align="center">{t('tournament.matchList.team')}</TableCell>
-              {isManager && <TableCell align="center">{t('tournament.matchList.action.title')}</TableCell>}
+              {isManager && <TableCell align="center" sx={{ width: 100 }}>{t('tournament.matchList.action.title')}</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -118,7 +118,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                   })}
                 </TableCell>
                 <TableCell align="center">
-                  <Typography >{match.scoreLabel.map((set, i) => <Typography key={i}>{set}</Typography>)}</Typography>
+                  <Box >{match.scoreLabel.map((set, i) => <Typography key={i}>{set}</Typography>)}</Box>
                 </TableCell>
                 <TableCell>
                   {match.teamB?.players.map((player) => {
