@@ -51,13 +51,13 @@ const AddQueueModal = ({ visible, setVisible, setMatchList }: AddQueueModalProps
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    const teamA: NewMatchTeam = { players: [], scoreSet: 0, score: 0  }
+    const teamA: NewMatchTeam = { players: [], scoreSet: 0, score: 0, serving: 0, isServing: true, receiving: 0  }
     if(player1)
       teamA.players.push(player1)
     if(player2)
       teamA.players.push(player2)
 
-    const teamB: NewMatchTeam = { players:[], scoreSet: 0, score: 0 }
+    const teamB: NewMatchTeam = { players:[], scoreSet: 0, score: 0, serving: 0, isServing: true, receiving: 0 }
     if(player3)
       teamB.players.push(player3)
     if(player4)
