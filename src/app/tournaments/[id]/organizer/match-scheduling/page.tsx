@@ -233,7 +233,7 @@ const Organizer = () => {
 
   const generateTimeSlots = (
     stepMinutes: number,
-    startHour = 9,
+    startHour = 5,
     startMinute = 0,
     endHour = 24,
     endMinute = 30
@@ -502,9 +502,9 @@ const Organizer = () => {
             {tournament.events.map(((event, idx) => {
               return (
                 <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  {eventMatches.length < 1
-                    ? <Button variant='contained' onClick={() => onGenerateMatches(event.id)}>Generate Matches</Button>
-                    : <><Accordion>
+                  {<>
+                    <Button variant='contained' onClick={() => onGenerateMatches(event.id)}>Generate Matches</Button>
+                    <Accordion>
                       <AccordionSummary expandIcon={<ArrowDropDown />}>
                         <Typography component="span">{`Matches in group stage (${eventMatches.filter((a:Match) => a.step === MatchStep.Group).length})`}</Typography>
                       </AccordionSummary>
