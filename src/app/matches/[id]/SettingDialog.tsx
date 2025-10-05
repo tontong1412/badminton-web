@@ -111,7 +111,7 @@ const SettingMatchDialog = ({ visible, setVisible, match, setMatch }: SettingMat
             {t('action.cancel')}
           </Button>
           <Button type="submit" variant="contained" loading={loading} disabled={loading}>
-            {t('tournament.registration.registerConfirm')}
+            {t('action.confirm')}
           </Button>
         </DialogActions>
       </Box>
