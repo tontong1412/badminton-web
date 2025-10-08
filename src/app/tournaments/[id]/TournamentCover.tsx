@@ -3,7 +3,7 @@ import LoginModal from '@/app/components/LoginModal'
 import RegisterEventForm from '@/app/components/RegisterEventModal'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
-import { Tournament } from '@/type'
+import { Tournament, TournamentStatus } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
 import { Box, Button, Container, Typography } from '@mui/material'
 import moment from 'moment'
@@ -53,7 +53,7 @@ const TournamentCover = ({ tournament }: Props) => {
           </div>
         </Box>
 
-        <Box component="section" sx={{ p: 2,  width: '100%', display: 'flex', flexDirection: 'column', alignItems:{ xs: 'center', md: 'flex-start' } }}>
+        <Box component="section" sx={{ p: 2,  width: '100%', display: 'flex', flexDirection: 'column', alignItems:{ xs: 'center', md: 'flex-start' }, justifyContent:'center' }}>
           <div className='text-gray-200'>
             <h1 className='text-2xl'>{tournament.name[language]}</h1>
             <Box sx={{ pt:1  }}>
@@ -61,6 +61,7 @@ const TournamentCover = ({ tournament }: Props) => {
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><CalendarMonth/><Typography>{`${moment(tournament.startDate).format('DD MMM YYYY')} ${tournament.startDate !== tournament.endDate && `to ${moment(tournament.endDate).format('DD MMM YYYY')}`}`}</Typography></Box>
             </Box>
           </div>
+          {tournament.status === TournamentStatus.RegistrationOpen &&
           <Box sx={{ paddingTop: 3 }}>
             <Button
               variant='contained'
@@ -68,6 +69,7 @@ const TournamentCover = ({ tournament }: Props) => {
               onClick={handleClickRegister}
               sx={{ borderRadius: 5, backgroundColor: '#ff7961' }}>{t('tournament.registration.registerConfirm')}</Button>
           </Box>
+          }
         </Box>
       </Container>
       <RegisterEventForm

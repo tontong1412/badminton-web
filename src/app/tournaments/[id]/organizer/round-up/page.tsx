@@ -5,22 +5,30 @@ import { useTournament } from '@/app/libs/data'
 import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
 import { useParams } from 'next/navigation'
 import MenuDrawer from '../MenuDrawer'
-import { useState } from 'react'
-import { Language, TournamentEvent } from '@/type'
+import { useEffect, useState } from 'react'
+import { Language, TournamentEvent, TournamentMenu } from '@/type'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
 import TabPanel from '@/app/components/TabPanel'
 import RoundUpEvent from './RoundUpEvent'
+import { useAppDispatch } from '@/app/providers'
+import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 
 const RoundUpPage = () => {
   const params = useParams()
   const { tournament } = useTournament(params.id as string)
   const [tabIndex, setTabIndex] = useState(0)
+  const dispatch = useAppDispatch()
   const language: Language = useSelector((state: RootState) => state.app.language)
+
+  useEffect(() => {
+    dispatch(setActiveMenu(TournamentMenu.Organize))
+  }, [dispatch])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
   }
+
   return (
     <TournamentLayout tournament={tournament}>
       {!tournament ? <CircularProgress/> :
