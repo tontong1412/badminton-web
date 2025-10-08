@@ -114,6 +114,7 @@ export interface MatchTeam {
   serving: number;
   isServing: boolean;
   receiving: number;
+  scoreDiff: number;
 }
 
 export type NewMatchTeam = Omit<MatchTeam, 'id'>
@@ -141,6 +142,7 @@ export interface Match {
   scoreLabel: string[];
   skip?: boolean;
   umpire?: SimplePlayer;
+  byePosition?: number;
 }
 
 export enum MatchStep {

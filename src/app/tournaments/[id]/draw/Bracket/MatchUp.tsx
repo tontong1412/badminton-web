@@ -31,7 +31,7 @@ const MatchUp = ({ match, style = 'bracket' }: {match: Match, style: 'bracket'|'
       <div className={styles.participants} >
         {/* <div className="participants" onClick={() => setModalVisible(true)}> */}
         <div className={styles.group}>
-          <div className={`${styles.participant} ${match.status === 'finished' ? match.teamA?.scoreSet > match.teamB?.scoreSet ? styles.winner : styles.loser : null}`}>
+          <div className={`${styles.participant} ${match.status === 'finished' ? (match.teamA?.scoreSet > match.teamB?.scoreSet || (match.skip && match.byePosition === 0)) ? styles.winner : styles.loser : null}`}>
             {match.teamA?.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>) || ''}
           </div>
           {
@@ -43,7 +43,7 @@ const MatchUp = ({ match, style = 'bracket' }: {match: Match, style: 'bracket'|'
           }
         </div>
         <div className={styles.group}>
-          <div className={`${styles.participant} ${match.status === 'finished' ? match.teamB?.scoreSet > match.teamA?.scoreSet ? styles.winner : styles.loser : null}`}>
+          <div className={`${styles.participant} ${match.status === 'finished' ? (match.teamB?.scoreSet > match.teamA?.scoreSet || (match.skip && match.byePosition === 1))  ? styles.winner : styles.loser : null}`}>
             {match.teamB?.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>) || ''}
           </div>
           {

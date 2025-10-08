@@ -1,9 +1,11 @@
 import Transition from '@/app/components/ModalTransition'
-import { Event, EventTeam } from '@/type'
+import { RootState } from '@/app/libs/redux/store'
+import { Event, EventTeam, Language } from '@/type'
 import { Edit } from '@mui/icons-material'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material'
 import { Dispatch, SetStateAction, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from 'react-redux'
 const height = 50
 const lineWidth = 50
 
@@ -15,6 +17,7 @@ interface Props {
 }
 
 const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
+  const language: Language = useSelector((state: RootState) => state.app.language)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<number>(-1)
   const [place, setPlace] = useState('')
@@ -64,9 +67,15 @@ const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
                   gap: '10px',
                   justifyContent: 'space-between'
                 }}>
-                <div style={{ display:'flex' }}>
+                <div style={{ display:'flex', alignItems: 'flex-end' }}>
                   <div style={{ marginRight: '5px', width: '20px' }}>{i + 1}</div>
-                  <div>{(typeof team === 'string' || team === null) ? team : team.id}</div>
+                  <div>{(typeof team === 'string' || team === null)
+                    ? team
+                    : team.players.map((p) => <Box key={p.id} display={'flex'}>
+                      <Typography width={200}>{p.officialName[language]}</Typography>
+                      <Typography width={150} overflow={'hidden'} noWrap>{p.club}</Typography>
+                    </Box>)}
+                  </div>
                 </div>
                 {setDraw && <div style={{ marginRight: '10px' }} onClick={() => onClickEdit(i)}>< Edit/></div>}
               </div>
