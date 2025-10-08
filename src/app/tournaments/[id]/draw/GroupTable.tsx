@@ -3,7 +3,7 @@
 import { MAP_GROUP_NAME } from '@/app/constants'
 import { useEvent, useMatchesEvent } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
-import { Language, MatchStep, Player } from '@/type'
+import { EventTeam, Language, MatchStatus, MatchStep, Player } from '@/type'
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
 import moment from 'moment'
 import { useSelector } from 'react-redux'
@@ -26,15 +26,52 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
     setAnchorEl(e.currentTarget)
   }
 
+  const processDataSource = (data:EventTeam[]) => {
+    return data.map((team) => {
+      const tempMatches = matches.filter((elm) => elm.step === MatchStep.Group && (elm.teamA.id === team.id || elm.teamB.id === team.id))
+      const result = {
+        team: team,
+        diff: 0,
+        score: 0,
+      }
+      tempMatches.forEach((match) => {
+        if (match.teamB.id === team.id) {
+          const temp = { ...match.teamB }
+          match.teamB = { ...match.teamA }
+          match.teamA = { ...temp }
+          match.scoreLabel = match.scoreLabel.map((set) => {
+            const score = set.split('-')
+            const tempScore = score[0]
+            score[0] = score[1]
+            score[1] = tempScore
+            return score.join('-')
+          })
+        }
+        if(match.status === MatchStatus.Finished){
+          match.scoreLabel.map((set) => {
+            const score = set.split('-')
+            result.diff += Number(score[0]) - Number(score[1])
+          })
+        }
+
+        result.score += match.teamA.scoreSet
+      })
+      return result
+    })
+  }
+
 
   const generateTableRow = (group:number) => {
     if(!matches) return
     const matchesInGroup = matches.filter((m) => m.step === MatchStep.Group && m.groupOrder === group)
     if(!event?.draw?.group) return
-    const tableRow = event.draw.group[group].map((teamA) => {
+
+    const data = processDataSource(event.draw.group[group])
+
+    const tableRow = data.map((teamA, i) => {
       return (
-        <TableRow key={`row-team-${teamA.id}`}>
-          <TableCell key={`team-${teamA.id}`}
+        <TableRow key={`row-team-${i}`}>
+          <TableCell key={`team-${teamA.team.id}`}
             scope="row"
             sx={{
               borderRight: '1px solid #e0e0e0',
@@ -44,14 +81,35 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
               backgroundColor: 'white', // Match your table background
             }}
           >
-            {teamA.players.map((p) => <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
+            {teamA.team.players.map((p) => <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
               <Typography >{p.officialName[language]}</Typography>
             </div>)}
           </TableCell>
           {
             event?.draw?.group?.[group]?.map((teamB) => {
-              const match = matchesInGroup.find((m) => (m.teamA.id === teamA.id && m.teamB.id === teamB.id) || (m.teamA.id === teamB.id && m.teamB.id === teamA.id))
-              if(!match) return <TableCell sx={{ borderRight: '1px solid #e0e0e0' }} align='center' key={'match-x'}>X</TableCell>
+              const match = matchesInGroup.find((m) => (m.teamA.id === teamA.team.id && m.teamB.id === teamB.id) || (m.teamA.id === teamB.id && m.teamB.id === teamA.team.id))
+              if(!match) return <TableCell sx={{ borderRight: '1px solid #e0e0e0' }} align='center' key={`match-x-${teamB.id}`}>X</TableCell>
+              if(match.status === MatchStatus.Finished){
+                if (match.teamA.id === teamB.id) {
+                  const temp = { ...match.teamB }
+                  match.teamB = { ...match.teamA }
+                  match.teamA = { ...temp }
+                  match.scoreLabel = match.scoreLabel.map((set) => {
+                    const score = set.split('-')
+                    const tempScore = score[0]
+                    score[0] = score[1]
+                    score[1] = tempScore
+                    return score.join('-')
+                  })
+                }
+                return (
+                  <TableCell align='center' key={`match-${match.id}`} sx={{ borderRight: '1px solid #e0e0e0' }}>
+                    {match.scoreLabel.map((set, i) => {
+                      return <div key={i + 1}>{set}</div>
+                    })}
+                  </TableCell>
+                )
+              }
               return (
                 <TableCell align='center' key={`match-${match.id}`} sx={{ borderRight: '1px solid #e0e0e0' }}>
                   <Typography>{`#${match.matchNumber}`}</Typography>
@@ -61,11 +119,12 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
               )
             })
           }
-          <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0' }}>
-            {'score'}
+
+          <TableCell align='center' key={`match-sore-${teamA.team.id}`} sx={{ borderRight: '1px solid #e0e0e0' }}>
+            <Typography>{teamA.score}</Typography>
           </TableCell>
-          <TableCell align='center' sx={{ borderRight: '1px solid #e0e0e0' }}>
-            {'dif'}
+          <TableCell align='center' key={`match-diff-${teamA.team.id}`} sx={{ borderRight: '1px solid #e0e0e0' }}>
+            <Typography>{teamA.diff}</Typography>
           </TableCell>
         </TableRow>
       )
