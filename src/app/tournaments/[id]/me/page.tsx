@@ -4,18 +4,21 @@ import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import LoginModal from '@/app/components/LoginModal'
 import PaymentModal from '@/app/components/PaymentModal'
 import RegisterEventForm from '@/app/components/RegisterEventModal'
-import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS } from '@/app/constants'
-import { useMyEvents, useTournament } from '@/app/libs/data'
+import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, MAP_ROUND_NAME } from '@/app/constants'
+import { useMatchesTournament, useMyEvents, useMyMatches, useTournament } from '@/app/libs/data'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
-import { Event, EventTeam, Language, Player, TeamStatus, TournamentMenu } from '@/type'
-import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Container, Divider, Typography } from '@mui/material'
+import { Event, EventTeam, Language, Match, MatchStatus, Player, TeamStatus, TournamentMenu, TournamentStatus } from '@/type'
+import { Avatar, Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Container, Divider, Typography } from '@mui/material'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
+import styles from '../draw/Bracket/MatchList.module.scss'
+import MatchUp from '../draw/Bracket/MatchUp'
+import moment from 'moment'
 
 
 const Me = () => {
@@ -32,6 +35,10 @@ const Me = () => {
   const [registerModalVisible, setRegisterModalVisible] = useState(false)
   const { tournament }  = useTournament(params.id as string)
   const { myEvents, mutate: fetchMyEvents } = useMyEvents(params.id as string)
+  const { myMatches, mutate: fetchMyMatches } = useMyMatches(params.id as string)
+  const { matches } = useMatchesTournament(params.id as string)
+  const [lastMatchAnnounced, setLastMatchAnnounced] = useState<Match>()
+  const [myNextMatch, setMyNextMatch] = useState<Match>()
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Me))
@@ -56,6 +63,30 @@ const Me = () => {
       setRegisterModalVisible(true)
     }
   }
+  const sortMatch = (a: Match, b: Match) => {
+    if(!a.matchNumber || !b.matchNumber){
+      return 0
+    }
+    return a.matchNumber - b.matchNumber
+  }
+  useEffect(() => {
+    if(matches){
+      const lastMatch = matches.filter((m) => m.status === MatchStatus.Playing).sort((a, b) => sortMatch(b, a))
+      console.log(lastMatch)
+      setLastMatchAnnounced(lastMatch[0])
+    }
+  }, [matches])
+
+  useEffect(() => {
+    if(myMatches){
+      const myNextMatchTemp = myMatches.filter((m) => m.status === MatchStatus.Waiting).sort(sortMatch)[0]
+      setMyNextMatch(myNextMatchTemp)
+    }
+  }, [myMatches])
+
+  useEffect(() => {
+    fetchMyMatches()
+  }, [tournament, user])
 
   useEffect(() => {
     if(selectedEvent && selectedTeam){
@@ -65,10 +96,41 @@ const Me = () => {
     }
   }, [myEvents])
 
+  const getNextMatchText = () => {
+
+    const waitNum = (myNextMatch?.matchNumber ?? 0) - (lastMatchAnnounced?.matchNumber ?? 0) - 1
+
+    const firstMatchInQueue = matches.filter((m) => m.status === MatchStatus.Waiting).sort(sortMatch)[0]
+
+    const minsLate = moment().diff(moment(firstMatchInQueue.date), 'minutes')
+    let lateText = ''
+    if(minsLate <= 30){
+      lateText = 'ตรงเวลา'
+    }else if(minsLate > 30 && minsLate <= 45){
+      lateText = 'ช้ากว่ากำหนด ประมาณ 30 นาที'
+    }else if(minsLate > 45 && minsLate <= 60){
+      lateText = 'ช้ากว่ากำหนด ประมาณ 45 นาที'
+    }else if(minsLate > 60 && minsLate <= 75){
+      lateText = 'ช้ากว่ากำหนด ประมาณ 60 นาที'
+    }else{
+      lateText = 'ช้ากว่ากำหนดมากกว่า 60 นาที'
+    }
+
+    if(waitNum > 0){
+      return <div>
+        <div style={{ color: '#80644f', fontSize: 20 }}>อีก <span style={{ fontSize: 26 }}>{waitNum}</span> คู่</div>
+        <Typography sx={{ color:'#999' }}>{lateText}</Typography>
+      </div>
+    }else{
+      return <div style={{ color: '#80644f', fontSize: 26 }}>คู่ต่อไป</div>
+    }
+
+  }
+
   const renderContent = () => {
-    if(!tournament || !myEvents){
+    if(!tournament || !myEvents || !myMatches){
       return <CircularProgress/>
-    }else if(myEvents.length < 1){
+    } else if(tournament.status === TournamentStatus.RegistrationOpen && myEvents.length < 1){
       return (<>
         <Container maxWidth="xl" sx={{ p: 2, textAlign: 'center' }}>
           <Typography variant='h5'>{t('tournament.registration.noRegistration')}</Typography>
@@ -82,7 +144,7 @@ const Me = () => {
           </Box>
         </Container>
       </>)
-    }else{
+    } else if (tournament.status === TournamentStatus.RegistrationOpen) {
       return (
         <Container maxWidth="xl" sx={{ p: 2 }}>
           <Divider sx={{ pt:2, pb:2 }}><Typography variant='h5' >รายการที่สมัคร</Typography></Divider>
@@ -156,13 +218,67 @@ const Me = () => {
           {selectedTeam && selectedEvent && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={selectedEvent} team={selectedTeam} setEvent={fetchMyEvents} isManager={isManager} setTeam={setSelectedTeam}/>}
         </Container>
       )
+    } else if(tournament.status === TournamentStatus.SchedulePublished || tournament.status === TournamentStatus.Ongoing || tournament.status === TournamentStatus.Finished){
+      return <Container>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 5, gap: 2 }}>
+          <Avatar sx={{ width: 100, height: 100 }} src={user?.player.photo}/>
+          <Typography variant='h5'>{user?.player.officialName[language]}</Typography>
+        </Box>
+        <Divider sx={{ pt:2, pb:2 }}><Typography>แมตช์ต่อไป</Typography></Divider>
+        { myNextMatch && <Box >
+          {getNextMatchText()}
+          <div key={myNextMatch.id} className={`${styles['match-list']} ${styles.matchups}`}>
+            <div style={{
+              backgroundColor: '#80644f',
+              borderTopLeftRadius: '0.25rem',
+              borderTopRightRadius: '0.25rem',
+              color: 'whitesmoke',
+              padding: '0px 10px',
+              display: 'flex',
+              justifyContent: 'space-between',
+
+            }}>
+              <div>{`${myNextMatch.event?.name[language]}  รอบ ${myNextMatch.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[myNextMatch.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {myNextMatch.status !== MatchStatus.Waiting && <div>{`#${myNextMatch.matchNumber}`}</div>}
+                {myNextMatch.status === MatchStatus.Playing && <div>{`คอร์ด - ${myNextMatch.court}`}</div>}
+              </div>
+            </div>
+            <MatchUp match={myNextMatch} style='list'/>
+          </div>
+        </Box>}
+        <Divider sx={{ pt:2, pb:2 }}><Typography >แมตช์ทั้งหมดของฉัน</Typography></Divider>
+        <Box sx={{ height: '300px', overflow: 'scroll' }}>
+          {myMatches?.filter((m) => !m.skip).map((match) =>
+            <div key={match.id} className={`${styles['match-list']} ${styles.matchups}`}>
+              <div style={{
+                backgroundColor: '#80644f',
+                borderTopLeftRadius: '0.25rem',
+                borderTopRightRadius: '0.25rem',
+                color: 'whitesmoke',
+                padding: '0px 10px',
+                display: 'flex',
+                justifyContent: 'space-between',
+
+              }}>
+                <div>{`${match.event?.name[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {match.status !== 'waiting' && <div>{`#${match.matchNumber}`}</div>}
+                  {match.status === 'playing' && <div>{`คอร์ด - ${match.court}`}</div>}
+                </div>
+              </div>
+              <MatchUp match={match} style='list'/>
+            </div>
+          )}
+        </Box>
+      </Container>
     }
   }
 
   return (
     <TournamentLayout tournament={tournament}>
       {renderContent()}
-      <FloatingAddButton onClick={handleClickRegister}/>
+      {tournament?.status === TournamentStatus.RegistrationOpen && <FloatingAddButton onClick={handleClickRegister}/>}
       {tournament && <RegisterEventForm
         onFinishRegister={() => fetchMyEvents()}
         tournamentLanguage={tournament.language}
