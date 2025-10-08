@@ -220,9 +220,10 @@ const Me = () => {
       )
     } else if(tournament.status === TournamentStatus.SchedulePublished || tournament.status === TournamentStatus.Ongoing || tournament.status === TournamentStatus.Finished){
       return <Container>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 5, gap: 2 }}>
-          <Avatar sx={{ width: 100, height: 100 }} src={user?.player.photo}/>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 5 }}>
+          <Avatar sx={{ width: 100, height: 100, m:1 }} src={user?.player.photo}/>
           <Typography variant='h5'>{user?.player.officialName[language]}</Typography>
+          <Typography variant='h6'>{tournament.name[language]}</Typography>
         </Box>
         <Divider sx={{ pt:2, pb:2 }}><Typography>แมตช์ต่อไป</Typography></Divider>
         { myNextMatch && <Box >
@@ -248,7 +249,7 @@ const Me = () => {
           </div>
         </Box>}
         <Divider sx={{ pt:2, pb:2 }}><Typography >แมตช์ทั้งหมดของฉัน</Typography></Divider>
-        <Box sx={{ height: '300px', overflow: 'scroll' }}>
+        <Box sx={{ height: '290px', overflow: 'scroll' }}>
           {myMatches?.filter((m) => !m.skip).map((match) =>
             <div key={match.id} className={`${styles['match-list']} ${styles.matchups}`}>
               <div style={{
