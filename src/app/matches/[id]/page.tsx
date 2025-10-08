@@ -22,6 +22,8 @@ const MatchPage = () => {
   const [settingModalVisible, setSettingModalVisible] = useState(false)
   const [undo, setUndo] = useState<Match[]>([])
   const [isSingle, setIsSingle] = useState(false)
+  const [endMatchEnable, setEndMatchEnable] = useState(false)
+
 
   useEffect(() => {
     if(match && user && user.player.id === match.umpire?.id){
@@ -36,6 +38,7 @@ const MatchPage = () => {
   }, [match])
 
   const updateScore = async(team: 'A'|'B') => {
+    setEndMatchEnable(false)
     const keepForUndo = [
       ...undo,
       match
@@ -112,6 +115,7 @@ const MatchPage = () => {
     setUndo([])
     setSide(!side)
     mutate(response.data)
+    setEndMatchEnable(true)
   }
 
   const endMatch = async() => {
@@ -272,6 +276,7 @@ const MatchPage = () => {
                 color='error'
                 variant='contained'
                 onClick={endMatch}
+                disabled={!endMatchEnable}
               >
                 จบแมตช์
               </Button>

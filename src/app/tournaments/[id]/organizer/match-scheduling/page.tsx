@@ -273,6 +273,13 @@ const Organizer = () => {
     setSelectedDay(newDay)
   }
 
+  const onGenerateMatchNumber = async() => {
+    await axios.post(`${SERVICE_ENDPOINT}/matches/assign-match-number`,
+      { tournamentID: tournament.id },
+      { withCredentials:true }
+    )
+  }
+
   const onAddMatchToSchedule = (matches: Match[]) => {
     // save history before modify
     const tempHistory = [...tableRowDataHistory]
@@ -485,6 +492,7 @@ const Organizer = () => {
             <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration)}>Reset</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' disabled={tableRowDataHistory.length < 1} onClick={onUndo}>Undo</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' onClick={onSaveSchedule}>Save</Button>
+            <Button sx={{ borderRadius: 10 }} color='primary' variant='contained' size='large' onClick={onGenerateMatchNumber}>Gen. Match No.</Button>
           </Box>
 
           <Tabs
