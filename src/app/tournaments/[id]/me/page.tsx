@@ -72,7 +72,6 @@ const Me = () => {
   useEffect(() => {
     if(matches){
       const lastMatch = matches.filter((m) => m.status === MatchStatus.Playing).sort((a, b) => sortMatch(b, a))
-      console.log(lastMatch)
       setLastMatchAnnounced(lastMatch[0])
     }
   }, [matches])
@@ -225,33 +224,13 @@ const Me = () => {
           <Typography variant='h5'>{user?.player.officialName[language]}</Typography>
           <Typography variant='h6'>{tournament.name[language]}</Typography>
         </Box>
-        <Divider sx={{ pt:2, pb:2 }}><Typography>แมตช์ต่อไป</Typography></Divider>
-        { myNextMatch && <Box >
-          {getNextMatchText()}
-          <div key={myNextMatch.id} className={`${styles['match-list']} ${styles.matchups}`}>
-            <div style={{
-              backgroundColor: '#80644f',
-              borderTopLeftRadius: '0.25rem',
-              borderTopRightRadius: '0.25rem',
-              color: 'whitesmoke',
-              padding: '0px 10px',
-              display: 'flex',
-              justifyContent: 'space-between',
 
-            }}>
-              <div>{`${myNextMatch.event?.name[language]}  รอบ ${myNextMatch.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[myNextMatch.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                {myNextMatch.status !== MatchStatus.Waiting && <div>{`#${myNextMatch.matchNumber}`}</div>}
-                {myNextMatch.status === MatchStatus.Playing && <div>{`คอร์ด - ${myNextMatch.court}`}</div>}
-              </div>
-            </div>
-            <MatchUp match={myNextMatch} style='list'/>
-          </div>
-        </Box>}
-        <Divider sx={{ pt:2, pb:2 }}><Typography >แมตช์ทั้งหมดของฉัน</Typography></Divider>
-        <Box sx={{ height: '290px', overflow: 'scroll' }}>
-          {myMatches?.filter((m) => !m.skip).map((match) =>
-            <div key={match.id} className={`${styles['match-list']} ${styles.matchups}`}>
+        { myNextMatch &&
+        <>
+          <Divider sx={{ pt:2, pb:2 }}><Typography>แมตช์ต่อไป</Typography></Divider>
+          <Box >
+            {getNextMatchText()}
+            <div key={myNextMatch.id} className={`${styles['match-list']} ${styles.matchups}`}>
               <div style={{
                 backgroundColor: '#80644f',
                 borderTopLeftRadius: '0.25rem',
@@ -262,16 +241,43 @@ const Me = () => {
                 justifyContent: 'space-between',
 
               }}>
-                <div>{`${match.event?.name[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+                <div>{`${myNextMatch.event?.name[language]}  รอบ ${myNextMatch.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[myNextMatch.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  {match.status !== 'waiting' && <div>{`#${match.matchNumber}`}</div>}
-                  {match.status === 'playing' && <div>{`คอร์ด - ${match.court}`}</div>}
+                  {myNextMatch.status !== MatchStatus.Waiting && <div>{`#${myNextMatch.matchNumber}`}</div>}
+                  {myNextMatch.status === MatchStatus.Playing && <div>{`คอร์ด - ${myNextMatch.court}`}</div>}
                 </div>
               </div>
-              <MatchUp match={match} style='list'/>
+              <MatchUp match={myNextMatch} style='list'/>
             </div>
-          )}
-        </Box>
+          </Box>
+        </>}
+
+        {myMatches && myMatches.length > 0 && <>
+          <Divider sx={{ pt:2, pb:2 }}><Typography >แมตช์ทั้งหมดของฉัน</Typography></Divider>
+          <Box sx={{ height: '290px', overflow: 'scroll' }}>
+            {myMatches.filter((m) => !m.skip).map((match) =>
+              <div key={match.id} className={`${styles['match-list']} ${styles.matchups}`}>
+                <div style={{
+                  backgroundColor: '#80644f',
+                  borderTopLeftRadius: '0.25rem',
+                  borderTopRightRadius: '0.25rem',
+                  color: 'whitesmoke',
+                  padding: '0px 10px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+
+                }}>
+                  <div>{`${match.event?.name[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {match.status !== 'waiting' && <div>{`#${match.matchNumber}`}</div>}
+                    {match.status === 'playing' && <div>{`คอร์ด - ${match.court}`}</div>}
+                  </div>
+                </div>
+                <MatchUp match={match} style='list'/>
+              </div>
+            )}
+          </Box>
+        </>}
       </Container>
     }
   }
