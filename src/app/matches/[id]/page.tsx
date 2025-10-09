@@ -84,13 +84,13 @@ const MatchPage = () => {
       }
     }
     const response = await axios.put(`${SERVICE_ENDPOINT}/matches/${match.id}`, payload, { withCredentials:true })
-    mutate(response.data)
+    mutate(response.data, { revalidate: false })
   }
 
   const onUndo = async() => {
     const prev = undo.pop()
     const response = await axios.put(`${SERVICE_ENDPOINT}/matches/${match.id}`, prev, { withCredentials:true })
-    mutate(response.data)
+    mutate(response.data, { revalidate:false })
   }
 
   const endGame = async() => {
@@ -114,7 +114,7 @@ const MatchPage = () => {
     }, { withCredentials :true })
     setUndo([])
     setSide(!side)
-    mutate(response.data)
+    mutate(response.data, { revalidate:false })
     setEndMatchEnable(true)
   }
 
@@ -122,7 +122,7 @@ const MatchPage = () => {
     const response = await axios.put(`${SERVICE_ENDPOINT}/matches/${match.id}`, {
       status: MatchStatus.Finished
     }, { withCredentials:true })
-    mutate(response.data)
+    mutate(response.data, { revalidate:false })
   }
 
 
