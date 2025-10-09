@@ -51,7 +51,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
   if(isLoading || !matches) return <CircularProgress/>
 
   return (
-    <Box sx={{ m:2 }}>
+    <Box>
       <TableContainer component={Paper} sx={{ maxHeight: 700 }}>
         <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
           <TableHead>

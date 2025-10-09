@@ -14,6 +14,7 @@ import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import { useTournament } from '@/app/libs/data'
 import MatchListTable from '../../matches/MatchListTable'
+import DownloadDoc from '@/app/components/DownloadMatchList'
 
 const RunMatch = () => {
   // const { t } = useTranslation()
@@ -42,7 +43,8 @@ const RunMatch = () => {
         ? <CircularProgress/>
         : <Box sx={{ display: 'flex' }}>
           <MenuDrawer tournamentID={tournament.id}/>
-          <Box>
+          <Box padding={1}>
+            <DownloadDoc tournamentID={tournament.id} />
             <MatchListTable tournamentID={tournament.id} isManager={isManager}/>
           </Box>
         </Box>}
