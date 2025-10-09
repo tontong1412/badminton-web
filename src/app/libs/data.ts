@@ -1,4 +1,4 @@
-import useSWR from 'swr'
+import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
 import { Event, Match, Player, Tournament } from '@/type'
@@ -136,7 +136,7 @@ export interface MatchResponse {
   match: Match
   isLoading: boolean
   isError: boolean
-  mutate: (data?: Match | Promise<Match>) => Promise<Match | undefined>
+  mutate: (data?: Match | Promise<Match>, options?: boolean | MutatorOptions | undefined) => Promise<Match | undefined>
 }
 
 export const useMatch = (id: (string | undefined)): MatchResponse => {
