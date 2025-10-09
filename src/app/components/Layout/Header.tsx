@@ -40,7 +40,7 @@ const pages: Page[] = [
 ]
 const settings: string[] = [
   // 'View Profile',
-  // 'Account',
+  'Account',
   'Language Setting',
   'Logout'
 ]
@@ -97,6 +97,9 @@ const  ResponsiveAppBar = () => {
       break
     case 'Language Setting':
       setLanguageSettingModal(true)
+      break
+    case 'Account':
+      router.push('/me')
       break
     default:
     }

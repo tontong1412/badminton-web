@@ -72,7 +72,6 @@ const Me = () => {
   useEffect(() => {
     if(matches){
       const lastMatch = matches.filter((m) => m.status === MatchStatus.Playing).sort((a, b) => sortMatch(b, a))
-      console.log(lastMatch)
       setLastMatchAnnounced(lastMatch[0])
     }
   }, [matches])

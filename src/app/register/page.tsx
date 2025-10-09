@@ -10,6 +10,7 @@ import { RootState } from '../libs/redux/store'
 import { useRouter } from 'next/navigation'
 import { login } from '../libs/redux/slices/appSlice'
 import { useEffect } from 'react'
+import Layout from '../components/Layout'
 
 type RegisterFormInputs = {
   email: string;
@@ -75,107 +76,109 @@ const Register = () => {
     }
   }
   return (
-    <Container
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      sx={{ width: 400, my:4 }}
-    >
-      <Typography variant="h5" gutterBottom sx={{ textAlign: 'center' }}>
-        {t('login.registerButton')}
-      </Typography>
-      <TextField
-        label={t('login.email')}
-        fullWidth
-        margin="normal"
-        {...register('email', {
-          required: 'Email is required',
-          pattern: {
-            value:
+    <Layout>
+      <Container
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{ width: 400, my:4 }}
+      >
+        <Typography variant="h5" gutterBottom sx={{ textAlign: 'center' }}>
+          {t('login.registerButton')}
+        </Typography>
+        <TextField
+          label={t('login.email')}
+          fullWidth
+          margin="normal"
+          {...register('email', {
+            required: 'Email is required',
+            pattern: {
+              value:
                   /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/,
-            message: 'Invalid email address',
-          },
-        })}
-        error={!!errors.email}
-        helperText={errors.email?.message}
-      />
+              message: 'Invalid email address',
+            },
+          })}
+          error={!!errors.email}
+          helperText={errors.email?.message}
+        />
 
-      <TextField
-        label={t('login.password')}
-        type="password"
-        fullWidth
-        margin="normal"
-        {...register('password', {
-          required: 'Password is required',
-          minLength: {
-            value: 8,
-            message: 'Password must be at least 8 characters',
-          },
-        })}
-        error={!!errors.password}
-        helperText={errors.password?.message}
-      />
+        <TextField
+          label={t('login.password')}
+          type="password"
+          fullWidth
+          margin="normal"
+          {...register('password', {
+            required: 'Password is required',
+            minLength: {
+              value: 8,
+              message: 'Password must be at least 8 characters',
+            },
+          })}
+          error={!!errors.password}
+          helperText={errors.password?.message}
+        />
 
-      <TextField
-        label={t('login.confirmPassword')}
-        type="password"
-        fullWidth
-        margin="normal"
-        {...register('confirmPassword', {
-          required: 'Please confirm your password',
-          validate: (value) =>
-            value === password || 'Passwords do not match',
-        })}
-        error={!!errors.confirmPassword}
-        helperText={errors.confirmPassword?.message}
-      />
-      <Divider sx={{ my: 2 }}>{t('player.detail')}</Divider>
-      <TextField
-        label={t('player.officialName')}
-        fullWidth
-        margin="normal"
-        {...register('officialName', {
-          required: 'Full name is required',
-        })}
-        error={!!errors.officialName}
-        helperText={errors.officialName?.message}
-      />
-      {language !== 'en' && <TextField
-        label={t('player.officialNameEN')}
-        fullWidth
-        margin="normal"
-        {...register('officialNameEN', {
-          required: 'Full name is required',
-        })}
-        error={!!errors.officialNameEN}
-        helperText={errors.officialNameEN?.message}
-      />}
-      <TextField
-        label={t('player.displayName')}
-        fullWidth
-        margin="normal"
-        {...register('displayName', {})}
-        error={!!errors.displayName}
-        helperText={errors.displayName?.message}
-      />
-      <TextField
-        label={t('player.dob')}
-        type="date"
-        fullWidth
-        slotProps={{
-          inputLabel: { shrink: true },
-        }}
-        margin="normal"
-        {...register('birthDate', {
-          required: 'Birthday is required',
-        })}
-        error={!!errors.birthDate}
-        helperText={errors.birthDate?.message}
-      />
+        <TextField
+          label={t('login.confirmPassword')}
+          type="password"
+          fullWidth
+          margin="normal"
+          {...register('confirmPassword', {
+            required: 'Please confirm your password',
+            validate: (value) =>
+              value === password || 'Passwords do not match',
+          })}
+          error={!!errors.confirmPassword}
+          helperText={errors.confirmPassword?.message}
+        />
+        <Divider sx={{ my: 2 }}>{t('player.detail')}</Divider>
+        <TextField
+          label={t('player.officialName')}
+          fullWidth
+          margin="normal"
+          {...register('officialName', {
+            required: 'Full name is required',
+          })}
+          error={!!errors.officialName}
+          helperText={errors.officialName?.message}
+        />
+        {language !== 'en' && <TextField
+          label={t('player.officialNameEN')}
+          fullWidth
+          margin="normal"
+          {...register('officialNameEN', {
+            required: 'Full name is required',
+          })}
+          error={!!errors.officialNameEN}
+          helperText={errors.officialNameEN?.message}
+        />}
+        <TextField
+          label={t('player.displayName')}
+          fullWidth
+          margin="normal"
+          {...register('displayName', {})}
+          error={!!errors.displayName}
+          helperText={errors.displayName?.message}
+        />
+        <TextField
+          label={t('player.dob')}
+          type="date"
+          fullWidth
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
+          margin="normal"
+          {...register('birthDate', {
+            required: 'Birthday is required',
+          })}
+          error={!!errors.birthDate}
+          helperText={errors.birthDate?.message}
+        />
 
-      <Button type="submit" variant='contained'  fullWidth autoFocus>
-        {t('action.register')}
-      </Button>
-    </Container>
+        <Button type="submit" variant='contained'  fullWidth autoFocus>
+          {t('action.register')}
+        </Button>
+      </Container>
+    </Layout>
   )
 }
 export default Register
