@@ -10,6 +10,7 @@ import { FilterList } from '@mui/icons-material'
 import { useState } from 'react'
 import moment from 'moment'
 import MatchMenu from './MatchMenu'
+import { useRouter } from 'next/navigation'
 
 interface MatchListTableProps {
   tournamentID: string
@@ -24,6 +25,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
   const [selectedMatch, setSelectedMatch] = useState<Match|null>(null)
+  const router = useRouter()
 
   const handleStatusClick = (event: React.MouseEvent<HTMLElement>) => {
     setStatusAnchorEl(event.currentTarget)
@@ -87,7 +89,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
           </TableHead>
           <TableBody>
             {filteredRows?.map((match, idx) => (
-              <TableRow key={idx}>
+              <TableRow key={idx} role='button' onClick={() => {if(!isManager) router.push(`/matches/${match.id}`)}}>
                 <TableCell align="center">
                   <Typography >{match.matchNumber}</Typography>
                 </TableCell>

@@ -12,6 +12,7 @@ import Transition from '@/app/components/ModalTransition'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
 import { EventResponse } from '@/app/libs/data'
+import SelectEventModal from '@/app/components/SelectEventModal'
 
 interface ParticipantMenuProps {
   menuTeam: EventTeam
@@ -38,6 +39,7 @@ const ParticipantMenu = ({ menuTeam, setMenuTeam, anchorElMenu, event, setEvent,
   const [confirmWithdrawDialogVisible, setConfirmWithdrawDialogVisible] = useState(false)
   const [shuttlecockDialogVisible, setShuttlecockDialogVisible] = useState(false)
   const [withdrawButtonLoading, setWithdrawButtonLoading] = useState(false)
+  const [changeEventDialogVisible, setChangeEventDialogVisible] = useState(false)
 
 
   const withdrawTeam = async(teamID: string) => {
@@ -102,6 +104,11 @@ const ParticipantMenu = ({ menuTeam, setMenuTeam, anchorElMenu, event, setEvent,
         }}>{t('tournament.action.note')}</MenuItem>
 
         <MenuItem onClick={() => {
+          setChangeEventDialogVisible(true)
+          setAnchorElMenu(null)
+        }}>{t('tournament.action.changeEvent')}</MenuItem>
+
+        <MenuItem onClick={() => {
           setShuttlecockDialogVisible(true)
           setAnchorElMenu(null)
         }}>{t('tournament.action.shuttlecock')}</MenuItem>
@@ -113,6 +120,7 @@ const ParticipantMenu = ({ menuTeam, setMenuTeam, anchorElMenu, event, setEvent,
       </Menu>
       <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={event} team={menuTeam} setEvent={setEvent} isManager={isManager} setTeam={setMenuTeam}/>
       <NoteModal visible={noteModalVisible} setVisible={setNoteModalVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>
+      <SelectEventModal visible={changeEventDialogVisible} setVisible={setChangeEventDialogVisible} event={event} setEvent={setEvent} team={menuTeam} setTeam={setMenuTeam} isManager={isManager} />
       <ShuttlecockCreditModal visible={shuttlecockDialogVisible} setVisible={setShuttlecockDialogVisible} event={event} team={menuTeam} setEvent={setEvent} setTeam={setMenuTeam} isManager={isManager}/>
       {menuTeam.contactPerson && <ContactPersonModal visible={contactPersonModalVisible} setVisible={setContactPersonModalVisible} player={menuTeam.contactPerson}/>}
       <Dialog

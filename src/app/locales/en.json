@@ -109,7 +109,8 @@
       "note": "Add note",
       "withdraw": "Withdraw",
       "withdrawConfirmation": "Are you sure you want to withdraw this team?",
-      "withdrawWarning": "Once you withdraw this team, all information about the team including evalutaion decision and payment information will be removed"
+      "withdrawWarning": "Once you withdraw this team, all information about the team including evalutaion decision and payment information will be removed",
+      "changeEvent": "Change event"
     },
     "participants": {
       "date": "Register Date",
