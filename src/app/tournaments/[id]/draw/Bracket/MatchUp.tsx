@@ -20,7 +20,7 @@ const MatchUp = ({ match, style = 'bracket' }: {match: Match, style: 'bracket'|'
     return (
       <React.Fragment>
         {match.scoreLabel.map((set: string, i: number) => <div key={i} className={styles['detail-score']}><p>{set.split('-')[teamIndex]}</p></div>)}
-        {match.status === 'playing' && <div className={styles['detail-score']}><p>{match[team].score}</p></div>}
+        {match.status === 'playing' && <div className={styles['detail-score']}><p>{match[team]?.score}</p></div>}
         {match.status === 'finished' && match.scoreLabel.length < 3 && [...Array.from({ length: 3 - match.scoreLabel.length })].map((i, idx) => <div key={idx} className={styles['detail-score']}><p></p></div>)}
         {match.status === 'playing' && match.scoreLabel.length < 2 && [...Array.from({ length: 2 - match.scoreLabel.length })].map((i, idx) => <div key={idx} className={styles['detail-score']}><p></p></div>)}
       </React.Fragment>

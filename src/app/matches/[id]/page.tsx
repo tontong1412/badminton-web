@@ -188,9 +188,9 @@ const MatchPage = () => {
               fontSize: '40px',
               display: 'flex',
             }}>
-              <div style={{ width: 65 }}>{match.teamA.score}</div>
+              <div style={{ width: 65 }}>{match.teamA?.score}</div>
               <div style={{ width: 20 }}>-</div>
-              <div style={{ width: 65 }}>{match.teamB.score}</div>
+              <div style={{ width: 65 }}>{match.teamB?.score}</div>
             </Box>}
           </Box>
 

@@ -5,7 +5,7 @@ import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
 import { Tournament, TournamentStatus } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
-import { Box, Button, Container, Typography } from '@mui/material'
+import { Avatar, Box, Button, Container, Typography } from '@mui/material'
 import moment from 'moment'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -43,12 +43,10 @@ const TournamentCover = ({ tournament }: Props) => {
             justifyContent: 'center',
             alignItems: 'center' }}>
           <div>
-            <Image
+            <Avatar
               src={tournament.logo || '/avatar.png'}
               alt={tournament.name[language]}
-              width={200}
-              height={200}
-              className='rounded-full shadow-md object-cover'
+              sx={{ width:200, height:200 }}
             />
           </div>
         </Box>
