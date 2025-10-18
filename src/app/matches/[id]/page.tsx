@@ -119,7 +119,9 @@ const MatchPage = () => {
   }
 
   const endMatch = async() => {
-    const response = await axios.put(`${SERVICE_ENDPOINT}/matches/${match.id}`, {
+    const response = await axios.post(`${SERVICE_ENDPOINT}/matches/set-score`, {
+      matchID: match.id,
+      score: match.scoreLabel,
       status: MatchStatus.Finished
     }, { withCredentials:true })
     mutate(response.data, { revalidate:false })
