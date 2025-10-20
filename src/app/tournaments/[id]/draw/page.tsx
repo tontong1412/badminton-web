@@ -2,7 +2,7 @@
 import TournamentLayout from '@/app/components/Layout/TournamentLayout'
 import { useTournament } from '@/app/libs/data'
 import { RootState } from '@/app/libs/redux/store'
-import { Language, MatchStep, TournamentEvent, TournamentMenu, TournamentStatus } from '@/type'
+import { EventFormat, Language, MatchStep, TournamentEvent, TournamentMenu, TournamentStatus } from '@/type'
 import { Box, CircularProgress, Tab, Tabs, ToggleButton, ToggleButtonGroup, Typography, useMediaQuery } from '@mui/material'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -139,11 +139,11 @@ const DrawPage = () => {
                       <ToggleButton value="list" aria-label="left aligned">
                         <Typography>List</Typography>
                       </ToggleButton>
-                      <ToggleButton value="group" aria-label="left aligned">
+                      {event.format !== EventFormat.SingleElimination && <ToggleButton value="group" aria-label="left aligned">
                         <Typography>Group</Typography>
-                      </ToggleButton>
+                      </ToggleButton>}
                       <ToggleButton value="playoff" aria-label="centered">
-                        Play off
+                        {event.format !== EventFormat.SingleElimination ? 'Play off' : 'Draw'}
                       </ToggleButton>
                     </ToggleButtonGroup>
                     {renderContent(event.id)}
