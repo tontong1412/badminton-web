@@ -253,4 +253,5 @@ const SingleElimDraw = ({ eventID }: SingleElimDrawProps) => {
     </Box>
   )
 }
+
 export default SingleElimDraw
