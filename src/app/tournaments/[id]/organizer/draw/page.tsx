@@ -4,13 +4,14 @@ import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { RootState } from '@/app/libs/redux/store'
 import { useAppDispatch } from '@/app/providers'
 import {
+  EventFormat,
   Language,
   Player,
   // Language,
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, CircularProgress, Tab, Tabs } from '@mui/material'
+import { Box, CircularProgress, Tab, Tabs, Typography } from '@mui/material'
 import { useParams } from 'next/navigation'
 import {   useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
@@ -19,6 +20,7 @@ import MenuDrawer from '../MenuDrawer'
 import PlayerPopover from '../../draw/PlayerPopover'
 import GroupDraw from './GroupDraw'
 import { useTournament } from '@/app/libs/data'
+import SingleElimDraw from './SingleElimDraw'
 
 const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
   return (
@@ -64,11 +66,22 @@ const Organizer = () => {
             </Tabs>
             <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
               {tournament.events.map(((event, idx) => {
-                return (
-                  <TabPanel value={tabIndex} index={idx} key={event.id} >
-                    <GroupDraw eventID={event.id}/>
-                  </TabPanel>
-                )
+                if(event.format === EventFormat.GroupPlayoff){
+                  return (
+                    <TabPanel value={tabIndex} index={idx} key={event.id} >
+                      <GroupDraw eventID={event.id}/>
+                    </TabPanel>
+                  )
+                } else if(event.format === EventFormat.SingleElimination){
+                  return (
+                    <TabPanel value={tabIndex} index={idx} key={event.id} >
+                      <SingleElimDraw eventID={event.id}/>
+                    </TabPanel>
+                  )
+                } else {
+                  return <Typography key={event.id}>Tournament Format not Supported</Typography>
+                }
+
               }))}
             </Box>
           </Box>
