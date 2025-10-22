@@ -104,7 +104,7 @@ const DrawPage = () => {
     }else {
       return <Box sx={{ color: 'GrayText', display: 'flex', flexDirection:'column', alignItems: 'center', mt:5 }} >
         <Block sx={{ fontSize: 100 }}/>
-        <Typography variant='h6' align='center'>Draw is not yet published</Typography>
+        <Typography variant='h6' align='center'>Draw has not yet been published</Typography>
       </Box>
     }
   }
