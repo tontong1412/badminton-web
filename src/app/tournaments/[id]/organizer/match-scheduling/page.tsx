@@ -52,6 +52,7 @@ const Organizer = () => {
   const dispatch = useAppDispatch()
   const [tabIndex, setTabIndex] = useState(0)
   const [numCourt, setNumCourt] = useState(8)
+  const [startTime, setStartTime] = useState(9)
   const [matchDuration, setMatchDuration] = useState(25)
   const [eventMatches, setEventMatches] = useState([])
   const [selectedDay, setSelectedDay] = useState<string|null>(null)
@@ -140,8 +141,8 @@ const Organizer = () => {
   }, [tabIndex])
 
   useEffect(() => {
-    generateTimeSlots(matchDuration)
-  }, [matchDuration, numCourt])
+    generateTimeSlots(matchDuration, startTime)
+  }, [matchDuration, numCourt, startTime])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
@@ -476,6 +477,14 @@ const Organizer = () => {
           <Box sx={{ display:'flex', gap:2, margin: 1, pt:2 }}>
             <TextField
               autoFocus
+              value={startTime}
+              onChange={(e) => setStartTime(Number(e.target.value))}
+              size='small'
+              label="เวลาเริ่ม"
+              variant="outlined"
+              type='number' />
+            <TextField
+              autoFocus
               value={numCourt}
               onChange={(e) => setNumCourt(Number(e.target.value))}
               size='small'
@@ -489,7 +498,7 @@ const Organizer = () => {
               label="เวลาต่อแมตช์ (นาที)"
               variant="outlined"
               type='number' />
-            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration)}>Reset</Button>
+            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration, startTime)}>Reset</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' disabled={tableRowDataHistory.length < 1} onClick={onUndo}>Undo</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' onClick={onSaveSchedule}>Save</Button>
             <Button sx={{ borderRadius: 10 }} color='primary' variant='contained' size='large' onClick={onGenerateMatchNumber}>Gen. Match No.</Button>
