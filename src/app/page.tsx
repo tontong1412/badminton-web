@@ -27,7 +27,7 @@ const Home = () => {
   return (
     <Layout>
       <Container>
-        <Typography sx={{ mt: 4, mb: 2, color: '#80644f' }} variant="h5">{t('greeting')}, {user?.player?.displayName?.[language] || user?.player.officialName[language]}
+        <Typography sx={{ mt: 4, mb: 2, color: '#80644f' }} variant="h5">{t('greeting')}, {user?.player?.displayName?.[language] || user?.player?.officialName[language]}
         </Typography>
         <TournamentList query={TournamentQuery.RegistrationOpen} label={t('tournament.title')} />
         {/* <Button data-test-id='button-to-session' variant='contained' size="large" onClick={() => router.push('/sessions')}>Host a Session</Button> */}
