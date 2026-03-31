@@ -117,6 +117,21 @@ export interface MatchTeam {
   scoreDiff: number;
 }
 
+export interface PlayerHistoryEvent{
+  event: Match['event'] & {
+    tournamentName?: {
+      th?: string
+      en?: string
+    }
+  }
+  matches: Match
+}
+
+export interface PlayerHistory{
+  info: Player;
+  history: PlayerHistoryEvent[];
+}
+
 export type NewMatchTeam = Omit<MatchTeam, 'id'>
 export interface Match {
   matchNumber?: number;

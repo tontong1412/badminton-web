@@ -4,6 +4,7 @@ import { useSelector } from '@/app/providers'
 import { Language, Player } from '@/type'
 import { Avatar, Box, Chip, Popover, Typography } from '@mui/material'
 import { Dispatch, SetStateAction } from 'react'
+import Link from 'next/link'
 
 interface Props {
   showPlayer: Player | null
@@ -32,7 +33,18 @@ const PlayerPopover = ({ showPlayer, anchorEl, setShowPlayer, setAnchorEl }: Pro
           <a href={showPlayer?.photo}><Avatar src={showPlayer?.photo || '/avatar.png'} sx={{ width: 80, height: 80 }}/></a>
           <Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Typography sx={{ fontSize: 20 }} >{showPlayer?.officialName[language]}</Typography>
+              <Typography sx={{ fontSize: 20 }}>
+                <Link
+                  href={showPlayer ? `/players/${showPlayer.id}` : '#'}
+                  onClick={() => {
+                    setShowPlayer(null)
+                    setAnchorEl(null)
+                  }}
+                  style={{ textDecoration: 'underline' }}
+                >
+                  {showPlayer?.officialName[language]}
+                </Link>
+              </Typography>
               {showPlayer?.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}
             </Box>
             <Typography sx={{ p: 0 }} >{showPlayer?.displayName?.[language]}</Typography>
