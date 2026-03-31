@@ -2,7 +2,6 @@ import { SERVICE_ENDPOINT } from '@/app/constants'
 import axios from 'axios'
 import { notFound } from 'next/navigation'
 import Layout from '@/app/components/Layout'
-import { Player } from '@/type'
 import PlayerDetailClient from '@/app/players/[id]/PlayerDetailClient'
 
 interface Props {
