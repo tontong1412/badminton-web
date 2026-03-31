@@ -89,6 +89,10 @@ const  ResponsiveAppBar = () => {
     setAnchorElNav(null)
   }
 
+  const handleDismissNavMenu = () => {
+    setAnchorElNav(null)
+  }
+
   const handleCloseUserMenu = async(selectedMenu: string) => {
     switch(selectedMenu){
     case 'Logout':
@@ -197,7 +201,7 @@ const  ResponsiveAppBar = () => {
                 horizontal: 'left',
               }}
               open={Boolean(anchorElNav)}
-              onClose={handleCloseNavMenu}
+              onClose={handleDismissNavMenu}
               sx={{ display: { xs: 'block', md: 'none' } }}
             >
               {pages.map((page) => (
