@@ -96,6 +96,12 @@ export default function CourtBookingModal({
         setErrorState(t('booking.selectTimeSlotFirst'))
         return
       }
+
+      const bookingStartAt = moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
+      if (bookingStartAt.isSameOrBefore(moment())) {
+        setErrorState(t('booking.pastTimeNotAllowed'))
+        return
+      }
     } else if (activeStep === 1) {
       if (bookerType === 'guest' && (!guestName || !guestPhone)) {
         setErrorState(t('booking.fillRequiredFields'))
@@ -114,6 +120,12 @@ export default function CourtBookingModal({
   const handleSubmit = async() => {
     if (!agreeTerms) {
       setErrorState(t('booking.mustAgreeTerms'))
+      return
+    }
+
+    const bookingStartAt = moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
+    if (bookingStartAt.isSameOrBefore(moment())) {
+      setErrorState(t('booking.pastTimeNotAllowed'))
       return
     }
 

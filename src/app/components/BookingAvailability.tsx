@@ -62,9 +62,21 @@ export default function BookingAvailabilityComponent({
   }
 
   const handleSlotSelect = (slot: { startTime: string; endTime: string }) => {
+    const slotStartAt = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
+    if (slotStartAt.isSameOrBefore(moment())) {
+      setError(t('booking.pastTimeNotAllowed'))
+      return
+    }
+
     setSelectedSlot(slot)
+    setError(null)
     onSlotSelected(selectedDate, slot.startTime, slot.endTime)
   }
+
+  const visibleSlots = availability?.slots.filter((slot) => {
+    const slotStartAt = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
+    return slotStartAt.isAfter(moment())
+  }) || []
 
   const minDateStr = minDate || moment().format('YYYY-MM-DD')
   const maxDateStr = moment().add(90, 'days').format('YYYY-MM-DD')
@@ -101,19 +113,19 @@ export default function BookingAvailabilityComponent({
         </Box>
       )}
 
-      {!loading && availability && availability.slots.length === 0 && (
+      {!loading && availability && visibleSlots.length === 0 && (
         <Alert severity="warning">
           {t('booking.noSlotsAvailable')}
         </Alert>
       )}
 
-      {!loading && availability && availability.slots.length > 0 && (
+      {!loading && availability && visibleSlots.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            {t('booking.availableSlots')} ({availability.slots.length})
+            {t('booking.availableSlots')} ({visibleSlots.length})
           </Typography>
           <Grid container spacing={1}>
-            {availability.slots.map((slot, index) => (
+            {visibleSlots.map((slot, index) => (
               <Grid item xs={6} sm={4} md={3} key={index}>
                 <Chip
                   label={`${slot.startTime} - ${slot.endTime}`}

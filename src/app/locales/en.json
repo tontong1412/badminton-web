@@ -216,6 +216,7 @@
     "fillRequiredFields": "Please fill in all required fields",
     "mustAgreeTerms": "You must agree to the terms and conditions",
     "invalidTimeRange": "End time must be later than start time",
+    "pastTimeNotAllowed": "You cannot book a court in the past",
     "selectedTimeSlot": "Selected time slot",
     "step1": "Select Time",
     "step2": "Enter Details",

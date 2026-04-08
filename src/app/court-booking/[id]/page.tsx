@@ -157,6 +157,11 @@ export default function VenueCourtsPage() {
               return
             }
 
+            const slotStartAt = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
+            if (slotStartAt.isSameOrBefore(moment())) {
+              return
+            }
+
             const key = `${slot.startTime}-${slot.endTime}`
             const existing = slotCount.get(key)
 
@@ -190,6 +195,12 @@ export default function VenueCourtsPage() {
   }, [selectedDate, courts, requestedDurationMinutes, requestedCourtCount])
 
   const handleSelectSlot = (slot: { startTime: string; endTime: string }) => {
+    const slotStartAt = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
+    if (slotStartAt.isSameOrBefore(moment())) {
+      setAvailabilityError(t('booking.pastTimeNotAllowed'))
+      return
+    }
+
     setSelectedSlot(slot)
     setStartTime(slot.startTime)
     setEndTime(slot.endTime)
