@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { useDispatch } from 'react-redux'
 import appReducer from './slices/appSlice'
+import bookingReducer from './slices/bookingSlice'
 
 export const store = configureStore({
   reducer: {
     app: appReducer,
+    booking: bookingReducer,
   },
 })
 

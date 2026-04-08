@@ -328,3 +328,109 @@ export type MuiColor =
 | 'info'
 | 'success'
 | 'warning';
+
+// Court Booking Types
+export enum BookingStatus {
+  Confirmed = 'confirmed',
+  Pending = 'pending',
+  Cancelled = 'cancelled',
+}
+
+export enum BookingType {
+  SingleShot = 'singleShot',
+  Recurring = 'recurring',
+}
+
+export enum BookingResaleOutcome {
+  None = 'none',
+  Listed = 'listed',
+  Sold = 'sold',
+  Cancelled = 'cancelled',
+}
+
+export interface DailySchedule {
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+}
+
+export interface HolidaySchedule {
+  date: string;
+  isClosed: boolean;
+  openTime?: string;
+  closeTime?: string;
+}
+
+export interface Venue {
+  id: string;
+  name: {
+    th: string;
+    en: string;
+  };
+  address: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+  };
+  ownerUserID: string;
+  weeklySchedule: Record<string, DailySchedule | null>;
+  holidays: HolidaySchedule[];
+  slotDurationMinutes: number;
+  gapPolicy: {
+    enabled: boolean;
+    minimumGapMinutes: number;
+  };
+}
+
+export interface Court {
+  id: string;
+  venueID: string;
+  name: string;
+  description?: string;
+  pricePerHour: number;
+  currency: string;
+  status: 'active' | 'inactive';
+}
+
+export interface Booking {
+  id: string;
+  bookingBundleID?: string;
+  courtID: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  totalPrice: number;
+  currency: string;
+  bookerType: 'guest' | 'user';
+  userID?: string;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
+  bookingType: BookingType;
+  recurringGroupID?: string;
+  status: BookingStatus;
+  paymentStatus: PaymentStatus;
+  slip?: string;
+  slipTimestamp?: string;
+  resaleListingID?: string;
+  resaleSourceListingID?: string;
+  resaleOutcome: BookingResaleOutcome;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface BookingAvailability {
+  court: Court;
+  date: string;
+  durationMinutes: number;
+  slots: {
+    startTime: string;
+    endTime: string;
+    available: boolean;
+    reason?: string;
+  }[];
+}
