@@ -36,6 +36,10 @@ const pages: Page[] = [
   {
     name: 'Tournament',
     action: '/tournaments'
+  },
+  {
+    name: 'Court Booking',
+    action: '/court-booking'
   }
 ]
 const settings: string[] = [

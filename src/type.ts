@@ -82,6 +82,7 @@ export interface User {
 export enum AppMenu {
   Home = 'home',
   Tournament = 'tournament',
+  Court = 'court',
   Setting = 'setting'
   // Session = 'session',
   // Venue = 'venue'

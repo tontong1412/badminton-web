@@ -3,7 +3,8 @@
   "footer": {
     "home": "หน้าหลัก",
     "tournament": "รายการแข่ง",
-    "settings": "ตั้งค่า"
+    "settings": "ตั้งค่า",
+    "court": "จองสนาม"
   },
   "settings": {
     "language": "ตั้งค่าภาษา"

@@ -21,12 +21,13 @@ import {
   DialogActions,
 } from '@mui/material'
 import { Booking, Court } from '@/type'
-import bookingsService from '../../services/bookings'
-import courtsService from '../../services/courts'
-import { useAppDispatch } from '../../libs/redux/store'
+import bookingsService from '../services/bookings'
+import courtsService from '../services/courts'
+import { useAppDispatch } from '../libs/redux/store'
 import { setBookings, removeBooking, setError as setBookingError } from '../../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
+import Layout from '../components/Layout'
 
 export default function MyBookingsPage() {
   const { t } = useTranslation()
@@ -130,128 +131,132 @@ export default function MyBookingsPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
+      <Layout>
+        <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Container>
+      </Layout>
     )
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 4, fontWeight: 'bold' }}>
-        {t('booking.myBookings')}
-      </Typography>
+    <Layout>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 4, fontWeight: 'bold' }}>
+          {t('booking.myBookings')}
+        </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-      {bookings.length === 0 ? (
-        <Alert severity="info">
-          {t('booking.noBookingsFound')}
-        </Alert>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableRow>
-                <TableCell>{t('booking.court')}</TableCell>
-                <TableCell>{t('booking.date')}</TableCell>
-                <TableCell>{t('booking.time')}</TableCell>
-                <TableCell>{t('booking.price')}</TableCell>
-                <TableCell>{t('booking.status')}</TableCell>
-                <TableCell>{t('booking.paymentStatus')}</TableCell>
-                <TableCell align="right">{t('booking.actions')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {bookings.map((booking) => (
-                <TableRow key={booking.id} hover>
-                  <TableCell>
-                    {courtDetails[booking.courtID]?.name || 'Loading...'}
-                  </TableCell>
-                  <TableCell>
-                    {moment(booking.date).format('DD/MM/YYYY')}
-                  </TableCell>
-                  <TableCell>
-                    {booking.startTime} - {booking.endTime}
-                  </TableCell>
-                  <TableCell>
-                    {booking.totalPrice.toFixed(2)} {booking.currency}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={booking.status}
-                      size="small"
-                      color={getStatusColor(booking.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={booking.paymentStatus}
-                      size="small"
-                      color={getPaymentStatusColor(booking.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {booking.status === 'confirmed' && (
-                      <>
-                        {moment(booking.date).isAfter(moment()) && (
-                          <Button
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                            onClick={() => handleCancelClick(booking.id)}
-                          >
-                            {t('booking.cancel')}
-                          </Button>
-                        )}
-                        {booking.paymentStatus === 'unpaid' && (
-                          <Button
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ ml: 1 }}
-                          >
-                            {t('booking.pay')}
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </TableCell>
+        {bookings.length === 0 ? (
+          <Alert severity="info">
+            {t('booking.noBookingsFound')}
+          </Alert>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow>
+                  <TableCell>{t('booking.court')}</TableCell>
+                  <TableCell>{t('booking.date')}</TableCell>
+                  <TableCell>{t('booking.time')}</TableCell>
+                  <TableCell>{t('booking.price')}</TableCell>
+                  <TableCell>{t('booking.status')}</TableCell>
+                  <TableCell>{t('booking.paymentStatus')}</TableCell>
+                  <TableCell align="right">{t('booking.actions')}</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              </TableHead>
+              <TableBody>
+                {bookings.map((booking) => (
+                  <TableRow key={booking.id} hover>
+                    <TableCell>
+                      {courtDetails[booking.courtID]?.name || 'Loading...'}
+                    </TableCell>
+                    <TableCell>
+                      {moment(booking.date).format('DD/MM/YYYY')}
+                    </TableCell>
+                    <TableCell>
+                      {booking.startTime} - {booking.endTime}
+                    </TableCell>
+                    <TableCell>
+                      {booking.totalPrice.toFixed(2)} {booking.currency}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={booking.status}
+                        size="small"
+                        color={getStatusColor(booking.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={booking.paymentStatus}
+                        size="small"
+                        color={getPaymentStatusColor(booking.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {booking.status === 'confirmed' && (
+                        <>
+                          {moment(booking.date).isAfter(moment()) && (
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              onClick={() => handleCancelClick(booking.id)}
+                            >
+                              {t('booking.cancel')}
+                            </Button>
+                          )}
+                          {booking.paymentStatus === 'unpaid' && (
+                            <Button
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ ml: 1 }}
+                            >
+                              {t('booking.pay')}
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-      <Dialog
-        open={cancelDialogOpen}
-        onClose={() => setCancelDialogOpen(false)}
-      >
-        <DialogTitle>{t('booking.confirmCancel')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t('booking.cancelBookingMessage')}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCancelDialogOpen(false)}>{t('booking.goBack')}</Button>
-          <Button
-            onClick={handleConfirmCancel}
-            color="error"
-            variant="contained"
-            disabled={cancelling}
-          >
-            {cancelling ? <CircularProgress size={24} /> : t('booking.confirmCancel')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        <Dialog
+          open={cancelDialogOpen}
+          onClose={() => setCancelDialogOpen(false)}
+        >
+          <DialogTitle>{t('booking.confirmCancel')}</DialogTitle>
+          <DialogContent>
+            <Typography>
+              {t('booking.cancelBookingMessage')}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelDialogOpen(false)}>{t('booking.goBack')}</Button>
+            <Button
+              onClick={handleConfirmCancel}
+              color="error"
+              variant="contained"
+              disabled={cancelling}
+            >
+              {cancelling ? <CircularProgress size={24} /> : t('booking.confirmCancel')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </Layout>
   )
 }

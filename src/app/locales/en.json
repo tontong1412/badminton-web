@@ -3,7 +3,8 @@
   "footer": {
     "home": "Home",
     "tournament": "Tournament",
-    "settings": "Settings"
+    "settings": "Settings",
+    "court": "Court Booking"
   },
   "settings": {
     "language": "Language Settings"

@@ -20,6 +20,7 @@ import venueService from '../../services/venues'
 import courtsService from '../../services/courts'
 import CourtSelection from '../../components/CourtSelection'
 import CourtBookingModal from '../../components/CourtBookingModal'
+import Layout from '../../components/Layout'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
@@ -209,156 +210,160 @@ export default function VenueCourtsPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
+      <Layout>
+        <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Container>
+      </Layout>
     )
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Breadcrumbs sx={{ mb: 3 }}>
-        <Link href="/court-booking" style={{ color: 'inherit', textDecoration: 'none' }}>
-          <Typography color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
-            {t('booking.venues')}
-          </Typography>
-        </Link>
-        <Typography color="textPrimary">
-          {venue?.name.en || venue?.name.th}
-        </Typography>
-      </Breadcrumbs>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {venue && (
-        <>
-          <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold' }}>
-            {venue.name.en || venue.name.th}
-          </Typography>
-          {venue.name.th && venue.name.en && (
-            <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
-              {venue.name.th}
+    <Layout>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Breadcrumbs sx={{ mb: 3 }}>
+          <Link href="/court-booking" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <Typography color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
+              {t('booking.venues')}
             </Typography>
-          )}
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 4 }}>
-            {venue.address}
+          </Link>
+          <Typography color="textPrimary">
+            {venue?.name.en || venue?.name.th}
           </Typography>
-        </>
-      )}
+        </Breadcrumbs>
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          {t('booking.selectDateTimeFirst')}
-        </Typography>
-
-        <TextField
-          label={t('booking.date')}
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ min: moment().format('YYYY-MM-DD') }}
-          sx={{ mb: 2, maxWidth: 260 }}
-        />
-
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-          <TextField
-            label={t('booking.numberOfCourts')}
-            type="number"
-            value={requestedCourtCount}
-            onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
-            inputProps={{ min: 1, step: 1 }}
-            sx={{ maxWidth: 220 }}
-          />
-          <TextField
-            label={t('booking.numberOfHours')}
-            type="number"
-            value={requestedHours}
-            onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
-            inputProps={{ min: 1, step: 1 }}
-            sx={{ maxWidth: 220 }}
-          />
-        </Stack>
-
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
-          {t('booking.availableSlots')}
-        </Typography>
-
-        {loadingSlots ? (
-          <Box sx={{ py: 2 }}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : availableSlots.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            {t('booking.noSlotsAvailable')}
-          </Alert>
-        ) : (
-          <Grid container spacing={1} sx={{ mb: 2 }}>
-            {availableSlots.map((slot) => (
-              <Grid item key={`${slot.startTime}-${slot.endTime}`}>
-                <Chip
-                  label={`${slot.startTime} - ${slot.endTime} (${slot.courtCount})`}
-                  color={selectedSlot?.startTime === slot.startTime && selectedSlot?.endTime === slot.endTime ? 'primary' : 'default'}
-                  variant={selectedSlot?.startTime === slot.startTime && selectedSlot?.endTime === slot.endTime ? 'filled' : 'outlined'}
-                  onClick={() => handleSelectSlot({ startTime: slot.startTime, endTime: slot.endTime })}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        )}
-
-        {availabilityError && (
+        {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {availabilityError}
+            {error}
           </Alert>
         )}
 
-        <Typography variant="subtitle1" sx={{ mb: 2 }}>
-          {t('booking.selectCourt')}
-        </Typography>
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          {t('booking.selectedCourtsCount', {
-            selected: selectedCourts.length,
-            required: requestedCourtCount,
-          })}
-        </Typography>
-        <CourtSelection
-          courts={availableCourts}
-          selectedCourtIds={selectedCourts.map((court) => court.id)}
-          onToggleCourt={handleToggleCourt}
-          maxSelectable={requestedCourtCount}
-          loading={searchingAvailability}
-          error={null}
-        />
-      </Box>
+        {venue && (
+          <>
+            <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold' }}>
+              {venue.name.en || venue.name.th}
+            </Typography>
+            {venue.name.th && venue.name.en && (
+              <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
+                {venue.name.th}
+              </Typography>
+            )}
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 4 }}>
+              {venue.address}
+            </Typography>
+          </>
+        )}
 
-      {selectedCourts.length === requestedCourtCount && requestedCourtCount > 0 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={() => setShowBookingModal(true)}
-          >
-            {t('booking.proceedToBooking')}
-          </Button>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            {t('booking.selectDateTimeFirst')}
+          </Typography>
+
+          <TextField
+            label={t('booking.date')}
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: moment().format('YYYY-MM-DD') }}
+            sx={{ mb: 2, maxWidth: 260 }}
+          />
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+            <TextField
+              label={t('booking.numberOfCourts')}
+              type="number"
+              value={requestedCourtCount}
+              onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
+              inputProps={{ min: 1, step: 1 }}
+              sx={{ maxWidth: 220 }}
+            />
+            <TextField
+              label={t('booking.numberOfHours')}
+              type="number"
+              value={requestedHours}
+              onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
+              inputProps={{ min: 1, step: 1 }}
+              sx={{ maxWidth: 220 }}
+            />
+          </Stack>
+
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            {t('booking.availableSlots')}
+          </Typography>
+
+          {loadingSlots ? (
+            <Box sx={{ py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : availableSlots.length === 0 ? (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {t('booking.noSlotsAvailable')}
+            </Alert>
+          ) : (
+            <Grid container spacing={1} sx={{ mb: 2 }}>
+              {availableSlots.map((slot) => (
+                <Grid item key={`${slot.startTime}-${slot.endTime}`}>
+                  <Chip
+                    label={`${slot.startTime} - ${slot.endTime} (${slot.courtCount})`}
+                    color={selectedSlot?.startTime === slot.startTime && selectedSlot?.endTime === slot.endTime ? 'primary' : 'default'}
+                    variant={selectedSlot?.startTime === slot.startTime && selectedSlot?.endTime === slot.endTime ? 'filled' : 'outlined'}
+                    onClick={() => handleSelectSlot({ startTime: slot.startTime, endTime: slot.endTime })}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+
+          {availabilityError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {availabilityError}
+            </Alert>
+          )}
+
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            {t('booking.selectCourt')}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            {t('booking.selectedCourtsCount', {
+              selected: selectedCourts.length,
+              required: requestedCourtCount,
+            })}
+          </Typography>
+          <CourtSelection
+            courts={availableCourts}
+            selectedCourtIds={selectedCourts.map((court) => court.id)}
+            onToggleCourt={handleToggleCourt}
+            maxSelectable={requestedCourtCount}
+            loading={searchingAvailability}
+            error={null}
+          />
         </Box>
-      )}
 
-      {selectedCourts.length > 0 && venue && (
-        <CourtBookingModal
-          open={showBookingModal}
-          onClose={() => setShowBookingModal(false)}
-          courts={selectedCourts}
-          venue={venue}
-          preselectedSlot={{ date: selectedDate, startTime, endTime }}
-          onBookingComplete={handleBookingComplete}
-        />
-      )}
-    </Container>
+        {selectedCourts.length === requestedCourtCount && requestedCourtCount > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={() => setShowBookingModal(true)}
+            >
+              {t('booking.proceedToBooking')}
+            </Button>
+          </Box>
+        )}
+
+        {selectedCourts.length > 0 && venue && (
+          <CourtBookingModal
+            open={showBookingModal}
+            onClose={() => setShowBookingModal(false)}
+            courts={selectedCourts}
+            venue={venue}
+            preselectedSlot={{ date: selectedDate, startTime, endTime }}
+            onBookingComplete={handleBookingComplete}
+          />
+        )}
+      </Container>
+    </Layout>
   )
 }
