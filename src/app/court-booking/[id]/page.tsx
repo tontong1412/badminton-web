@@ -3,25 +3,25 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
+  Avatar,
   Container,
   Typography,
   Box,
   Alert,
   CircularProgress,
-  Breadcrumbs,
   TextField,
   Chip,
   Grid,
   Button,
   Stack,
 } from '@mui/material'
+import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import { Court, Venue } from '@/type'
 import venueService from '../../services/venues'
 import courtsService from '../../services/courts'
 import CourtSelection from '../../components/CourtSelection'
 import CourtBookingModal from '../../components/CourtBookingModal'
 import Layout from '../../components/Layout'
-import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 
@@ -220,38 +220,56 @@ export default function VenueCourtsPage() {
 
   return (
     <Layout>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Breadcrumbs sx={{ mb: 3 }}>
-          <Link href="/court-booking" style={{ color: 'inherit', textDecoration: 'none' }}>
-            <Typography color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
-              {t('booking.venues')}
-            </Typography>
-          </Link>
-          <Typography color="textPrimary">
-            {venue?.name.en || venue?.name.th}
-          </Typography>
-        </Breadcrumbs>
+      {venue && (
+        <Box sx={{ width: '100vw', ml: 'calc(50% - 50vw)', backgroundColor: '#80644f', mb: 2 }}>
+          <Container maxWidth="lg" sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+            <Box
+              component="section"
+              sx={{
+                p: 2,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Avatar sx={{ width: 160, height: 160, bgcolor: '#ff7961' }}>
+                <SportsTennisIcon sx={{ fontSize: 80 }} />
+              </Avatar>
+            </Box>
 
+            <Box
+              component="section"
+              sx={{
+                p: 2,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: { xs: 'center', md: 'flex-start' },
+                justifyContent: 'center',
+                color: 'grey.200',
+              }}
+            >
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+                {venue.name.en || venue.name.th}
+              </Typography>
+              {venue.name.th && venue.name.en && (
+                <Typography variant="h6" sx={{ mt: 1 }}>
+                  {venue.name.th}
+                </Typography>
+              )}
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {venue.address}
+              </Typography>
+            </Box>
+          </Container>
+        </Box>
+      )}
+
+      <Container maxWidth="lg" sx={{ pt: 1, pb: 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
-        )}
-
-        {venue && (
-          <>
-            <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold' }}>
-              {venue.name.en || venue.name.th}
-            </Typography>
-            {venue.name.th && venue.name.en && (
-              <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
-                {venue.name.th}
-              </Typography>
-            )}
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 4 }}>
-              {venue.address}
-            </Typography>
-          </>
         )}
 
         <Box sx={{ mb: 4 }}>
@@ -260,30 +278,29 @@ export default function VenueCourtsPage() {
           </Typography>
 
           <TextField
+            size='small'
             label={t('booking.date')}
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ min: moment().format('YYYY-MM-DD') }}
             sx={{ mb: 2, maxWidth: 260 }}
           />
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
             <TextField
+              size='small'
               label={t('booking.numberOfCourts')}
               type="number"
               value={requestedCourtCount}
               onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
-              inputProps={{ min: 1, step: 1 }}
               sx={{ maxWidth: 220 }}
             />
             <TextField
+              size='small'
               label={t('booking.numberOfHours')}
               type="number"
               value={requestedHours}
               onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
-              inputProps={{ min: 1, step: 1 }}
               sx={{ maxWidth: 220 }}
             />
           </Stack>

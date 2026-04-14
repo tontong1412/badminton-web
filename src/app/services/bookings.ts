@@ -32,7 +32,9 @@ interface CreateSingleBookingPayload extends NewBooking {
 }
 
 const createSingle = (booking: CreateSingleBookingPayload): Promise<Booking> => {
-  const request = axios.post(`${baseUrl}`, booking)
+  const request = axios.post(`${baseUrl}`, booking, {
+    withCredentials: true,
+  })
   return request.then((response) => response.data as Booking)
 }
 

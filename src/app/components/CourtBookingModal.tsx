@@ -13,10 +13,6 @@ import {
   Stepper,
   Step,
   StepLabel,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   CircularProgress,
   FormControlLabel,
@@ -27,7 +23,7 @@ import BookingAvailability from './BookingAvailability'
 import Transition from './ModalTransition'
 import { useTranslation } from 'react-i18next'
 import bookingsService from '../services/bookings'
-import { useAppDispatch } from '../libs/redux/store'
+import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { addBooking, setError } from '../libs/redux/slices/bookingSlice'
 import moment from 'moment'
 
@@ -56,12 +52,12 @@ export default function CourtBookingModal({
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
+  const currentUser = useAppSelector((state) => state.app.user)
 
   const [activeStep, setActiveStep] = useState(0)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [startTime, setStartTime] = useState<string>('')
   const [endTime, setEndTime] = useState<string>('')
-  const [bookerType, setBookerType] = useState<'user' | 'guest'>('guest')
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
@@ -103,7 +99,7 @@ export default function CourtBookingModal({
         return
       }
     } else if (activeStep === 1) {
-      if (bookerType === 'guest' && (!guestName || !guestPhone)) {
+      if (!currentUser && (!guestName || !guestPhone)) {
         setErrorState(t('booking.fillRequiredFields'))
         return
       }
@@ -133,6 +129,7 @@ export default function CourtBookingModal({
       setLoading(true)
       const durationMinutes = calculateDuration()
 
+      const bookerType: 'user' | 'guest' = currentUser?.id ? 'user' : 'guest'
       const createdBookings = await Promise.all(
         courts.map(async(court) => {
           const durationHours = durationMinutes / 60
@@ -149,7 +146,7 @@ export default function CourtBookingModal({
             status: 'confirmed' as const,
             paymentStatus: 'unpaid' as const,
             resaleOutcome: 'none' as const,
-            ...(bookerType === 'guest' && {
+            ...(!currentUser?.id && {
               guestName,
               guestPhone,
               guestEmail,
@@ -256,21 +253,14 @@ export default function CourtBookingModal({
 
           {activeStep === 1 && (
             <Box>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>{t('booking.bookerType')}</InputLabel>
-                <Select
-                  value={bookerType}
-                  onChange={(e) => setBookerType(e.target.value as 'user' | 'guest')}
-                  label={t('booking.bookerType')}
-                >
-                  <MenuItem value="guest">{t('booking.guest')}</MenuItem>
-                  <MenuItem value="user">{t('booking.registeredUser')}</MenuItem>
-                </Select>
-              </FormControl>
-
-              {bookerType === 'guest' && (
+              {currentUser ? (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  {t('booking.bookingAs')}: {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.email}
+                </Alert>
+              ) : (
                 <>
                   <TextField
+                    size='small'
                     fullWidth
                     label={t('booking.name')}
                     value={guestName}
@@ -279,6 +269,7 @@ export default function CourtBookingModal({
                     required
                   />
                   <TextField
+                    size='small'
                     fullWidth
                     label={t('booking.phone')}
                     value={guestPhone}
@@ -287,12 +278,14 @@ export default function CourtBookingModal({
                     required
                   />
                   <TextField
+                    size='small'
                     fullWidth
                     label={t('booking.email')}
                     type="email"
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     sx={{ mb: 2 }}
+                    required
                   />
                 </>
               )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
+  Avatar,
   Box,
   Container,
   Grid,
@@ -14,6 +15,7 @@ import {
   Alert,
   Chip,
 } from '@mui/material'
+import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import { Venue } from '@/type'
 import venueService from '../services/venues'
 import Link from 'next/link'
@@ -57,10 +59,44 @@ export default function VenuesPage() {
 
   return (
     <Layout>
+      <Box sx={{ width: '100%', backgroundColor: '#80644f' }}>
+        <Container maxWidth="lg" sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box
+            component="section"
+            sx={{
+              p: 2,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Avatar sx={{ width: 200, height: 200, bgcolor: '#ff7961' }}>
+              <SportsTennisIcon sx={{ fontSize: 100 }} />
+            </Avatar>
+          </Box>
+          <Box
+            component="section"
+            sx={{
+              p: 2,
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: { xs: 'center', md: 'flex-start' },
+              justifyContent: 'center',
+              color: 'grey.200',
+            }}
+          >
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+              {t('booking.venues')}
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 1 }}>
+              {venues.length} {t('booking.viewCourts')}
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 4, fontWeight: 'bold' }}>
-          {t('booking.venues')}
-        </Typography>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

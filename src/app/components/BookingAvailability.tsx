@@ -89,6 +89,7 @@ export default function BookingAvailabilityComponent({
 
       <Box sx={{ mb: 3 }}>
         <TextField
+          size='small'
           type="date"
           value={selectedDate}
           onChange={handleDateChange}
