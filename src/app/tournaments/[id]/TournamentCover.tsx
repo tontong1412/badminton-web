@@ -70,6 +70,7 @@ const TournamentCover = ({ tournament }: Props) => {
         </Box>
       </Container>
       <RegisterEventForm
+        useHandicap={tournament.useHandicap}
         onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
         tournamentLanguage={tournament.language}
         events={tournament.events}
