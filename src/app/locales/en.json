@@ -4,7 +4,8 @@
     "home": "Home",
     "tournament": "Tournament",
     "settings": "Settings",
-    "court": "Court Booking"
+    "court": "Court Booking",
+    "me": "Me"
   },
   "settings": {
     "language": "Language Settings"

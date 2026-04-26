@@ -1,3 +1,5 @@
+import Me from './app/tournaments/[id]/me/page'
+
 export enum PaymentStatus {
   Paid = 'paid',
   Pending = 'pending',
@@ -83,7 +85,8 @@ export enum AppMenu {
   Home = 'home',
   Tournament = 'tournament',
   Court = 'court',
-  Setting = 'setting'
+  Setting = 'setting',
+  Me = 'me',
   // Session = 'session',
   // Venue = 'venue'
 }

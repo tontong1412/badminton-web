@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Container,
   Typography,
@@ -24,7 +24,7 @@ import { Booking, Court } from '@/type'
 import bookingsService from '../services/bookings'
 import courtsService from '../services/courts'
 import { useAppDispatch } from '../libs/redux/store'
-import { setBookings, removeBooking, setError as setBookingError } from '../../libs/redux/slices/bookingSlice'
+import { setBookings, removeBooking, setError as setBookingError } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 import Layout from '../components/Layout'
@@ -38,14 +38,61 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
+  const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
+  const [payingBundleID, setPayingBundleID] = useState<string | null>(null)
+
+  const groupedBookings = useMemo(() => {
+    const groupedMap = new Map<string, Booking[]>()
+
+    bookings.forEach((booking) => {
+      const key = booking.bookingBundleID || `single-${booking.id}`
+      const existing = groupedMap.get(key) || []
+      existing.push(booking)
+      groupedMap.set(key, existing)
+    })
+
+    const grouped = Array.from(groupedMap.entries()).map(([groupKey, groupedItems]) => {
+      const sortedItems = [...groupedItems].sort((a, b) => {
+        const aDate = moment(`${a.date} ${a.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
+        const bDate = moment(`${b.date} ${b.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
+        return aDate - bDate
+      })
+
+      const first = sortedItems[0]
+      const totalPrice = sortedItems.reduce((sum, item) => sum + item.totalPrice, 0)
+      const allConfirmed = sortedItems.every((item) => item.status === 'confirmed')
+      const anyCancelled = sortedItems.some((item) => item.status === 'cancelled')
+      const allPaid = sortedItems.every((item) => item.paymentStatus === 'paid')
+      const anyUnpaid = sortedItems.some((item) => item.paymentStatus === 'unpaid')
+
+      return {
+        groupKey,
+        bundleID: first.bookingBundleID,
+        bookings: sortedItems,
+        date: first.date,
+        startTime: first.startTime,
+        endTime: first.endTime,
+        currency: first.currency,
+        totalPrice,
+        status: allConfirmed ? 'confirmed' : (anyCancelled ? 'cancelled' : 'pending'),
+        paymentStatus: allPaid ? 'paid' : (anyUnpaid ? 'unpaid' : 'pending'),
+      }
+    })
+
+    return grouped.sort((a, b) => {
+      const aDate = moment(`${a.date} ${a.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
+      const bDate = moment(`${b.date} ${b.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
+      return bDate - aDate
+    })
+  }, [bookings])
 
   useEffect(() => {
     const loadBookings = async() => {
       try {
         setLoading(true)
         const data = await bookingsService.getAll()
+        console.log(data)
         setBookingsState(data)
         dispatch(setBookings(data))
 
@@ -77,27 +124,52 @@ export default function MyBookingsPage() {
     loadBookings()
   }, [dispatch])
 
-  const handleCancelClick = (bookingId: string) => {
-    setSelectedBookingId(bookingId)
+  const handleCancelClick = (bookingIds: string[]) => {
+    setSelectedBookingIds(bookingIds)
     setCancelDialogOpen(true)
   }
 
   const handleConfirmCancel = async() => {
-    if (!selectedBookingId) return
+    if (selectedBookingIds.length === 0) return
 
     try {
       setCancelling(true)
-      await bookingsService.cancel(selectedBookingId)
-      setBookingsState(bookings.filter((b) => b.id !== selectedBookingId))
-      dispatch(removeBooking(selectedBookingId))
+      await Promise.all(selectedBookingIds.map((bookingId) => bookingsService.cancel(bookingId)))
+
+      setBookingsState((prev) => prev.filter((booking) => !selectedBookingIds.includes(booking.id)))
+      selectedBookingIds.forEach((bookingId) => dispatch(removeBooking(bookingId)))
+
       setCancelDialogOpen(false)
-      setSelectedBookingId(null)
+      setSelectedBookingIds([])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to cancel booking'
       setError(message)
       console.error('Error canceling booking:', err)
     } finally {
       setCancelling(false)
+    }
+  }
+
+  const handlePayBundle = async(bundleID: string, bookingIds: string[]) => {
+    try {
+      setPayingBundleID(bundleID)
+      await bookingsService.payBooking(bundleID)
+
+      setBookingsState((prev) => {
+        const updated = prev.map((booking) =>
+          bookingIds.includes(booking.id)
+            ? { ...booking, paymentStatus: 'paid' as const }
+            : booking
+        )
+        dispatch(setBookings(updated))
+        return updated
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to pay booking'
+      setError(message)
+      console.error('Error paying booking bundle:', err)
+    } finally {
+      setPayingBundleID(null)
     }
   }
 
@@ -171,57 +243,64 @@ export default function MyBookingsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {bookings.map((booking) => (
-                  <TableRow key={booking.id} hover>
+                {groupedBookings.map((group) => (
+                  <TableRow key={group.groupKey} hover>
                     <TableCell>
-                      {courtDetails[booking.courtID]?.name || 'Loading...'}
+                      {group.bookings.map((booking) => courtDetails[booking.courtID]?.name || 'Loading...').join(', ')}
+                      {group.bundleID && (
+                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Bundle: {group.bundleID}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {moment(booking.date).format('DD/MM/YYYY')}
+                      {moment(group.date).format('DD/MM/YYYY')}
                     </TableCell>
                     <TableCell>
-                      {booking.startTime} - {booking.endTime}
+                      {group.startTime} - {group.endTime}
                     </TableCell>
                     <TableCell>
-                      {booking.totalPrice.toFixed(2)} {booking.currency}
+                      {group.totalPrice.toFixed(2)} {group.currency}
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={booking.status}
+                        label={group.status}
                         size="small"
-                        color={getStatusColor(booking.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                        color={getStatusColor(group.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                         variant="outlined"
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={booking.paymentStatus}
+                        label={group.paymentStatus}
                         size="small"
-                        color={getPaymentStatusColor(booking.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                        color={getPaymentStatusColor(group.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                         variant="outlined"
                       />
                     </TableCell>
                     <TableCell align="right">
-                      {booking.status === 'confirmed' && (
+                      {group.status === 'confirmed' && (
                         <>
-                          {moment(booking.date).isAfter(moment()) && (
+                          {moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
                             <Button
                               size="small"
                               color="error"
                               variant="outlined"
-                              onClick={() => handleCancelClick(booking.id)}
+                              onClick={() => handleCancelClick(group.bookings.map((booking) => booking.id))}
                             >
                               {t('booking.cancel')}
                             </Button>
                           )}
-                          {booking.paymentStatus === 'unpaid' && (
+                          {group.paymentStatus === 'unpaid' && group.bundleID && (
                             <Button
                               size="small"
                               color="primary"
                               variant="outlined"
                               sx={{ ml: 1 }}
+                              onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((booking) => booking.id))}
+                              disabled={payingBundleID === group.bundleID}
                             >
-                              {t('booking.pay')}
+                              {payingBundleID === group.bundleID ? <CircularProgress size={16} /> : t('booking.pay')}
                             </Button>
                           )}
                         </>
@@ -236,7 +315,10 @@ export default function MyBookingsPage() {
 
         <Dialog
           open={cancelDialogOpen}
-          onClose={() => setCancelDialogOpen(false)}
+          onClose={() => {
+            setCancelDialogOpen(false)
+            setSelectedBookingIds([])
+          }}
         >
           <DialogTitle>{t('booking.confirmCancel')}</DialogTitle>
           <DialogContent>

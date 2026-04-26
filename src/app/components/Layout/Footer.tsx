@@ -7,6 +7,7 @@ import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import HomeIcon from '@mui/icons-material/Home'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
+import PersonIcon from '@mui/icons-material/Person'
 
 // import SettingsIcon from '@mui/icons-material/Settings'
 // import GroupIcon from '@mui/icons-material/Group'
@@ -40,6 +41,9 @@ const Footer = () => {
           case AppMenu.Court:
             router.push('/court-booking')
             break
+          case AppMenu.Me:
+            router.push('/me')
+            break
           case AppMenu.Setting:
             break
           default:
@@ -50,6 +54,7 @@ const Footer = () => {
         <BottomNavigationAction label={t('footer.home')} value={AppMenu.Home} icon={<HomeIcon />} />
         <BottomNavigationAction label={t('footer.court')} value={AppMenu.Court} icon={<LocationOnIcon />} />
         <BottomNavigationAction label={t('footer.tournament')} value={AppMenu.Tournament} icon={<EmojiEventsIcon />} />
+        <BottomNavigationAction label={t('footer.me')} value={AppMenu.Me} icon={<PersonIcon />} />
         {/* <BottomNavigationAction label={t('footer.settings')} value={AppMenu.Setting} icon={<SettingsIcon />} /> */}
         {/* <BottomNavigationAction label="Players" value='' icon={<GroupIcon />} />
         <BottomNavigationAction label="Queue" icon={<TocIcon />} /> */}
