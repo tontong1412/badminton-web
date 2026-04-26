@@ -218,7 +218,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
           </TableBody>
         </Table>
       </TableContainer>
-      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={event.tournament.useHandicap}/>}
       {menuTeam && event && isManager && <ParticipantMenu
         menuTeam={menuTeam}
         setMenuTeam={setMenuTeam}

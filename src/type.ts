@@ -246,6 +246,7 @@ export interface Tournament {
     bank: string
   },
   status: TournamentStatus
+  useHandicap: boolean
 }
 
 export interface displayData {
