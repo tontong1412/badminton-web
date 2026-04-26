@@ -227,7 +227,7 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
               ))}
             </TableBody>
           </Table>
-          {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+          {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={event.tournament.useHandicap}/>}
         </TableContainer>
         {draw.group && draw.group.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
         <Box sx={{ display:'flex', flexWrap: 'wrap', gap:2, width:'50%', overflow:'scroll', p:1, pt:0, maxHeight: 500 }}>

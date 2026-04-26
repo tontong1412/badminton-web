@@ -11,9 +11,10 @@ interface Props {
   anchorEl: HTMLDivElement | null
   setShowPlayer: Dispatch<SetStateAction<Player | null>>
   setAnchorEl: Dispatch<SetStateAction<HTMLDivElement | null>>
+  useHandicap: boolean
 }
 
-const PlayerPopover = ({ showPlayer, anchorEl, setShowPlayer, setAnchorEl }: Props) => {
+const PlayerPopover = ({ showPlayer, anchorEl, setShowPlayer, setAnchorEl, useHandicap }: Props) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   return (
     <Popover
@@ -45,7 +46,7 @@ const PlayerPopover = ({ showPlayer, anchorEl, setShowPlayer, setAnchorEl }: Pro
                   {showPlayer?.officialName[language]}
                 </Link>
               </Typography>
-              {showPlayer?.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}
+              {useHandicap && showPlayer?.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}
             </Box>
             <Typography sx={{ p: 0 }} >{showPlayer?.displayName?.[language]}</Typography>
             <Typography sx={{ p: 0 }} >{showPlayer?.club}</Typography>
