@@ -93,6 +93,7 @@ const DrawPage = () => {
           }
           {tournament.status === TournamentStatus.RegistrationOpen && <FloatingAddButton onClick={handleClickRegister}/>}
           <RegisterEventForm
+            useHandicap={tournament.useHandicap}
             onFinishRegister={() => router.push(`/tournaments/${tournament.id}/me`)}
             tournamentLanguage={tournament.language}
             events={tournament.events}

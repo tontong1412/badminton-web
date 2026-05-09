@@ -287,6 +287,7 @@ const Me = () => {
       {renderContent()}
       {tournament?.status === TournamentStatus.RegistrationOpen && <FloatingAddButton onClick={handleClickRegister}/>}
       {tournament && <RegisterEventForm
+        useHandicap={tournament.useHandicap}
         onFinishRegister={() => fetchMyEvents()}
         tournamentLanguage={tournament.language}
         events={tournament.events}

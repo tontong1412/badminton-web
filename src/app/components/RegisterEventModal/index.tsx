@@ -65,6 +65,7 @@ interface ContactPerson {
 
 interface Props {
   events: TournamentEvent[];
+  useHandicap: boolean;
   visible: boolean;
   setVisible: Dispatch<SetStateAction<boolean>>;
   tournamentLanguage: Language;
@@ -86,7 +87,7 @@ export const initialPlayer: Player = {
 }
 
 
-const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, onFinishRegister }: Props) => {
+const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, onFinishRegister, useHandicap }: Props) => {
   const user = useSelector((state: RootState) => state.app.user)
   const player1UploadRef = useRef<HTMLInputElement>(null)
   const player2UploadRef = useRef<HTMLInputElement>(null)
@@ -384,21 +385,22 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
             required
           />
 
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="level-label">{t('tournament.registration.level')}</InputLabel>
-            <Select
-              required
-              label="Level"
-              labelId="level-label"
-              value={player1.level}
-              onChange={(e) => handlePlayerChange('player1', 'level', e.target.value)}>
-              {LEVEL.map((level, index) => (
-                <MenuItem key={`level-${index}`} value={index}>
-                  {level[language] || level.en}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          { useHandicap &&
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="level-label">{t('tournament.registration.level')}</InputLabel>
+              <Select
+                required
+                label="Level"
+                labelId="level-label"
+                value={player1.level}
+                onChange={(e) => handlePlayerChange('player1', 'level', e.target.value)}>
+                {LEVEL.map((level, index) => (
+                  <MenuItem key={`level-${index}`} value={index}>
+                    {level[language] || level.en}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>}
 
           <FormControl fullWidth margin="normal">
             <FormLabel>{t('tournament.registration.gender')}</FormLabel>
@@ -502,6 +504,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
                   required
                 />
 
+                {useHandicap &&
                 <FormControl fullWidth margin="normal">
                   <InputLabel id="level-label">{t('tournament.registration.level')}</InputLabel>
                   <Select
@@ -516,7 +519,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
                       </MenuItem>
                     ))}
                   </Select>
-                </FormControl>
+                </FormControl>}
 
                 <FormControl fullWidth margin="normal">
                   <FormLabel>{t('tournament.registration.gender')}</FormLabel>

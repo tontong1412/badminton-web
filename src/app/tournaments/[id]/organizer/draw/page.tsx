@@ -86,7 +86,7 @@ const Organizer = () => {
             </Box>
           </Box>
         </Box>}
-      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={tournament?.useHandicap}/>}
     </TournamentLayout>
   )
 

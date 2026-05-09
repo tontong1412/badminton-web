@@ -132,7 +132,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
           </Card>
         ))
       }
-      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={event.tournament.useHandicap}/>}
       {menuTeam && event && isManager && <ParticipantMenu
         menuTeam={menuTeam}
         setMenuTeam={setMenuTeam}

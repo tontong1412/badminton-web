@@ -177,7 +177,7 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
           </TableContainer>
         )
       })}
-      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl}/>}
+      {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={event.tournament.useHandicap}/>}
     </Box>
   )
 }
