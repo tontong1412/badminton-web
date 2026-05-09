@@ -407,6 +407,7 @@ export interface Court {
   description?: string;
   pricePerHour: number;
   pricingRules?: CourtPricingRule[];
+  slotStartOffsetMinutes?: number;
   currency: string;
   status: 'active' | 'inactive';
 }
