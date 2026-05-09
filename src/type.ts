@@ -1,5 +1,3 @@
-import Me from './app/tournaments/[id]/me/page'
-
 export enum PaymentStatus {
   Paid = 'paid',
   Pending = 'pending',
