@@ -15,9 +15,33 @@ import {
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
-import { BookingAvailability, Court } from '@/type'
+import { BookingAvailability, Court, CourtPricingRule } from '@/type'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
+
+const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+const getSlotPrice = (court: Court, startTime: string, slotDurationMinutes: number): number => {
+  const rules = court.pricingRules ?? []
+  const segStart = toMins(startTime)
+  const segEnd = segStart + slotDurationMinutes
+  if (rules.length === 0) return Number(((court.pricePerHour / 60) * slotDurationMinutes).toFixed(2))
+
+  const boundaries = new Set<number>([segStart, segEnd])
+  for (const rule of rules) {
+    const rs = toMins(rule.startTime), re = toMins(rule.endTime)
+    if (rs > segStart && rs < segEnd) boundaries.add(rs)
+    if (re > segStart && re < segEnd) boundaries.add(re)
+  }
+  const sorted = Array.from(boundaries).sort((a, b) => a - b)
+  let total = 0
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const s = sorted[i], e = sorted[i + 1]
+    const rule = rules.find((r: CourtPricingRule) => toMins(r.startTime) <= s && toMins(r.endTime) >= e)
+    total += ((rule ? rule.pricePerHour : court.pricePerHour) / 60) * (e - s)
+  }
+  return Number(total.toFixed(2))
+}
 
 const addMinutes = (time: string, minutes: number): string => {
   const [h, m] = time.split(':').map(Number)
@@ -141,7 +165,7 @@ export default function CourtAvailabilityTable({
                     return (
                       <TableCell key={court.id} align="center" sx={{ py: 0.5 }}>
                         {available ? (
-                          <Tooltip title={t('booking.available')}>
+                          <Tooltip title={`${t('booking.available')} · ${getSlotPrice(court, slot.startTime, slotDurationMinutes).toFixed(2)} ${court.currency}`}>
                             <CheckCircleIcon
                               color={isSelectedCell ? 'primary' : 'success'}
                               sx={{

@@ -394,12 +394,19 @@ export interface Venue {
   payment?: VenuePayment;
 }
 
+export interface CourtPricingRule {
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  pricePerHour: number;
+}
+
 export interface Court {
   id: string;
   venueID: string;
   name: string;
   description?: string;
   pricePerHour: number;
+  pricingRules?: CourtPricingRule[];
   currency: string;
   status: 'active' | 'inactive';
 }

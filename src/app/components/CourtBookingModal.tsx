@@ -85,6 +85,34 @@ export default function CourtBookingModal({
     setEndTime(end)
   }
 
+  /** Mirrors backend calculateTotalPriceWithRules — segments the window and applies rules. */
+  const getPriceForRange = (court: (typeof courts)[0], start: string, end: string): number => {
+    const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const rules = court.pricingRules ?? []
+    const bookingStart = toMins(start)
+    const bookingEnd = toMins(end)
+
+    if (rules.length === 0) {
+      return Number(((court.pricePerHour / 60) * (bookingEnd - bookingStart)).toFixed(2))
+    }
+
+    const boundaries = new Set<number>([bookingStart, bookingEnd])
+    for (const rule of rules) {
+      const rs = toMins(rule.startTime)
+      const re = toMins(rule.endTime)
+      if (rs > bookingStart && rs < bookingEnd) boundaries.add(rs)
+      if (re > bookingStart && re < bookingEnd) boundaries.add(re)
+    }
+    const sorted = Array.from(boundaries).sort((a, b) => a - b)
+    let total = 0
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const segStart = sorted[i], segEnd = sorted[i + 1]
+      const rule = rules.find((r) => toMins(r.startTime) <= segStart && toMins(r.endTime) >= segEnd)
+      total += ((rule ? rule.pricePerHour : court.pricePerHour) / 60) * (segEnd - segStart)
+    }
+    return Number(total.toFixed(2))
+  }
+
   const calculateDuration = () => {
     if (isItemsPreselected && bookingItems) {
       // Total minutes across all items
@@ -105,14 +133,11 @@ export default function CourtBookingModal({
       return bookingItems.reduce((sum, item) => {
         const court = courts.find((c) => c.id === item.courtID)
         if (!court) return sum
-        const start = moment(item.startTime, 'HH:mm')
-        const end = moment(item.endTime, 'HH:mm')
-        const durationHours = end.diff(start, 'minutes') / 60
-        return sum + durationHours * court.pricePerHour
+        return sum + getPriceForRange(court, item.startTime, item.endTime)
       }, 0)
     }
-    const durationHours = calculateDuration() / 60
-    return courts.reduce((sum, court) => sum + (durationHours * court.pricePerHour), 0)
+    if (!startTime || !endTime) return 0
+    return courts.reduce((sum, court) => sum + getPriceForRange(court, startTime, endTime), 0)
   }
 
   const handleNext = () => {
@@ -355,7 +380,7 @@ export default function CourtBookingModal({
                   bookingItems.map((item) => {
                     const court = courts.find((c) => c.id === item.courtID)
                     const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
-                    const price = court ? (durationMins / 60) * court.pricePerHour : 0
+                    const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
                     return (
                       <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
                         <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>

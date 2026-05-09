@@ -477,6 +477,8 @@ export default function VenueCourtsPage() {
                   maxSelectable={requestedCourtCount}
                   loading={searchingGuidedCourts}
                   error={null}
+                  slotStartTime={guidedSelectedSlot?.startTime}
+                  slotEndTime={guidedSelectedSlot?.endTime}
                 />
               </>
             )}
