@@ -366,6 +366,14 @@ export interface HolidaySchedule {
   closeTime?: string;
 }
 
+export interface VenuePayment {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  promptPayID?: string;
+  qrCodeUrl?: string;
+}
+
 export interface Venue {
   id: string;
   name: {
@@ -385,6 +393,7 @@ export interface Venue {
     enabled: boolean;
     minimumGapMinutes: number;
   };
+  payment?: VenuePayment;
 }
 
 export interface Court {

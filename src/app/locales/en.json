@@ -227,6 +227,21 @@
     "gapPolicy": "Gap Policy",
     "bookingConfirmed": "Booking confirmed successfully!",
     "numberOfCourts": "Number of Courts",
-    "numberOfHours": "Number of Hours"
+    "numberOfHours": "Number of Hours",
+    "availabilityTable": "Court Availability",
+    "selectionNotContiguous": "Selected slots for {{court}} must be consecutive",
+    "selectSameTimeRange": "All selected courts must cover the same time range",
+    "clearSelection": "Clear",
+    "selectedCourt": "Courts",
+    "modeGuided": "Guided",
+    "modeFree": "Pick freely",
+    "uploadSlip": "Upload Payment Slip",
+    "uploadSlipInstruction": "Please upload a photo of your payment slip to confirm payment.",
+    "chooseFile": "Choose image...",
+    "paymentMethod": "Payment Method",
+    "bankName": "Bank",
+    "accountName": "Account Name",
+    "accountNumber": "Account Number",
+    "promptPayID": "PromptPay ID"
   }
 }

@@ -18,14 +18,21 @@ import {
   FormControlLabel,
   Checkbox,
 } from '@mui/material'
-import { Court, Venue, NewBooking } from '@/type'
+import { Court, Venue } from '@/type'
 import BookingAvailability from './BookingAvailability'
 import Transition from './ModalTransition'
 import { useTranslation } from 'react-i18next'
 import bookingsService from '../services/bookings'
 import { useAppDispatch, useAppSelector } from '../libs/redux/store'
-import { addBooking, setError } from '../libs/redux/slices/bookingSlice'
+import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingSlice'
 import moment from 'moment'
+
+interface BookingItemInput {
+  courtID: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
 
 interface CourtBookingModalProps {
   open: boolean;
@@ -37,6 +44,7 @@ interface CourtBookingModalProps {
     startTime: string;
     endTime: string;
   };
+  bookingItems?: BookingItemInput[];
   onBookingComplete: () => void;
 }
 
@@ -48,6 +56,7 @@ export default function CourtBookingModal({
   courts,
   venue,
   preselectedSlot,
+  bookingItems,
   onBookingComplete,
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
@@ -66,7 +75,9 @@ export default function CourtBookingModal({
   const [error, setErrorState] = useState<string | null>(null)
   const [agreeTerms, setAgreeTerms] = useState(false)
 
+  const isItemsPreselected = Boolean(bookingItems && bookingItems.length > 0)
   const isSlotPreselected = Boolean(preselectedSlot?.date && preselectedSlot?.startTime && preselectedSlot?.endTime)
+  const isPreselected = isItemsPreselected || isSlotPreselected
 
   const handleSlotSelected = (date: string, start: string, end: string) => {
     setSelectedDate(date)
@@ -75,6 +86,14 @@ export default function CourtBookingModal({
   }
 
   const calculateDuration = () => {
+    if (isItemsPreselected && bookingItems) {
+      // Total minutes across all items
+      return bookingItems.reduce((sum, item) => {
+        const start = moment(item.startTime, 'HH:mm')
+        const end = moment(item.endTime, 'HH:mm')
+        return sum + end.diff(start, 'minutes')
+      }, 0)
+    }
     if (!startTime || !endTime) return 0
     const start = moment(startTime, 'HH:mm')
     const end = moment(endTime, 'HH:mm')
@@ -82,21 +101,33 @@ export default function CourtBookingModal({
   }
 
   const calculatePrice = () => {
+    if (isItemsPreselected && bookingItems) {
+      return bookingItems.reduce((sum, item) => {
+        const court = courts.find((c) => c.id === item.courtID)
+        if (!court) return sum
+        const start = moment(item.startTime, 'HH:mm')
+        const end = moment(item.endTime, 'HH:mm')
+        const durationHours = end.diff(start, 'minutes') / 60
+        return sum + durationHours * court.pricePerHour
+      }, 0)
+    }
     const durationHours = calculateDuration() / 60
     return courts.reduce((sum, court) => sum + (durationHours * court.pricePerHour), 0)
   }
 
   const handleNext = () => {
     if (activeStep === 0) {
-      if (!isSlotPreselected && (!selectedDate || !startTime || !endTime)) {
+      if (!isPreselected && (!selectedDate || !startTime || !endTime)) {
         setErrorState(t('booking.selectTimeSlotFirst'))
         return
       }
 
-      const bookingStartAt = moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
-      if (bookingStartAt.isSameOrBefore(moment())) {
-        setErrorState(t('booking.pastTimeNotAllowed'))
-        return
+      if (!isItemsPreselected) {
+        const bookingStartAt = moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
+        if (bookingStartAt.isSameOrBefore(moment())) {
+          setErrorState(t('booking.pastTimeNotAllowed'))
+          return
+        }
       }
     } else if (activeStep === 1) {
       if (!currentUser && (!guestName || !guestPhone)) {
@@ -119,7 +150,9 @@ export default function CourtBookingModal({
       return
     }
 
-    const bookingStartAt = moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
+    const bookingStartAt = isItemsPreselected && bookingItems
+      ? moment(`${bookingItems[0].date} ${bookingItems[0].startTime}`, 'YYYY-MM-DD HH:mm')
+      : moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
     if (bookingStartAt.isSameOrBefore(moment())) {
       setErrorState(t('booking.pastTimeNotAllowed'))
       return
@@ -127,38 +160,34 @@ export default function CourtBookingModal({
 
     try {
       setLoading(true)
-      const durationMinutes = calculateDuration()
-
       const bookerType: 'user' | 'guest' = currentUser?.id ? 'user' : 'guest'
-      const createdBookings = await Promise.all(
-        courts.map(async(court) => {
-          const durationHours = durationMinutes / 60
-          const bookingData: NewBooking = {
-            courtID: court.id,
-            date: selectedDate,
-            startTime,
-            endTime,
-            durationMinutes,
-            totalPrice: durationHours * court.pricePerHour,
-            currency: court.currency,
-            bookerType,
-            bookingType: 'singleShot' as const,
-            status: 'confirmed' as const,
-            paymentStatus: 'unpaid' as const,
-            resaleOutcome: 'none' as const,
-            ...(!currentUser?.id && {
-              guestName,
-              guestPhone,
-              guestEmail,
-            }),
-            ...(note && { note }),
-          }
 
-          return bookingsService.createSingle(bookingData as Parameters<typeof bookingsService.createSingle>[0])
-        })
-      )
+      const effectiveItems = isItemsPreselected && bookingItems
+        ? bookingItems
+        : courts.map((court) => ({
+          courtID: court.id,
+          date: selectedDate,
+          startTime,
+          endTime,
+        }))
 
-      createdBookings.forEach((booking) => dispatch(addBooking(booking)))
+      const result = await bookingsService.createBundle({
+        items: effectiveItems,
+        ...(!currentUser?.id && {
+          guestName,
+          guestPhone,
+          guestEmail,
+        }),
+        ...(note && { note }),
+      })
+
+      if ('bookings' in result) {
+        // multi-court bundle
+        dispatch(addBookings(result.bookings))
+      } else {
+        // single court
+        dispatch(addBooking(result))
+      }
 
       setErrorState(null)
       setActiveStep(0)
@@ -238,7 +267,18 @@ export default function CourtBookingModal({
               <Typography variant="subtitle2" sx={{ mb: 2 }}>
                 {t('booking.venue')}: {venue.name.en || venue.name.th}
               </Typography>
-              {isSlotPreselected ? (
+              {isItemsPreselected && bookingItems ? (
+                <Box>
+                  {bookingItems.map((item) => {
+                    const court = courts.find((c) => c.id === item.courtID)
+                    return (
+                      <Typography key={`${item.courtID}-${item.startTime}`} variant="body2" sx={{ mb: 0.5 }}>
+                        {court?.name ?? item.courtID}: {item.date} {item.startTime} – {item.endTime}
+                      </Typography>
+                    )
+                  })}
+                </Box>
+              ) : isSlotPreselected ? (
                 <Alert severity="info" sx={{ mb: 2 }}>
                   {t('booking.selectedTimeSlot')}: {selectedDate} {startTime} - {endTime}
                 </Alert>
@@ -309,20 +349,38 @@ export default function CourtBookingModal({
 
               <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
                   <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
                 </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
-                </Typography>
+                {isItemsPreselected && bookingItems ? (
+                  bookingItems.map((item) => {
+                    const court = courts.find((c) => c.id === item.courtID)
+                    const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
+                    const price = court ? (durationMins / 60) * court.pricePerHour : 0
+                    return (
+                      <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                        <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
+                        <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('DD/MM/YYYY')}</Typography>
+                        <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
+                        <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
+                      </Box>
+                    )
+                  })
+                ) : (
+                  <>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
+                    </Typography>
+                  </>
+                )}
                 <Typography variant="h6" sx={{ mt: 2 }}>
                   <strong>{t('booking.total')}:</strong> {calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}
                 </Typography>

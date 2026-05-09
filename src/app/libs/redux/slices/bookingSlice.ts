@@ -29,6 +29,10 @@ const bookingSlice = createSlice({
       state.bookings.push(action.payload)
       state.error = null
     },
+    addBookings(state, action: PayloadAction<Booking[]>) {
+      state.bookings.push(...action.payload)
+      state.error = null
+    },
     updateBooking(state, action: PayloadAction<Booking>) {
       const index = state.bookings.findIndex((b) => b.id === action.payload.id)
       if (index !== -1) {
@@ -69,6 +73,7 @@ const bookingSlice = createSlice({
 export const {
   setBookings,
   addBooking,
+  addBookings,
   updateBooking,
   removeBooking,
   setSelectedBooking,

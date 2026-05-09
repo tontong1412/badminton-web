@@ -230,6 +230,21 @@
     "gapPolicy": "นโยบายช่องว่าง",
     "bookingConfirmed": "ยืนยันการจองสำเร็จแล้ว!",
     "numberOfCourts": "จำนวนสนาม",
-    "numberOfHours": "จำนวนชั่วโมง"
+    "numberOfHours": "จำนวนชั่วโมง",
+    "availabilityTable": "ตารางความพร้อมของสนาม",
+    "selectionNotContiguous": "ช่วงเวลาที่เลือกสำหรับ {{court}} ต้องต่อเนื่องกัน",
+    "selectSameTimeRange": "สนามที่เลือกทั้งหมดต้องอยู่ในช่วงเวลาเดียวกัน",
+    "clearSelection": "ล้างการเลือก",
+    "selectedCourt": "สนามที่เลือก",
+    "modeGuided": "แบบแนะนำ",
+    "modeFree": "เลือกเอง",
+    "uploadSlip": "อัพโหลดสลิปโอน",
+    "uploadSlipInstruction": "กรุณาอัพโหลดภาพสลิปโอนเงินเพื่อยืนยันการชำระเงิน",
+    "chooseFile": "เลือกรูปภาพ...",
+    "paymentMethod": "วิธีการชำระเงิน",
+    "bankName": "ธนาคาร",
+    "accountName": "ชื่อบัญชี",
+    "accountNumber": "เลขบัญชี",
+    "promptPayID": "พรอมพเพย์ ID"
   }
 }

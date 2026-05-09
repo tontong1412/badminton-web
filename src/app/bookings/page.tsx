@@ -19,10 +19,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  Box,
+  Divider,
 } from '@mui/material'
-import { Booking, Court } from '@/type'
+import { Booking, Court, Venue } from '@/type'
 import bookingsService from '../services/bookings'
 import courtsService from '../services/courts'
+import venueService from '../services/venues'
 import { useAppDispatch } from '../libs/redux/store'
 import { setBookings, removeBooking, setError as setBookingError } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
@@ -35,12 +39,23 @@ export default function MyBookingsPage() {
 
   const [bookings, setBookingsState] = useState<Booking[]>([])
   const [courtDetails, setCourtDetails] = useState<Record<string, Court>>({})
+  const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
   const [payingBundleID, setPayingBundleID] = useState<string | null>(null)
+  const [payDialogOpen, setPayDialogOpen] = useState(false)
+  const [payTargetBundleID, setPayTargetBundleID] = useState<string | null>(null)
+  const [payTargetBookingIds, setPayTargetBookingIds] = useState<string[]>([])
+  const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
+  const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
+  const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
+  const [slipFile, setSlipFile] = useState<File | null>(null)
+  const [slipPreview, setSlipPreview] = useState<string | null>(null)
+  const [slipNote, setSlipNote] = useState('')
+  const [paySubmitting, setPaySubmitting] = useState(false)
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -60,7 +75,7 @@ export default function MyBookingsPage() {
       })
 
       const first = sortedItems[0]
-      const totalPrice = sortedItems.reduce((sum, item) => sum + item.totalPrice, 0)
+      const totalPrice = sortedItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
       const allConfirmed = sortedItems.every((item) => item.status === 'confirmed')
       const anyCancelled = sortedItems.some((item) => item.status === 'cancelled')
       const allPaid = sortedItems.every((item) => item.paymentStatus === 'paid')
@@ -99,17 +114,23 @@ export default function MyBookingsPage() {
         // Load court details for all bookings
         const courtIds = [...new Set(data.map((b) => b.courtID))]
         const courts: Record<string, Court> = {}
+        const venues: Record<string, Venue> = {}
 
         for (const courtId of courtIds) {
           try {
             const court = await courtsService.getById(courtId)
             courts[courtId] = court
+            if (!venues[court.venueID]) {
+              const venue = await venueService.getById(court.venueID)
+              venues[court.venueID] = venue
+            }
           } catch (err) {
             console.error(`Failed to load court ${courtId}:`, err)
           }
         }
 
         setCourtDetails(courts)
+        setVenueDetails(venues)
         setError(null)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load bookings'
@@ -150,25 +171,54 @@ export default function MyBookingsPage() {
     }
   }
 
-  const handlePayBundle = async(bundleID: string, bookingIds: string[]) => {
-    try {
-      setPayingBundleID(bundleID)
-      await bookingsService.payBooking(bundleID)
+  const handlePayBundle = async(bundleID: string, bookingIds: string[], currency: string) => {
+    const bundleBookings = bookings.filter((b) => bookingIds.includes(b.id))
+    const firstCourtID = bundleBookings[0]?.courtID
+    const court = firstCourtID ? courtDetails[firstCourtID] : undefined
+    const venue = court ? venueDetails[court.venueID] : undefined
+    setPayTargetBundleID(bundleID)
+    setPayTargetBookingIds(bookingIds)
+    setPayTargetBookings(bundleBookings)
+    setPayTargetCurrency(currency)
+    setPayTargetVenue(venue ?? null)
+    setSlipFile(null)
+    setSlipPreview(null)
+    setSlipNote('')
+    setPayDialogOpen(true)
+  }
 
+  const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    setSlipFile(file)
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => setSlipPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setSlipPreview(null)
+    }
+  }
+
+  const handleConfirmPay = async() => {
+    if (!payTargetBundleID || !slipPreview) return
+    try {
+      setPaySubmitting(true)
+      const result = await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
       setBookingsState((prev) => {
         const updated = prev.map((booking) =>
-          bookingIds.includes(booking.id)
-            ? { ...booking, paymentStatus: 'paid' as const }
+          payTargetBookingIds.includes(booking.id)
+            ? { ...booking, paymentStatus: 'pending' as const }
             : booking
         )
         dispatch(setBookings(updated))
         return updated
       })
+      setPayDialogOpen(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to pay booking'
       setError(message)
-      console.error('Error paying booking bundle:', err)
     } finally {
+      setPaySubmitting(false)
       setPayingBundleID(null)
     }
   }
@@ -260,7 +310,7 @@ export default function MyBookingsPage() {
                       {group.startTime} - {group.endTime}
                     </TableCell>
                     <TableCell>
-                      {group.totalPrice.toFixed(2)} {group.currency}
+                      {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -297,10 +347,10 @@ export default function MyBookingsPage() {
                               color="primary"
                               variant="outlined"
                               sx={{ ml: 1 }}
-                              onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((booking) => booking.id))}
+                              onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
                               disabled={payingBundleID === group.bundleID}
                             >
-                              {payingBundleID === group.bundleID ? <CircularProgress size={16} /> : t('booking.pay')}
+                              {t('booking.pay')}
                             </Button>
                           )}
                         </>
@@ -335,6 +385,122 @@ export default function MyBookingsPage() {
               disabled={cancelling}
             >
               {cancelling ? <CircularProgress size={24} /> : t('booking.confirmCancel')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={payDialogOpen}
+          onClose={() => !paySubmitting && setPayDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>{t('booking.uploadSlip')}</DialogTitle>
+          <DialogContent>
+            {/* Booking details */}
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+                {t('booking.bookingDetails')}
+              </Typography>
+              {payTargetVenue && (
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>{t('booking.venue')}:</strong> {payTargetVenue.name.en || payTargetVenue.name.th}
+                </Typography>
+              )}
+              {payTargetBookings.map((b) => {
+                const court = courtDetails[b.courtID]
+                return (
+                  <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                    <Typography variant="body2">
+                      {court?.name ?? b.courtID} &nbsp;·&nbsp; {moment(b.date).format('DD/MM/YYYY')} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
+                      {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
+                    </Typography>
+                  </Box>
+                )
+              })}
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle2">{t('booking.total')}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Payment method */}
+            {payTargetVenue?.payment ? (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+                  {t('booking.paymentMethod')}
+                </Typography>
+                <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                  <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {payTargetVenue.payment.bankName}</Typography>
+                  <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
+                  <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
+                  {payTargetVenue.payment.promptPayID && (
+                    <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
+                  )}
+                  {payTargetVenue.payment.qrCodeUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={payTargetVenue.payment.qrCodeUrl}
+                      alt="QR Code"
+                      style={{ marginTop: 8, maxWidth: 160, display: 'block' }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            ) : null}
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {t('booking.uploadSlipInstruction')}
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{ mb: 2 }}
+            >
+              {slipFile ? slipFile.name : t('booking.chooseFile')}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleSlipFileChange}
+              />
+            </Button>
+            {slipPreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={slipPreview}
+                alt="slip preview"
+                style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
+              />
+            )}
+            <TextField
+              size="small"
+              fullWidth
+              label={t('booking.note')}
+              value={slipNote}
+              onChange={(e) => setSlipNote(e.target.value)}
+              multiline
+              rows={2}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPayDialogOpen(false)} disabled={paySubmitting}>
+              {t('booking.cancel')}
+            </Button>
+            <Button
+              onClick={handleConfirmPay}
+              variant="contained"
+              disabled={!slipPreview || paySubmitting}
+            >
+              {paySubmitting ? <CircularProgress size={20} /> : t('booking.confirmBooking')}
             </Button>
           </DialogActions>
         </Dialog>
