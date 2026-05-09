@@ -196,6 +196,40 @@ export default function VenueCourtsPage() {
     if (bookingMode === 'guided') loadGuided()
   }, [selectedDate, courts, requestedDurationMinutes, requestedCourtCount, bookingMode])
 
+  /**
+   * Given all courts and the available subset, suggest the best contiguous block
+   * of `count` available courts (in natural name order) that is most adjacent to
+   * already-booked courts (i.e., maximises booked neighbours on the block's edges).
+   */
+  const suggestCourts = (allCourts: Court[], availableCourts: Court[], count: number): Court[] => {
+    if (count <= 0 || availableCourts.length < count) return availableCourts.slice(0, count)
+
+    const sorted = [...allCourts].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    )
+    const availableIds = new Set(availableCourts.map((c) => c.id))
+    const isAvailable = sorted.map((c) => availableIds.has(c.id))
+
+    let bestIndices: number[] = []
+    let bestScore = -1
+
+    for (let start = 0; start <= sorted.length - count; start++) {
+      const indices = Array.from({ length: count }, (_, i) => start + i)
+      if (!indices.every((i) => isAvailable[i])) continue
+
+      const leftBooked = start > 0 && !isAvailable[start - 1] ? 1 : 0
+      const rightBooked = start + count < sorted.length && !isAvailable[start + count] ? 1 : 0
+      const score = leftBooked + rightBooked
+
+      if (score > bestScore) {
+        bestScore = score
+        bestIndices = indices
+      }
+    }
+
+    return bestIndices.map((i) => sorted[i])
+  }
+
   const handleSelectGuidedSlot = async(slot: { startTime: string; endTime: string }) => {
     if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {
       setGuidedError(t('booking.pastTimeNotAllowed'))
@@ -215,7 +249,9 @@ export default function VenueCourtsPage() {
           return { court, available: ok }
         })
       )
-      setGuidedAvailableCourts(results.filter((r) => r.available).map((r) => r.court))
+      const available = results.filter((r) => r.available).map((r) => r.court)
+      setGuidedAvailableCourts(available)
+      setGuidedSelectedCourts(suggestCourts(courts, available, requestedCourtCount))
     } catch (err) {
       setGuidedError(err instanceof Error ? err.message : 'Failed to check availability')
     } finally {
