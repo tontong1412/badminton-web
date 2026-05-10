@@ -72,7 +72,7 @@ const Register = () => {
       router.back()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      alert(error.response?.data?.error || t('register.error'))
+      alert(error.response?.data?.message || error.response?.data?.error || t('register.error'))
     }
   }
   return (
