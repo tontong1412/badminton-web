@@ -115,10 +115,16 @@ const payBooking = (bookingBundleID: string, payload: PayBookingPayload): Promis
   return request.then((response) => response.data as PayBookingResponse)
 }
 
-const getVenueBookings = (paymentStatus?: string): Promise<Booking[]> => {
+interface VenueBookingsParams {
+  paymentStatus?: string;
+  date?: string;
+  venueID?: string;
+}
+
+const getVenueBookings = (params?: VenueBookingsParams): Promise<Booking[]> => {
   return axios.get(`${baseUrl}/venue-admin`, {
     withCredentials: true,
-    params: paymentStatus ? { paymentStatus } : undefined,
+    params,
   }).then((response) => response.data as Booking[])
 }
 
