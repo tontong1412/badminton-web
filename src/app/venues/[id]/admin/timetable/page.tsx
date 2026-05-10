@@ -437,8 +437,12 @@ export default function VenueTimetablePage() {
                               }}
                             >
                               <div style={{ fontWeight: 600 }}>{booking.startTime}–{booking.endTime}</div>
-                              {booking.guestName && <div style={{ color: '#444' }}>{booking.guestName}</div>}
-                              {booking.guestPhone && <div style={{ color: '#666', fontSize: 11 }}>{booking.guestPhone}</div>}
+                              {(booking.guestName || booking.bookerName) && (
+                                <div style={{ color: '#444' }}>{booking.guestName || booking.bookerName}</div>
+                              )}
+                              {(booking.guestPhone || booking.bookerPhone) && (
+                                <div style={{ color: '#666', fontSize: 11 }}>{booking.guestPhone || booking.bookerPhone}</div>
+                              )}
                               <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(0,0,0,0.08)' }}>
                                 {getStatusLabel(booking.paymentStatus)}
                               </span>
@@ -542,21 +546,24 @@ export default function VenueTimetablePage() {
                     }
                   />
                 </Box>
-                {(detailBooking.guestName || detailBooking.guestPhone || detailBooking.guestEmail) && (
+                {(detailBooking.guestName || detailBooking.guestPhone || detailBooking.guestEmail
+                  || detailBooking.bookerName || detailBooking.bookerPhone) && (
                   <>
                     <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1, mt: 0.5 }}>
-                      <Typography variant="caption" color="text.secondary">Booker</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {detailBooking.guestName ? 'Guest' : 'Booker'}
+                      </Typography>
                     </Box>
-                    {detailBooking.guestName && (
+                    {(detailBooking.guestName || detailBooking.bookerName) && (
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" color="text.secondary">Name</Typography>
-                        <Typography variant="body2">{detailBooking.guestName}</Typography>
+                        <Typography variant="body2">{detailBooking.guestName || detailBooking.bookerName}</Typography>
                       </Box>
                     )}
-                    {detailBooking.guestPhone && (
+                    {(detailBooking.guestPhone || detailBooking.bookerPhone) && (
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" color="text.secondary">Phone</Typography>
-                        <Typography variant="body2">{detailBooking.guestPhone}</Typography>
+                        <Typography variant="body2">{detailBooking.guestPhone || detailBooking.bookerPhone}</Typography>
                       </Box>
                     )}
                     {detailBooking.guestEmail && (

@@ -438,6 +438,8 @@ export interface Booking {
   resaleSourceListingID?: string;
   resaleOutcome: BookingResaleOutcome;
   note?: string;
+  bookerName?: string;
+  bookerPhone?: string;
   createdAt?: string;
   updatedAt?: string;
 }
