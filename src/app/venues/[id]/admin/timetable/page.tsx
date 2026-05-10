@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Container,
   Typography,
@@ -17,6 +17,11 @@ import {
   Button,
   Tabs,
   Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
@@ -54,6 +59,17 @@ function getStatusLabel(paymentStatus: PaymentStatus): string {
   return 'Unpaid'
 }
 
+function getEndTimeOptions(startTime: string): string[] {
+  const startMin = timeToMinutes(startTime)
+  const opts: string[] = []
+  for (let m = startMin + 30; m <= timeToMinutes('23:00'); m += 30) {
+    const h = Math.floor(m / 60)
+    const min = m % 60
+    opts.push(`${String(h).padStart(2, '0')}:${min === 0 ? '00' : '30'}`)
+  }
+  return opts
+}
+
 interface BookingCell {
   booking: Booking;
   slotStart: string;
@@ -74,6 +90,15 @@ export default function VenueTimetablePage() {
   const [initLoading, setInitLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
+  const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
+  const [bookEndTime, setBookEndTime] = useState('')
+  const [bookGuestName, setBookGuestName] = useState('')
+  const [bookGuestPhone, setBookGuestPhone] = useState('')
+  const [bookGuestEmail, setBookGuestEmail] = useState('')
+  const [bookSubmitting, setBookSubmitting] = useState(false)
+  const [bookError, setBookError] = useState<string | null>(null)
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     const init = async() => {
@@ -101,23 +126,71 @@ export default function VenueTimetablePage() {
     init()
   }, [venueID, user, router])
 
-  useEffect(() => {
+  const refreshBookings = useCallback(async() => {
     if (!date) return
-    const load = async() => {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await bookingsService.getVenueBookings({ date, venueID })
-        setBookings(data)
-      } catch (e) {
-        setError('Failed to load bookings')
-        console.error(e)
-      } finally {
-        setLoading(false)
-      }
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await bookingsService.getVenueBookings({ date, venueID })
+      setBookings(data)
+    } catch (e) {
+      setError('Failed to load bookings')
+      console.error(e)
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [date, venueID])
+
+  useEffect(() => {
+    refreshBookings()
+  }, [refreshBookings])
+
+  const openBookDialog = (court: Court, slot: string) => {
+    const opts = getEndTimeOptions(slot)
+    setBookDialog({ court, startTime: slot })
+    setBookEndTime(opts[0] || '')
+    setBookGuestName('')
+    setBookGuestPhone('')
+    setBookGuestEmail('')
+    setBookError(null)
+  }
+
+  const handleBook = async() => {
+    if (!bookDialog || !bookEndTime) return
+    try {
+      setBookSubmitting(true)
+      setBookError(null)
+      await bookingsService.createBundle({
+        items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime: bookEndTime }],
+        guestName: bookGuestName || undefined,
+        guestPhone: bookGuestPhone || undefined,
+        guestEmail: bookGuestEmail || undefined,
+      })
+      setBookDialog(null)
+      await refreshBookings()
+    } catch (e) {
+      setBookError('Failed to create booking')
+      console.error(e)
+    } finally {
+      setBookSubmitting(false)
+    }
+  }
+
+  const handleCancel = async() => {
+    if (!detailBooking) return
+    try {
+      setCancelling(true)
+      await bookingsService.cancel(detailBooking.id)
+      setCancelConfirm(false)
+      setDetailBooking(null)
+      await refreshBookings()
+    } catch (e) {
+      setError('Failed to cancel booking')
+      console.error(e)
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   const sortedCourts = [...courts].sort((a, b) => a.name.localeCompare(b.name))
 
@@ -285,11 +358,18 @@ export default function VenueTimetablePage() {
                         }
 
                         return (
-                          <td key={court.id} style={{
-                            borderRight: '1px solid #e0e0e0',
-                            borderBottom: '1px solid #f0f0f0',
-                            height: 36,
-                          }} />
+                          <td
+                            key={court.id}
+                            onClick={() => openBookDialog(court, slot)}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLTableCellElement).style.background = '#f0f7ff' }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableCellElement).style.background = '' }}
+                            style={{
+                              borderRight: '1px solid #e0e0e0',
+                              borderBottom: '1px solid #f0f0f0',
+                              height: 36,
+                              cursor: 'pointer',
+                            }}
+                          />
                         )
                       })}
                     </tr>
@@ -378,7 +458,60 @@ export default function VenueTimetablePage() {
             )}
           </DialogContent>
           <DialogActions>
+            {detailBooking?.status !== BookingStatus.Cancelled && (
+              <Button color="error" onClick={() => setCancelConfirm(true)} sx={{ mr: 'auto' }}>
+                Cancel Booking
+              </Button>
+            )}
             <Button onClick={() => setDetailBooking(null)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Cancel confirmation dialog */}
+        <Dialog open={cancelConfirm} onClose={() => !cancelling && setCancelConfirm(false)} maxWidth="xs">
+          <DialogTitle>Cancel Booking?</DialogTitle>
+          <DialogContent>
+            <Typography>Are you sure you want to cancel this booking? This cannot be undone.</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelConfirm(false)} disabled={cancelling}>Keep</Button>
+            <Button color="error" onClick={handleCancel} disabled={cancelling}>
+              {cancelling ? <CircularProgress size={18} /> : 'Cancel Booking'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* New booking dialog */}
+        <Dialog open={!!bookDialog} onClose={() => !bookSubmitting && setBookDialog(null)} maxWidth="xs" fullWidth>
+          <DialogTitle>New Booking — {bookDialog?.court.name}</DialogTitle>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
+            {bookError && <Alert severity="error" sx={{ mb: 1 }}>{bookError}</Alert>}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField size="small" label="Date" value={date} InputProps={{ readOnly: true }} fullWidth />
+              <TextField size="small" label="Start" value={bookDialog?.startTime || ''} InputProps={{ readOnly: true }} fullWidth />
+            </Box>
+            <FormControl size="small" fullWidth>
+              <InputLabel>End Time</InputLabel>
+              <Select
+                label="End Time"
+                value={bookEndTime}
+                onChange={(e) => setBookEndTime(e.target.value)}
+              >
+                {bookDialog && getEndTimeOptions(bookDialog.startTime).map((t) => (
+                  <MenuItem key={t} value={t}>{t}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Divider />
+            <TextField size="small" label="Guest Name" value={bookGuestName} onChange={(e) => setBookGuestName(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Phone" value={bookGuestPhone} onChange={(e) => setBookGuestPhone(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Email" value={bookGuestEmail} onChange={(e) => setBookGuestEmail(e.target.value)} fullWidth />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setBookDialog(null)} disabled={bookSubmitting}>Cancel</Button>
+            <Button variant="contained" onClick={handleBook} disabled={!bookEndTime || bookSubmitting}>
+              {bookSubmitting ? <CircularProgress size={18} /> : 'Book'}
+            </Button>
           </DialogActions>
         </Dialog>
       </Container>
