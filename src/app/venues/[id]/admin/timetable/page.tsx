@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Container,
   Typography,
@@ -22,10 +22,12 @@ import {
   Select,
   MenuItem,
   Divider,
+  ToggleButton,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import SelectAllIcon from '@mui/icons-material/SelectAll'
 import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
-import bookingsService from '../../../../services/bookings'
+import bookingsService, { BookingBundleItem } from '../../../../services/bookings'
 import venueService from '../../../../services/venues'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
@@ -46,6 +48,10 @@ function timeToMinutes(t: string) {
   return h * 60 + m
 }
 
+function minutesToTime(m: number) {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${m % 60 === 0 ? '00' : '30'}`
+}
+
 function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus): string {
   if (status === BookingStatus.Cancelled) return '#e0e0e0'
   if (paymentStatus === PaymentStatus.Paid) return '#c8e6c9'
@@ -63,11 +69,41 @@ function getEndTimeOptions(startTime: string): string[] {
   const startMin = timeToMinutes(startTime)
   const opts: string[] = []
   for (let m = startMin + 30; m <= timeToMinutes('23:00'); m += 30) {
-    const h = Math.floor(m / 60)
-    const min = m % 60
-    opts.push(`${String(h).padStart(2, '0')}:${min === 0 ? '00' : '30'}`)
+    opts.push(minutesToTime(m))
   }
   return opts
+}
+
+// Merge selected cells (courtID:slot) into bundle items grouped by court
+function buildBundleItems(selectedCells: Set<string>, date: string): BookingBundleItem[] {
+  const byCourtID = new Map<string, number[]>()
+  for (const key of selectedCells) {
+    const colonIdx = key.indexOf(':')
+    const courtID = key.slice(0, colonIdx)
+    const slot = key.slice(colonIdx + 1)
+    const mins = timeToMinutes(slot)
+    const list = byCourtID.get(courtID) ?? []
+    list.push(mins)
+    byCourtID.set(courtID, list)
+  }
+
+  const items: BookingBundleItem[] = []
+  for (const [courtID, minsList] of byCourtID.entries()) {
+    minsList.sort((a, b) => a - b)
+    let rangeStart = minsList[0]
+    let rangeEnd = minsList[0] + 30
+    for (let i = 1; i < minsList.length; i++) {
+      if (minsList[i] === rangeEnd) {
+        rangeEnd += 30
+      } else {
+        items.push({ courtID, date, startTime: minutesToTime(rangeStart), endTime: minutesToTime(rangeEnd) })
+        rangeStart = minsList[i]
+        rangeEnd = minsList[i] + 30
+      }
+    }
+    items.push({ courtID, date, startTime: minutesToTime(rangeStart), endTime: minutesToTime(rangeEnd) })
+  }
+  return items
 }
 
 interface BookingCell {
@@ -89,14 +125,25 @@ export default function VenueTimetablePage() {
   const [loading, setLoading] = useState(false)
   const [initLoading, setInitLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
+
+  // Single-cell booking state
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
   const [bookEndTime, setBookEndTime] = useState('')
-  const [bookGuestName, setBookGuestName] = useState('')
-  const [bookGuestPhone, setBookGuestPhone] = useState('')
-  const [bookGuestEmail, setBookGuestEmail] = useState('')
-  const [bookSubmitting, setBookSubmitting] = useState(false)
   const [bookError, setBookError] = useState<string | null>(null)
+  const [bookSubmitting, setBookSubmitting] = useState(false)
+
+  // Multi-select booking state
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
+  const [multiBookDialog, setMultiBookDialog] = useState(false)
+
+  // Shared guest info
+  const [guestName, setGuestName] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+
+  // Detail / cancel state
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const [cancelling, setCancelling] = useState(false)
 
@@ -141,35 +188,86 @@ export default function VenueTimetablePage() {
     }
   }, [date, venueID])
 
-  useEffect(() => {
-    refreshBookings()
-  }, [refreshBookings])
+  useEffect(() => { refreshBookings() }, [refreshBookings])
+  useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
 
-  const openBookDialog = (court: Court, slot: string) => {
+  const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
+
+  const cellMap = useMemo(() => {
+    const map = new Map<string, Map<string, BookingCell>>()
+    sortedCourts.forEach((c) => map.set(c.id, new Map()))
+    bookings.forEach((booking) => {
+      if (booking.status === BookingStatus.Cancelled) return
+      const courtSlots = map.get(booking.courtID)
+      if (!courtSlots) return
+      const startMin = timeToMinutes(booking.startTime)
+      const endMin = timeToMinutes(booking.endTime)
+      const rowSpan = Math.ceil((endMin - startMin) / 30)
+      courtSlots.set(minutesToTime(startMin), { booking, slotStart: minutesToTime(startMin), rowSpan })
+    })
+    return map
+  }, [sortedCourts, bookings])
+
+  const activeSlots = ALL_SLOTS.slice(0, ALL_SLOTS.length - 1)
+
+  const openSingleBookDialog = (court: Court, slot: string) => {
     const opts = getEndTimeOptions(slot)
     setBookDialog({ court, startTime: slot })
     setBookEndTime(opts[0] || '')
-    setBookGuestName('')
-    setBookGuestPhone('')
-    setBookGuestEmail('')
+    setGuestName('')
+    setGuestPhone('')
+    setGuestEmail('')
     setBookError(null)
   }
 
-  const handleBook = async() => {
+  const toggleCellSelection = (courtID: string, slot: string) => {
+    const key = `${courtID}:${slot}`
+    setSelectedCells((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const handleSingleBook = async() => {
     if (!bookDialog || !bookEndTime) return
     try {
       setBookSubmitting(true)
       setBookError(null)
       await bookingsService.createBundle({
         items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime: bookEndTime }],
-        guestName: bookGuestName || undefined,
-        guestPhone: bookGuestPhone || undefined,
-        guestEmail: bookGuestEmail || undefined,
+        guestName: guestName || undefined,
+        guestPhone: guestPhone || undefined,
+        guestEmail: guestEmail || undefined,
       })
       setBookDialog(null)
       await refreshBookings()
     } catch (e) {
       setBookError('Failed to create booking')
+      console.error(e)
+    } finally {
+      setBookSubmitting(false)
+    }
+  }
+
+  const handleMultiBook = async() => {
+    const items = buildBundleItems(selectedCells, date)
+    if (items.length === 0) return
+    try {
+      setBookSubmitting(true)
+      setBookError(null)
+      await bookingsService.createBundle({
+        items,
+        guestName: guestName || undefined,
+        guestPhone: guestPhone || undefined,
+        guestEmail: guestEmail || undefined,
+      })
+      setMultiBookDialog(false)
+      setSelectedCells(new Set())
+      await refreshBookings()
+    } catch (e) {
+      setBookError('Failed to create bookings')
       console.error(e)
     } finally {
       setBookSubmitting(false)
@@ -192,24 +290,8 @@ export default function VenueTimetablePage() {
     }
   }
 
-  const sortedCourts = [...courts].sort((a, b) => a.name.localeCompare(b.name))
-
-  // Build cellMap
-  const cellMap = new Map<string, Map<string, BookingCell>>()
-  sortedCourts.forEach((c) => cellMap.set(c.id, new Map()))
-
-  bookings.forEach((booking) => {
-    if (booking.status === BookingStatus.Cancelled) return
-    const courtSlots = cellMap.get(booking.courtID)
-    if (!courtSlots) return
-    const startMin = timeToMinutes(booking.startTime)
-    const endMin = timeToMinutes(booking.endTime)
-    const rowSpan = Math.ceil((endMin - startMin) / 30)
-    const slotStart = `${String(Math.floor(startMin / 60)).padStart(2, '0')}:${startMin % 60 === 0 ? '00' : '30'}`
-    courtSlots.set(slotStart, { booking, slotStart, rowSpan })
-  })
-
-  const activeSlots = ALL_SLOTS.slice(0, ALL_SLOTS.length - 1)
+  const multiBookItems = useMemo(() => buildBundleItems(selectedCells, date), [selectedCells, date])
+  const courtNameById = useMemo(() => Object.fromEntries(courts.map((c) => [c.id, c.name])), [courts])
 
   if (initLoading) {
     return (
@@ -223,15 +305,9 @@ export default function VenueTimetablePage() {
 
   return (
     <Layout>
-      <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, md: 4 } }}>
-        {/* Header */}
+      <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, md: 4 }, pb: selectedCells.size > 0 ? 14 : 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          <Button
-            size="small"
-            startIcon={<ArrowBackIcon />}
-            onClick={() => router.push('/admin')}
-            sx={{ mr: 1 }}
-          >
+          <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => router.push('/admin')} sx={{ mr: 1 }}>
             All Venues
           </Button>
         </Box>
@@ -239,7 +315,6 @@ export default function VenueTimetablePage() {
           {venue?.name.en || venue?.name.th}
         </Typography>
 
-        {/* Sub-nav tabs */}
         <Tabs
           value="timetable"
           sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
@@ -249,11 +324,9 @@ export default function VenueTimetablePage() {
           <Tab label="Payments" value="bookings" />
         </Tabs>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>
-        )}
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
-        {/* Date picker + legend */}
+        {/* Toolbar */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
             size="small"
@@ -263,13 +336,29 @@ export default function VenueTimetablePage() {
             onChange={(e) => setDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <ToggleButton
+            value="select"
+            selected={selectMode}
+            onChange={() => setSelectMode((v) => !v)}
+            size="small"
+            color="primary"
+          >
+            <SelectAllIcon sx={{ mr: 0.5, fontSize: 18 }} />
+            {selectMode ? 'Selecting' : 'Select Slots'}
+          </ToggleButton>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
             <Box sx={{ width: 14, height: 14, bgcolor: '#bbdefb', border: '1px solid #ccc', borderRadius: 0.5 }} />
             <Typography variant="caption">Unpaid</Typography>
             <Box sx={{ width: 14, height: 14, bgcolor: '#fff9c4', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
             <Typography variant="caption">Slip Uploaded</Typography>
             <Box sx={{ width: 14, height: 14, bgcolor: '#c8e6c9', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
             <Typography variant="caption">Paid</Typography>
+            {selectMode && (
+              <>
+                <Box sx={{ width: 14, height: 14, bgcolor: '#ffe0b2', border: '2px solid #fb8c00', borderRadius: 0.5, ml: 1 }} />
+                <Typography variant="caption">Selected</Typography>
+              </>
+            )}
           </Box>
         </Box>
 
@@ -335,13 +424,13 @@ export default function VenueTimetablePage() {
                             <td
                               key={court.id}
                               rowSpan={rowSpan}
-                              onClick={() => setDetailBooking(booking)}
+                              onClick={() => !selectMode && setDetailBooking(booking)}
                               style={{
                                 background: getStatusColor(booking.status, booking.paymentStatus),
                                 border: '2px solid white',
                                 padding: '4px 8px',
                                 verticalAlign: 'top',
-                                cursor: 'pointer',
+                                cursor: selectMode ? 'default' : 'pointer',
                                 fontSize: 12,
                                 lineHeight: 1.4,
                                 height: rowSpan * 36,
@@ -357,17 +446,27 @@ export default function VenueTimetablePage() {
                           )
                         }
 
+                        const cellKey = `${court.id}:${slot}`
+                        const isSelected = selectedCells.has(cellKey)
+
                         return (
                           <td
                             key={court.id}
-                            onClick={() => openBookDialog(court, slot)}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLTableCellElement).style.background = '#f0f7ff' }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableCellElement).style.background = '' }}
+                            onClick={() => selectMode ? toggleCellSelection(court.id, slot) : openSingleBookDialog(court, slot)}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) (e.currentTarget as HTMLTableCellElement).style.background = '#f0f7ff'
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) (e.currentTarget as HTMLTableCellElement).style.background = ''
+                            }}
                             style={{
                               borderRight: '1px solid #e0e0e0',
                               borderBottom: '1px solid #f0f0f0',
                               height: 36,
                               cursor: 'pointer',
+                              background: isSelected ? '#ffe0b2' : '',
+                              outline: isSelected ? '2px solid #fb8c00' : '',
+                              outlineOffset: '-2px',
                             }}
                           />
                         )
@@ -377,6 +476,37 @@ export default function VenueTimetablePage() {
                 </tbody>
               </table>
             )}
+          </Paper>
+        )}
+
+        {/* Floating selection bar */}
+        {selectedCells.size > 0 && (
+          <Paper
+            elevation={6}
+            sx={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+              px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 2,
+              borderTop: '1px solid #e0e0e0', bgcolor: 'background.paper',
+            }}
+          >
+            <Typography variant="body2" sx={{ flex: 1 }}>
+              <strong>{selectedCells.size}</strong> slot{selectedCells.size > 1 ? 's' : ''} selected
+              {' '}&mdash; {multiBookItems.length} booking item{multiBookItems.length > 1 ? 's' : ''}
+            </Typography>
+            <Button size="small" onClick={() => setSelectedCells(new Set())}>Clear</Button>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                setGuestName('')
+                setGuestPhone('')
+                setGuestEmail('')
+                setBookError(null)
+                setMultiBookDialog(true)
+              }}
+            >
+              Book Selected
+            </Button>
           </Paper>
         )}
 
@@ -481,7 +611,7 @@ export default function VenueTimetablePage() {
           </DialogActions>
         </Dialog>
 
-        {/* New booking dialog */}
+        {/* Single-cell booking dialog */}
         <Dialog open={!!bookDialog} onClose={() => !bookSubmitting && setBookDialog(null)} maxWidth="xs" fullWidth>
           <DialogTitle>New Booking — {bookDialog?.court.name}</DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
@@ -492,25 +622,47 @@ export default function VenueTimetablePage() {
             </Box>
             <FormControl size="small" fullWidth>
               <InputLabel>End Time</InputLabel>
-              <Select
-                label="End Time"
-                value={bookEndTime}
-                onChange={(e) => setBookEndTime(e.target.value)}
-              >
+              <Select label="End Time" value={bookEndTime} onChange={(e) => setBookEndTime(e.target.value)}>
                 {bookDialog && getEndTimeOptions(bookDialog.startTime).map((t) => (
                   <MenuItem key={t} value={t}>{t}</MenuItem>
                 ))}
               </Select>
             </FormControl>
             <Divider />
-            <TextField size="small" label="Guest Name" value={bookGuestName} onChange={(e) => setBookGuestName(e.target.value)} fullWidth />
-            <TextField size="small" label="Guest Phone" value={bookGuestPhone} onChange={(e) => setBookGuestPhone(e.target.value)} fullWidth />
-            <TextField size="small" label="Guest Email" value={bookGuestEmail} onChange={(e) => setBookGuestEmail(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} fullWidth />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setBookDialog(null)} disabled={bookSubmitting}>Cancel</Button>
-            <Button variant="contained" onClick={handleBook} disabled={!bookEndTime || bookSubmitting}>
+            <Button variant="contained" onClick={handleSingleBook} disabled={!bookEndTime || bookSubmitting}>
               {bookSubmitting ? <CircularProgress size={18} /> : 'Book'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Multi-select booking dialog */}
+        <Dialog open={multiBookDialog} onClose={() => !bookSubmitting && setMultiBookDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Book Selected Slots</DialogTitle>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
+            {bookError && <Alert severity="error" sx={{ mb: 1 }}>{bookError}</Alert>}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {multiBookItems.map((item, i) => (
+                <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Chip size="small" label={courtNameById[item.courtID] ?? item.courtID} />
+                  <Typography variant="body2">{item.startTime} – {item.endTime}</Typography>
+                </Box>
+              ))}
+            </Box>
+            <Divider />
+            <TextField size="small" label="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} fullWidth />
+            <TextField size="small" label="Guest Email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} fullWidth />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setMultiBookDialog(false)} disabled={bookSubmitting}>Cancel</Button>
+            <Button variant="contained" onClick={handleMultiBook} disabled={bookSubmitting}>
+              {bookSubmitting ? <CircularProgress size={18} /> : `Book ${multiBookItems.length} item${multiBookItems.length > 1 ? 's' : ''}`}
             </Button>
           </DialogActions>
         </Dialog>
