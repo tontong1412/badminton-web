@@ -134,6 +134,12 @@ const approvePayment = (bookingBundleID: string): Promise<{ message: string; boo
   }).then((response) => response.data as { message: string; bookings: Booking[] })
 }
 
+const markAsPaid = (bookingID: string): Promise<{ message: string; booking: Booking }> => {
+  return axios.put(`${baseUrl}/${bookingID}/mark-paid`, {}, {
+    withCredentials: true,
+  }).then((response) => response.data as { message: string; booking: Booking })
+}
+
 export default {
   getAll,
   getById,
@@ -144,4 +150,5 @@ export default {
   payBooking,
   getVenueBookings,
   approvePayment,
+  markAsPaid,
 }

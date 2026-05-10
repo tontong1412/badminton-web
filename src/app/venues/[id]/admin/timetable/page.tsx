@@ -146,6 +146,7 @@ export default function VenueTimetablePage() {
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [approving, setApproving] = useState(false)
 
   useEffect(() => {
     const init = async() => {
@@ -271,6 +272,36 @@ export default function VenueTimetablePage() {
       console.error(e)
     } finally {
       setBookSubmitting(false)
+    }
+  }
+
+  const handleApprove = async() => {
+    if (!detailBooking?.bookingBundleID) return
+    try {
+      setApproving(true)
+      await bookingsService.approvePayment(detailBooking.bookingBundleID)
+      setDetailBooking(null)
+      await refreshBookings()
+    } catch (e) {
+      setError('Failed to approve payment')
+      console.error(e)
+    } finally {
+      setApproving(false)
+    }
+  }
+
+  const handleMarkAsPaid = async() => {
+    if (!detailBooking?.id) return
+    try {
+      setApproving(true)
+      await bookingsService.markAsPaid(detailBooking.id)
+      setDetailBooking(null)
+      await refreshBookings()
+    } catch (e) {
+      setError('Failed to mark as paid')
+      console.error(e)
+    } finally {
+      setApproving(false)
     }
   }
 
@@ -596,11 +627,22 @@ export default function VenueTimetablePage() {
           </DialogContent>
           <DialogActions>
             {detailBooking?.status !== BookingStatus.Cancelled && (
-              <Button color="error" onClick={() => setCancelConfirm(true)} sx={{ mr: 'auto' }}>
+              <Button color="error" onClick={() => setCancelConfirm(true)} sx={{ mr: 'auto' }} disabled={approving}>
                 Cancel Booking
               </Button>
             )}
-            <Button onClick={() => setDetailBooking(null)}>Close</Button>
+            {detailBooking?.paymentStatus === PaymentStatus.Unpaid
+              && detailBooking?.status !== BookingStatus.Cancelled && (
+              <Button variant="contained" color="success" onClick={handleMarkAsPaid} disabled={approving}>
+                {approving ? <CircularProgress size={18} /> : 'Mark as Paid'}
+              </Button>
+            )}
+            {detailBooking?.paymentStatus === PaymentStatus.Pending && (
+              <Button variant="contained" color="success" onClick={handleApprove} disabled={approving}>
+                {approving ? <CircularProgress size={18} /> : 'Approve Payment'}
+              </Button>
+            )}
+            <Button onClick={() => setDetailBooking(null)} disabled={approving}>Close</Button>
           </DialogActions>
         </Dialog>
 
