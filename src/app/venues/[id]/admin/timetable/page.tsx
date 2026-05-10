@@ -23,8 +23,11 @@ import {
   MenuItem,
   Divider,
   ToggleButton,
+  IconButton,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SelectAllIcon from '@mui/icons-material/SelectAll'
 import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
 import bookingsService, { BookingBundleItem } from '../../../../services/bookings'
@@ -361,14 +364,22 @@ export default function VenueTimetablePage() {
 
         {/* Toolbar */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-          <TextField
-            size="small"
-            type="date"
-            label="Date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <IconButton size="small" onClick={() => setDate(moment(date).subtract(1, 'day').format('YYYY-MM-DD'))}>
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            <TextField
+              size="small"
+              type="date"
+              label="Date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <IconButton size="small" onClick={() => setDate(moment(date).add(1, 'day').format('YYYY-MM-DD'))}>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
           <ToggleButton
             value="select"
             selected={selectMode}

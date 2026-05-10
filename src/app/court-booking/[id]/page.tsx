@@ -16,7 +16,10 @@ import {
   Stack,
   Grid,
   Chip,
+  IconButton,
 } from '@mui/material'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import { BookingAvailability, Court, Venue } from '@/type'
 import venueService from '../../services/venues'
@@ -394,14 +397,22 @@ export default function VenueCourtsPage() {
 
         {/* Shared date picker */}
         <Box sx={{ mb: 3 }}>
-          <TextField
-            size="small"
-            label={t('booking.date')}
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            sx={{ maxWidth: 260 }}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}>
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            <TextField
+              size="small"
+              label={t('booking.date')}
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              sx={{ maxWidth: 200 }}
+            />
+            <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).add(1, 'day').format('YYYY-MM-DD'))}>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
 
         {/* Mode tabs */}
