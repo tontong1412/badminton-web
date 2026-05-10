@@ -19,12 +19,14 @@ import {
   Tab,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Booking, BookingStatus, Court, PaymentStatus, Venue } from '@/type'
+import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
 import bookingsService from '../../../../services/bookings'
 import venueService from '../../../../services/venues'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
+import { useSelector } from 'react-redux'
+import { RootState } from '../../../../libs/redux/store'
 
 // Generate half-hour slots from 06:00 to 23:00
 const ALL_SLOTS: string[] = []
@@ -62,6 +64,7 @@ export default function VenueTimetablePage() {
   const params = useParams()
   const router = useRouter()
   const venueID = params.id as string
+  const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
 
   const [venue, setVenue] = useState<Venue | null>(null)
   const [courts, setCourts] = useState<Court[]>([])
@@ -79,6 +82,13 @@ export default function VenueTimetablePage() {
           venueService.getById(venueID),
           venueService.getCourts(),
         ])
+        const userID = (user as unknown as { id: string } | null)?.id
+        const isOwner = v.ownerUserID === userID
+        const isManager = v.managerUserIDs.includes(userID ?? '')
+        if (!userID || (!isOwner && !isManager)) {
+          router.replace('/admin')
+          return
+        }
         setVenue(v)
         setCourts(allCourts.filter((c) => c.venueID === venueID && c.status === 'active'))
       } catch (e) {
@@ -89,7 +99,7 @@ export default function VenueTimetablePage() {
       }
     }
     init()
-  }, [venueID])
+  }, [venueID, user, router])
 
   useEffect(() => {
     if (!date) return

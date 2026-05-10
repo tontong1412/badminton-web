@@ -384,6 +384,7 @@ export interface Venue {
     coordinates: [number, number];
   };
   ownerUserID: string;
+  managerUserIDs: string[];
   weeklySchedule: Record<string, DailySchedule | null>;
   holidays: HolidaySchedule[];
   slotDurationMinutes: number;

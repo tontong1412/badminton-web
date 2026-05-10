@@ -24,13 +24,15 @@ import {
   Tab,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Booking, Court, Venue } from '@/type'
+import { Booking, Court, User, Venue } from '@/type'
 import bookingsService from '../../../../services/bookings'
 import courtsService from '../../../../services/courts'
 import venueService from '../../../../services/venues'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
+import { useSelector } from 'react-redux'
+import { RootState } from '../../../../libs/redux/store'
 
 interface BundleGroup {
   bundleID: string;
@@ -51,6 +53,7 @@ export default function VenuePaymentsPage() {
   const params = useParams()
   const router = useRouter()
   const venueID = params.id as string
+  const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
 
   const [venue, setVenue] = useState<Venue | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -65,11 +68,20 @@ export default function VenuePaymentsPage() {
   const [approving, setApproving] = useState(false)
 
   useEffect(() => {
+    const userID = (user as unknown as { id: string } | null)?.id
     venueService.getById(venueID)
-      .then(setVenue)
+      .then((v) => {
+        const isOwner = v.ownerUserID === userID
+        const isManager = v.managerUserIDs.includes(userID ?? '')
+        if (!userID || (!isOwner && !isManager)) {
+          router.replace('/admin')
+          return
+        }
+        setVenue(v)
+      })
       .catch((e) => { setError('Failed to load venue'); console.error(e) })
       .finally(() => setInitLoading(false))
-  }, [venueID])
+  }, [venueID, user, router])
 
   const loadBookings = async(status: string) => {
     try {
