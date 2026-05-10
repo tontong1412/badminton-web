@@ -22,6 +22,8 @@ import {
   TextField,
   Box,
   Divider,
+  Tabs,
+  Tab,
 } from '@mui/material'
 import { Booking, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
@@ -56,6 +58,7 @@ export default function MyBookingsPage() {
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
   const [slipNote, setSlipNote] = useState('')
   const [paySubmitting, setPaySubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState<'active' | 'cancelled'>('active')
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -101,6 +104,16 @@ export default function MyBookingsPage() {
       return bDate - aDate
     })
   }, [bookings])
+
+  const activeBookings = useMemo(
+    () => groupedBookings.filter((g) => g.status !== 'cancelled'),
+    [groupedBookings],
+  )
+  const cancelledBookings = useMemo(
+    () => groupedBookings.filter((g) => g.status === 'cancelled'),
+    [groupedBookings],
+  )
+  const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeBookings
 
   useEffect(() => {
     const loadBookings = async() => {
@@ -264,9 +277,18 @@ export default function MyBookingsPage() {
   return (
     <Layout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 4, fontWeight: 'bold' }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 'bold' }}>
           {t('booking.myBookings')}
         </Typography>
+
+        <Tabs
+          value={activeTab}
+          onChange={(_, v) => setActiveTab(v)}
+          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label={`Active (${activeBookings.length})`} value="active" />
+          <Tab label={`Cancelled (${cancelledBookings.length})`} value="cancelled" />
+        </Tabs>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -278,13 +300,18 @@ export default function MyBookingsPage() {
           <Alert severity="info">
             {t('booking.noBookingsFound')}
           </Alert>
+        ) : displayedBookings.length === 0 ? (
+          <Alert severity="info">
+            No {activeTab === 'cancelled' ? 'cancelled' : 'active'} bookings found.
+          </Alert>
         ) : (
           <TableContainer component={Paper}>
             <Table>
               <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                 <TableRow>
-                  <TableCell>{t('booking.court')}</TableCell>
+                  <TableCell>Venue</TableCell>
                   <TableCell>{t('booking.date')}</TableCell>
+                  <TableCell>{t('booking.court')}</TableCell>
                   <TableCell>{t('booking.time')}</TableCell>
                   <TableCell>{t('booking.price')}</TableCell>
                   <TableCell>{t('booking.status')}</TableCell>
@@ -293,21 +320,30 @@ export default function MyBookingsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {groupedBookings.map((group) => (
+                {displayedBookings.map((group) => {
+                  const firstCourt = courtDetails[group.bookings[0]?.courtID]
+                  const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
+                  return (
                   <TableRow key={group.groupKey} hover>
                     <TableCell>
-                      {group.bookings.map((booking) => courtDetails[booking.courtID]?.name || 'Loading...').join(', ')}
-                      {group.bundleID && (
-                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
-                          Bundle: {group.bundleID}
-                        </Typography>
-                      )}
+                      {venue ? (venue.name.en || venue.name.th) : '—'}
                     </TableCell>
                     <TableCell>
                       {moment(group.date).format('DD/MM/YYYY')}
                     </TableCell>
                     <TableCell>
-                      {group.startTime} - {group.endTime}
+                      {group.bookings.map((booking) => (
+                        <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
+                          {courtDetails[booking.courtID]?.name || '—'}
+                        </Typography>
+                      ))}
+                    </TableCell>
+                    <TableCell>
+                      {group.bookings.map((booking) => (
+                        <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
+                          {booking.startTime} – {booking.endTime}
+                        </Typography>
+                      ))}
                     </TableCell>
                     <TableCell>
                       {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
@@ -358,7 +394,8 @@ export default function MyBookingsPage() {
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </TableContainer>
