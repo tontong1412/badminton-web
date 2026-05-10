@@ -52,6 +52,7 @@ export interface CreateBundlePayload {
   guestEmail?: string;
   note?: string;
   slip?: string;
+  bookedAsAdmin?: boolean;
 }
 
 export interface BookingBundleResponse {

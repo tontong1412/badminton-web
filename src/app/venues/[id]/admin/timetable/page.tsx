@@ -241,6 +241,7 @@ export default function VenueTimetablePage() {
         guestName: guestName || undefined,
         guestPhone: guestPhone || undefined,
         guestEmail: guestEmail || undefined,
+        bookedAsAdmin: true,
       })
       setBookDialog(null)
       await refreshBookings()
@@ -263,6 +264,7 @@ export default function VenueTimetablePage() {
         guestName: guestName || undefined,
         guestPhone: guestPhone || undefined,
         guestEmail: guestEmail || undefined,
+        bookedAsAdmin: true,
       })
       setMultiBookDialog(false)
       setSelectedCells(new Set())
