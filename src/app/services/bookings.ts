@@ -115,6 +115,19 @@ const payBooking = (bookingBundleID: string, payload: PayBookingPayload): Promis
   return request.then((response) => response.data as PayBookingResponse)
 }
 
+const getVenueBookings = (paymentStatus?: string): Promise<Booking[]> => {
+  return axios.get(`${baseUrl}/venue-admin`, {
+    withCredentials: true,
+    params: paymentStatus ? { paymentStatus } : undefined,
+  }).then((response) => response.data as Booking[])
+}
+
+const approvePayment = (bookingBundleID: string): Promise<{ message: string; bookings: Booking[] }> => {
+  return axios.put(`${baseUrl}/bundles/${bookingBundleID}/approve-payment`, {}, {
+    withCredentials: true,
+  }).then((response) => response.data as { message: string; bookings: Booking[] })
+}
+
 export default {
   getAll,
   getById,
@@ -123,4 +136,6 @@ export default {
   createRecurring,
   cancel,
   payBooking,
+  getVenueBookings,
+  approvePayment,
 }

@@ -23,7 +23,7 @@ import {
   Box,
   Divider,
 } from '@mui/material'
-import { Booking, Court, Venue } from '@/type'
+import { Booking, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
@@ -207,7 +207,7 @@ export default function MyBookingsPage() {
       setBookingsState((prev) => {
         const updated = prev.map((booking) =>
           payTargetBookingIds.includes(booking.id)
-            ? { ...booking, paymentStatus: 'pending' as const }
+            ? { ...booking, paymentStatus: PaymentStatus.Pending }
             : booking
         )
         dispatch(setBookings(updated))
@@ -329,9 +329,10 @@ export default function MyBookingsPage() {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      {group.status === 'confirmed' && (
+                      {(group.status === 'confirmed' || group.status === 'pending') && (
                         <>
-                          {moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
+                          {group.status === 'confirmed' &&
+                            moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
                             <Button
                               size="small"
                               color="error"
@@ -345,7 +346,7 @@ export default function MyBookingsPage() {
                             <Button
                               size="small"
                               color="primary"
-                              variant="outlined"
+                              variant="contained"
                               sx={{ ml: 1 }}
                               onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
                               disabled={payingBundleID === group.bundleID}
