@@ -96,7 +96,7 @@ export default function MyBookingsPage() {
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
   const [slipNote, setSlipNote] = useState('')
   const [paySubmitting, setPaySubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState<'active' | 'cancelled'>('active')
+  const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -144,14 +144,26 @@ export default function MyBookingsPage() {
   }, [bookings])
 
   const activeBookings = useMemo(
-    () => groupedBookings.filter((g) => g.status !== 'cancelled'),
+    () => groupedBookings.filter((g) => {
+      if (g.status === 'cancelled') return false
+      const lastBooking = g.bookings[g.bookings.length - 1]
+      return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())
+    }),
+    [groupedBookings],
+  )
+  const pastBookings = useMemo(
+    () => groupedBookings.filter((g) => {
+      if (g.status === 'cancelled') return false
+      const lastBooking = g.bookings[g.bookings.length - 1]
+      return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())
+    }),
     [groupedBookings],
   )
   const cancelledBookings = useMemo(
     () => groupedBookings.filter((g) => g.status === 'cancelled'),
     [groupedBookings],
   )
-  const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeBookings
+  const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeTab === 'past' ? pastBookings : activeBookings
 
   useEffect(() => {
     const loadBookings = async() => {
@@ -324,7 +336,8 @@ export default function MyBookingsPage() {
           onChange={(_, v) => setActiveTab(v)}
           sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label={`Active (${activeBookings.length})`} value="active" />
+          <Tab label={`Upcoming (${activeBookings.length})`} value="active" />
+          <Tab label={`Past (${pastBookings.length})`} value="past" />
           <Tab label={`Cancelled (${cancelledBookings.length})`} value="cancelled" />
         </Tabs>
 
@@ -340,7 +353,7 @@ export default function MyBookingsPage() {
           </Alert>
         ) : displayedBookings.length === 0 ? (
           <Alert severity="info">
-            No {activeTab === 'cancelled' ? 'cancelled' : 'active'} bookings found.
+            No {activeTab === 'cancelled' ? 'cancelled' : activeTab === 'past' ? 'past' : 'upcoming'} bookings found.
           </Alert>
         ) : (
           <TableContainer component={Paper}>
