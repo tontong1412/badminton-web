@@ -245,16 +245,6 @@ export default function VenueTimetablePage() {
     setBookError(null)
   }
 
-  const toggleCellSelection = (courtID: string, slot: string) => {
-    const key = `${courtID}:${slot}`
-    setSelectedCells((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   const getCellsBetween = (courtID: string, slotA: string, slotB: string): Set<string> => {
     const minA = timeToMinutes(slotA)
     const minB = timeToMinutes(slotB)
@@ -428,7 +418,7 @@ export default function VenueTimetablePage() {
 
   return (
     <Layout>
-      <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, md: 4 }, pb: selectedCells.size > 0 ? 14 : 4 }}>
+      <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, pb: selectedCells.size > 0 ? 10 : 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => router.push('/admin')} sx={{ mr: 1 }}>
             All Venues
@@ -438,78 +428,81 @@ export default function VenueTimetablePage() {
           {venue?.name.en || venue?.name.th}
         </Typography>
 
-        <Tabs
-          value="timetable"
-          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
-          onChange={(_, v) => v === 'bookings' && router.push(`/venues/${venueID}/admin/bookings`)}
-        >
-          <Tab label="Timetable" value="timetable" />
-          <Tab label="Payments" value="bookings" />
-        </Tabs>
-
-        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
-
-        {/* Toolbar */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <IconButton size="small" onClick={() => setDate(moment(date).subtract(1, 'day').format('YYYY-MM-DD'))}>
-              <ChevronLeftIcon fontSize="small" />
-            </IconButton>
-            <TextField
-              size="small"
-              type="date"
-              label="Date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-            <IconButton size="small" onClick={() => setDate(moment(date).add(1, 'day').format('YYYY-MM-DD'))}>
-              <ChevronRightIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <ToggleButton
-            value="select"
-            selected={selectMode}
-            onChange={() => setSelectMode((v) => !v)}
-            size="small"
-            color="primary"
+        {/* Sticky control panel */}
+        <Box sx={{ position: 'sticky', top: 0, zIndex: 10, bgcolor: 'background.default', pb: 1 }}>
+          <Tabs
+            value="timetable"
+            sx={{ mb: 1, borderBottom: 1, borderColor: 'divider' }}
+            onChange={(_, v) => v === 'bookings' && router.push(`/venues/${venueID}/admin/bookings`)}
           >
-            <SelectAllIcon sx={{ mr: 0.5, fontSize: 18 }} />
-            {selectMode ? 'Selecting' : 'Select Slots'}
-          </ToggleButton>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
-            <Box sx={{ width: 14, height: 14, bgcolor: '#bbdefb', border: '1px solid #ccc', borderRadius: 0.5 }} />
-            <Typography variant="caption">Unpaid</Typography>
-            <Box sx={{ width: 14, height: 14, bgcolor: '#fff9c4', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
-            <Typography variant="caption">Slip Uploaded</Typography>
-            <Box sx={{ width: 14, height: 14, bgcolor: '#c8e6c9', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
-            <Typography variant="caption">Paid</Typography>
-            {selectMode && (
-              <>
-                <Box sx={{ width: 14, height: 14, bgcolor: '#ffe0b2', border: '2px solid #fb8c00', borderRadius: 0.5, ml: 1 }} />
-                <Typography variant="caption">Selected</Typography>
-              </>
-            )}
+            <Tab label="Timetable" value="timetable" />
+            <Tab label="Payments" value="bookings" />
+          </Tabs>
+
+          {error && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>{error}</Alert>}
+
+          {/* Toolbar */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton size="small" onClick={() => setDate(moment(date).subtract(1, 'day').format('YYYY-MM-DD'))}>
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+              <TextField
+                size="small"
+                type="date"
+                label="Date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <IconButton size="small" onClick={() => setDate(moment(date).add(1, 'day').format('YYYY-MM-DD'))}>
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <ToggleButton
+              value="select"
+              selected={selectMode}
+              onChange={() => setSelectMode((v) => !v)}
+              size="small"
+              color="primary"
+            >
+              <SelectAllIcon sx={{ mr: 0.5, fontSize: 18 }} />
+              {selectMode ? 'Selecting' : 'Select Slots'}
+            </ToggleButton>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#bbdefb', border: '1px solid #ccc', borderRadius: 0.5 }} />
+              <Typography variant="caption">Unpaid</Typography>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#fff9c4', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
+              <Typography variant="caption">Slip Uploaded</Typography>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#c8e6c9', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
+              <Typography variant="caption">Paid</Typography>
+              {selectMode && (
+                <>
+                  <Box sx={{ width: 14, height: 14, bgcolor: '#ffe0b2', border: '2px solid #fb8c00', borderRadius: 0.5, ml: 1 }} />
+                  <Typography variant="caption">Selected</Typography>
+                </>
+              )}
+            </Box>
           </Box>
         </Box>
 
         {sortedCourts.length === 0 ? (
-          <Alert severity="info">No active courts found for this venue.</Alert>
+          <Alert severity="info" sx={{ mt: 1 }}>No active courts found for this venue.</Alert>
         ) : (
-          <Paper sx={{ overflowX: 'auto' }}>
+          <Paper sx={{ overflow: 'auto' }}>
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress size={28} />
               </Box>
             ) : (
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
-                <thead>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
                   <tr>
                     <th style={{
                       width: 64, minWidth: 64, padding: '8px 4px',
                       background: '#f5f5f5', borderBottom: '2px solid #e0e0e0',
                       borderRight: '1px solid #e0e0e0', fontSize: 12, color: '#666',
-                      position: 'sticky', left: 0, zIndex: 2,
+                      position: 'sticky', left: 0, top: 0, zIndex: 4,
                     }}>
                       Time
                     </th>
@@ -518,6 +511,7 @@ export default function VenueTimetablePage() {
                         padding: '8px 12px', background: '#f5f5f5',
                         borderBottom: '2px solid #e0e0e0', borderRight: '1px solid #e0e0e0',
                         fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'center',
+                        position: 'sticky', top: 0, zIndex: 2,
                       }}>
                         {court.name}
                       </th>
@@ -715,7 +709,6 @@ export default function VenueTimetablePage() {
                 {detailBooking.slip && (
                   <Box sx={{ mt: 1 }}>
                     <Typography variant="caption" color="text.secondary">Payment Slip</Typography>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={detailBooking.slip}
                       alt="Payment slip"
@@ -816,7 +809,7 @@ export default function VenueTimetablePage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Container>
+      </Box>
     </Layout>
   )
 }
