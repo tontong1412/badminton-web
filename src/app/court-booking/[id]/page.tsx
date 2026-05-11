@@ -400,7 +400,7 @@ export default function VenueCourtsPage() {
 
         {/* Shared date picker */}
         <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
             <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}>
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
@@ -427,23 +427,55 @@ export default function VenueCourtsPage() {
         {/* ── GUIDED MODE ─────────────────────────────────────────────────── */}
         {bookingMode === 'guided' && (
           <Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
-              <TextField
-                size="small"
-                label={t('booking.numberOfCourts')}
-                type="number"
-                value={requestedCourtCount}
-                onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
-                sx={{ maxWidth: 220 }}
-              />
-              <TextField
-                size="small"
-                label={t('booking.numberOfHours')}
-                type="number"
-                value={requestedHours}
-                onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
-                sx={{ maxWidth: 220 }}
-              />
+            <Stack direction="row" spacing={2} sx={{ mb: 3, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <IconButton
+                  size="small"
+                  onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))}
+                  disabled={requestedCourtCount <= 1}
+                >
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+                <TextField
+                  size="small"
+                  label={t('booking.numberOfCourts')}
+                  type="number"
+                  value={requestedCourtCount}
+                  onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
+                  sx={{ width: 100 }}
+                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => setRequestedCourtCount((v) => v + 1)}
+                >
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <IconButton
+                  size="small"
+                  onClick={() => setRequestedHours((v) => Math.max(1, v - 1))}
+                  disabled={requestedHours <= 1}
+                >
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+                <TextField
+                  size="small"
+                  label={t('booking.numberOfHours')}
+                  type="number"
+                  value={requestedHours}
+                  onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
+                  sx={{ width: 100 }}
+                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => setRequestedHours((v) => v + 1)}
+                >
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Stack>
 
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
