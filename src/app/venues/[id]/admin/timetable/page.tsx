@@ -454,6 +454,7 @@ export default function VenueTimetablePage() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                sx={{ '& .MuiInputBase-root': { fontSize: 12 }, '& .MuiInputBase-input': { py: '5px' } }}
               />
               <IconButton size="small" onClick={() => setDate(moment(date).add(1, 'day').format('YYYY-MM-DD'))}>
                 <ChevronRightIcon fontSize="small" />
@@ -465,8 +466,9 @@ export default function VenueTimetablePage() {
               onChange={() => setSelectMode((v) => !v)}
               size="small"
               color="primary"
+              sx={{ fontSize: 12, px: 1, py: 0.5 }}
             >
-              <SelectAllIcon sx={{ mr: 0.5, fontSize: 18 }} />
+              <SelectAllIcon sx={{ mr: 0.5, fontSize: 16 }} />
               {selectMode ? 'Selecting' : 'Select Slots'}
             </ToggleButton>
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
