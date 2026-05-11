@@ -469,7 +469,7 @@ export default function VenueTimetablePage() {
               <SelectAllIcon sx={{ mr: 0.5, fontSize: 18 }} />
               {selectMode ? 'Selecting' : 'Select Slots'}
             </ToggleButton>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
               <Box sx={{ width: 14, height: 14, bgcolor: '#bbdefb', border: '1px solid #ccc', borderRadius: 0.5 }} />
               <Typography variant="caption">Unpaid</Typography>
               <Box sx={{ width: 14, height: 14, bgcolor: '#fff9c4', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
