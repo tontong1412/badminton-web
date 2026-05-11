@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Container,
   Typography,
@@ -34,6 +34,44 @@ import { setBookings, removeBooking, setError as setBookingError } from '../libs
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 import Layout from '../components/Layout'
+
+const EXPIRY_MINUTES = 10
+
+function BookingCountdown({ createdAt }: { createdAt: string }) {
+  const expiresAt = useMemo(() => new Date(createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000, [createdAt])
+  const [remaining, setRemaining] = useState(() => Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)))
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      const secs = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
+      setRemaining(secs)
+      if (secs === 0 && timerRef.current) clearInterval(timerRef.current)
+    }, 1000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [expiresAt])
+
+  if (remaining <= 0) {
+    return (
+      <Typography variant="caption" color="error" sx={{ display: 'block', fontWeight: 600, mt: 0.5 }}>
+        Expired — awaiting cancellation
+      </Typography>
+    )
+  }
+
+  const mins = Math.floor(remaining / 60)
+  const secs = remaining % 60
+  const isUrgent = remaining < 120
+
+  return (
+    <Typography
+      variant="caption"
+      sx={{ display: 'block', mt: 0.5, fontWeight: 600, color: isUrgent ? 'error.main' : 'warning.main' }}
+    >
+      Pay within {mins}:{String(secs).padStart(2, '0')} min or booking will be cancelled
+    </Typography>
+  )
+}
 
 export default function MyBookingsPage() {
   const { t } = useTranslation()
@@ -363,6 +401,10 @@ export default function MyBookingsPage() {
                         color={getPaymentStatusColor(group.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                         variant="outlined"
                       />
+                      {group.paymentStatus === 'unpaid' && group.status !== 'cancelled' &&
+                        group.bookings[0]?.createdAt && (
+                          <BookingCountdown createdAt={group.bookings[0].createdAt} />
+                        )}
                     </TableCell>
                     <TableCell align="right">
                       {(group.status === 'confirmed' || group.status === 'pending') && (
