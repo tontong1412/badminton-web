@@ -241,6 +241,7 @@
     "uploadSlip": "Upload Payment Slip",
     "uploadSlipInstruction": "Please upload a photo of your payment slip to confirm payment.",
     "chooseFile": "Choose image...",
+    "fileSelected": "Image selected",
     "paymentMethod": "Payment Method",
     "bankName": "Bank",
     "accountName": "Account Name",

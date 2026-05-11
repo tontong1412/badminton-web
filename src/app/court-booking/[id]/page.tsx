@@ -196,8 +196,8 @@ export default function VenueCourtsPage() {
       }
     }
 
-    if (bookingMode === 'guided') loadGuided()
-  }, [selectedDate, courts, requestedDurationMinutes, bookingMode])
+    loadGuided()
+  }, [selectedDate, courts, requestedDurationMinutes])
 
   const filteredGuidedSlots = useMemo(
     () => guidedSlots.filter((s) => s.courtCount >= requestedCourtCount),
@@ -312,8 +312,8 @@ export default function VenueCourtsPage() {
       }
     }
 
-    if (bookingMode === 'free') loadFree()
-  }, [selectedDate, courts, slotDurationMinutes, bookingMode])
+    loadFree()
+  }, [selectedDate, courts, slotDurationMinutes])
 
   const handleCellClick = (startTime: string, court: Court) => {
     if (moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {

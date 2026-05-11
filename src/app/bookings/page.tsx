@@ -644,7 +644,7 @@ export default function MyBookingsPage() {
               fullWidth
               sx={{ mb: 2 }}
             >
-              {slipFile ? slipFile.name : t('booking.chooseFile')}
+              {slipFile ? t('booking.fileSelected') : t('booking.chooseFile')}
               <input
                 type="file"
                 accept="image/*"

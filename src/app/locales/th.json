@@ -244,6 +244,7 @@
     "uploadSlip": "อัพโหลดสลิปโอน",
     "uploadSlipInstruction": "กรุณาอัพโหลดภาพสลิปโอนเงินเพื่อยืนยันการชำระเงิน",
     "chooseFile": "เลือกรูปภาพ...",
+    "fileSelected": "เลือกรูปภาพแล้ว",
     "paymentMethod": "วิธีการชำระเงิน",
     "bankName": "ธนาคาร",
     "accountName": "ชื่อบัญชี",
