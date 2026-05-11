@@ -4,12 +4,6 @@ import {
   Box,
   CircularProgress,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -117,80 +111,82 @@ export default function CourtAvailabilityTable({
       <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
         {t('booking.availabilityTable')}
       </Typography>
-      <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700, minWidth: 130, whiteSpace: 'nowrap', bgcolor: 'grey.100' }}>
+      <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr>
+              <th style={{
+                fontWeight: 700, whiteSpace: 'nowrap', background: '#f5f5f5',
+                padding: '8px 12px', borderBottom: '2px solid #e0e0e0', borderRight: '1px solid #e0e0e0',
+                textAlign: 'left', fontSize: 13,
+                position: 'sticky', left: 0, top: 0, zIndex: 3,
+              }}>
                 {t('booking.time')}
-              </TableCell>
+              </th>
               {courts.map((court) => (
-                <TableCell
-                  key={court.id}
-                  align="center"
-                  sx={{ fontWeight: 700, minWidth: 100, whiteSpace: 'nowrap', bgcolor: 'grey.100' }}
-                >
+                <th key={court.id} style={{
+                  fontWeight: 700, whiteSpace: 'nowrap', background: '#f5f5f5',
+                  padding: '8px 12px', borderBottom: '2px solid #e0e0e0', borderRight: '1px solid #e0e0e0',
+                  textAlign: 'center', fontSize: 13, minWidth: 100,
+                  position: 'sticky', top: 0, zIndex: 2,
+                }}>
                   {court.name}
-                </TableCell>
+                </th>
               ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
+            </tr>
+          </thead>
+          <tbody>
             {sortedSlots.map((slot) => {
-              const displayEnd = addMinutes(slot.startTime, slotDurationMinutes)
-              const isRowHighlighted = Array.from(selectedCells.values()).some((times) => times.has(slot.startTime))
-
               return (
-                <TableRow
-                  key={slot.startTime}
-                  sx={{
-                    backgroundColor: isRowHighlighted ? 'primary.50' : 'inherit',
-                    '&:hover': { backgroundColor: isRowHighlighted ? 'primary.50' : 'action.hover' },
-                  }}
-                >
-                  <TableCell
-                    sx={{
-                      fontWeight: isRowHighlighted ? 700 : 400,
-                      whiteSpace: 'nowrap',
-                      color: isRowHighlighted ? 'primary.main' : 'inherit',
-                    }}
-                  >
-                    {slot.startTime} – {displayEnd}
-                  </TableCell>
+                <tr key={slot.startTime}>
+                  <td style={{
+                    fontWeight: 400,
+                    whiteSpace: 'nowrap',
+                    padding: '6px 12px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #e0e0e0',
+                    fontSize: 13, background: '#fff',
+                    position: 'sticky', left: 0, zIndex: 1,
+                    boxShadow: '2px 0 4px -2px rgba(0,0,0,0.08)',
+                  }}>
+                    {slot.startTime}
+                  </td>
                   {courts.map((court) => {
                     const courtSlotMap = availabilityMap.get(court.id)
                     const available = courtSlotMap?.get(slot.startTime) ?? false
                     const isSelectedCell = selectedCells.get(court.id)?.has(slot.startTime) ?? false
 
                     return (
-                      <TableCell key={court.id} align="center" sx={{ py: 0.5 }}>
+                      <td key={court.id} style={{ textAlign: 'center', padding: '4px 8px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #e0e0e0' }}>
                         {available ? (
-                          <Tooltip title={`${t('booking.available')} · ${getSlotPrice(court, slot.startTime, slotDurationMinutes).toFixed(2)} ${court.currency}`}>
+                          <div
+                            onClick={() => onCellClick(slot.startTime, court)}
+                            style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                          >
                             <CheckCircleIcon
                               color={isSelectedCell ? 'primary' : 'success'}
                               sx={{
-                                cursor: 'pointer',
                                 fontSize: 22,
                                 transition: 'transform 0.1s',
                                 '&:hover': { transform: 'scale(1.2)' },
                               }}
-                              onClick={() => onCellClick(slot.startTime, court)}
                             />
-                          </Tooltip>
+                            <span style={{ fontSize: 10, color: '#666', lineHeight: 1.2, marginTop: 2 }}>
+                              {getSlotPrice(court, slot.startTime, slotDurationMinutes).toFixed(0)} {court.currency}
+                            </span>
+                          </div>
                         ) : (
                           <Tooltip title={t('booking.unavailable')}>
                             <CancelIcon color="disabled" sx={{ fontSize: 22 }} />
                           </Tooltip>
                         )}
-                      </TableCell>
+                      </td>
                     )
                   })}
-                </TableRow>
+                </tr>
               )
             })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </tbody>
+        </table>
+      </Paper>
     </Box>
   )
 }

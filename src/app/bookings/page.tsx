@@ -8,7 +8,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Paper,
@@ -441,18 +440,18 @@ export default function MyBookingsPage() {
               })}
             </Box>
           ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+            <Box component={Paper} sx={{ maxHeight: 520, overflow: 'auto' }}>
+              <Table stickyHeader sx={{ minWidth: 800 }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell>Venue</TableCell>
-                    <TableCell>{t('booking.date')}</TableCell>
-                    <TableCell>{t('booking.court')}</TableCell>
-                    <TableCell>{t('booking.time')}</TableCell>
-                    <TableCell>{t('booking.price')}</TableCell>
-                    <TableCell>{t('booking.status')}</TableCell>
-                    <TableCell>{t('booking.paymentStatus')}</TableCell>
-                    <TableCell align="right">{t('booking.actions')}</TableCell>
+                    <TableCell sx={{ position: 'sticky', left: 0, top: 0, zIndex: 4, bgcolor: '#f5f5f5', fontWeight: 700 }}>Venue</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.date')}</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.court')}</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.time')}</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.price')}</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.status')}</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.paymentStatus')}</TableCell>
+                    <TableCell align="right" sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -461,7 +460,7 @@ export default function MyBookingsPage() {
                     const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
                     return (
                       <TableRow key={group.groupKey} hover>
-                        <TableCell>
+                        <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: 'white', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                           {venue ? (venue.name.en || venue.name.th) : '—'}
                         </TableCell>
                         <TableCell>
@@ -539,7 +538,7 @@ export default function MyBookingsPage() {
                   })}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </Box>
           )
         )}
 
