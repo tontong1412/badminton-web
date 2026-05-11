@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   Avatar,
@@ -75,7 +75,6 @@ export default function VenueCourtsPage() {
   // ── Guided mode state ──────────────────────────────────────────────────────
   const [requestedCourtCount, setRequestedCourtCount] = useState(1)
   const [requestedHours, setRequestedHours] = useState(1)
-  const [guidedAvailability, setGuidedAvailability] = useState<BookingAvailability[]>([])
   const [guidedSlots, setGuidedSlots] = useState<{ startTime: string; endTime: string; courtCount: number }[]>([])
   const [guidedSelectedSlot, setGuidedSelectedSlot] = useState<{ startTime: string; endTime: string } | null>(null)
   const [guidedAvailableCourts, setGuidedAvailableCourts] = useState<Court[]>([])
@@ -159,7 +158,6 @@ export default function VenueCourtsPage() {
 
       setLoadingGuided(true)
       setGuidedError(null)
-      setGuidedAvailability([])
       setGuidedSlots([])
       setGuidedSelectedSlot(null)
       setGuidedAvailableCourts([])
@@ -170,7 +168,6 @@ export default function VenueCourtsPage() {
         const fetched = await Promise.all(
           activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, requestedDurationMinutes))
         )
-        setGuidedAvailability(fetched)
 
         const slotCount = new Map<string, { startTime: string; endTime: string; courtCount: number }>()
         fetched.forEach((avail) => {
@@ -188,7 +185,6 @@ export default function VenueCourtsPage() {
         })
         setGuidedSlots(
           Array.from(slotCount.values())
-            .filter((s) => s.courtCount >= requestedCourtCount)
             .sort((a, b) => a.startTime.localeCompare(b.startTime))
         )
       } catch (err) {
@@ -200,7 +196,19 @@ export default function VenueCourtsPage() {
     }
 
     if (bookingMode === 'guided') loadGuided()
-  }, [selectedDate, courts, requestedDurationMinutes, requestedCourtCount, bookingMode])
+  }, [selectedDate, courts, requestedDurationMinutes, bookingMode])
+
+  const filteredGuidedSlots = useMemo(
+    () => guidedSlots.filter((s) => s.courtCount >= requestedCourtCount),
+    [guidedSlots, requestedCourtCount]
+  )
+
+  // Reset slot selection when court count changes (no API re-fetch)
+  useEffect(() => {
+    setGuidedSelectedSlot(null)
+    setGuidedSelectedCourts([])
+    setGuidedAvailableCourts([])
+  }, [requestedCourtCount])
 
   /**
    * Given all courts and the available subset, suggest the best contiguous block
@@ -484,11 +492,11 @@ export default function VenueCourtsPage() {
 
             {loadingGuided ? (
               <Box sx={{ py: 2 }}><CircularProgress size={24} /></Box>
-            ) : guidedSlots.length === 0 ? (
+            ) : filteredGuidedSlots.length === 0 ? (
               <Alert severity="info" sx={{ mb: 2 }}>{t('booking.noSlotsAvailable')}</Alert>
             ) : (
               <Grid container spacing={1} sx={{ mb: 3 }}>
-                {guidedSlots.map((slot) => (
+                {filteredGuidedSlots.map((slot) => (
                   <Grid item key={`${slot.startTime}-${slot.endTime}`}>
                     <Chip
                       label={`${slot.startTime} – ${slot.endTime} (${slot.courtCount})`}
