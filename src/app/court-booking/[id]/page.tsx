@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   Avatar,
@@ -49,6 +49,7 @@ export default function VenueCourtsPage() {
   const [bookingMode, setBookingMode] = useState<'guided' | 'free'>('guided')
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [showSelectionDrawer, setShowSelectionDrawer] = useState(false)
+  const [showGuidedDrawer, setShowGuidedDrawer] = useState(false)
 
   const slotDurationMinutes = venue?.slotDurationMinutes ?? 30
 
@@ -140,6 +141,13 @@ export default function VenueCourtsPage() {
   }, 0)
   const freeCurrency = freeSelectedCourts[0]?.currency ?? ''
 
+  const guidedTotalPrice = guidedSelectedSlot
+    ? guidedSelectedCourts.reduce((sum, court) => sum + calcRangePrice(court, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime), 0)
+    : 0
+  const guidedCurrency = guidedSelectedCourts[0]?.currency ?? ''
+
+  const fmtPrice = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(2)
+
   const freeSelectionValidation = (() => {
     if (selectedCells.size === 0) return { valid: false, error: null }
     return { valid: true, error: null }
@@ -186,18 +194,25 @@ export default function VenueCourtsPage() {
 
   // ── Guided mode effects & handlers ─────────────────────────────────────────
   useEffect(() => {
+    setGuidedSelectedSlot(null)
+    setGuidedAvailableCourts([])
+    setGuidedSelectedCourts([])
+    setGuidedSlots([])
+  }, [selectedDate])
+
+  const prevDateRef = useRef(selectedDate)
+
+  useEffect(() => {
     const loadGuided = async() => {
       if (!selectedDate || courts.length === 0) {
         setGuidedSlots([])
         return
       }
 
-      setLoadingGuided(true)
+      const isDateChange = prevDateRef.current !== selectedDate
+      prevDateRef.current = selectedDate
+      if (isDateChange) setLoadingGuided(true)
       setGuidedError(null)
-      setGuidedSlots([])
-      setGuidedSelectedSlot(null)
-      setGuidedAvailableCourts([])
-      setGuidedSelectedCourts([])
 
       try {
         const activeCourts = courts.filter((c) => c.status === 'active')
@@ -287,7 +302,6 @@ export default function VenueCourtsPage() {
       return
     }
     setGuidedSelectedSlot(slot)
-    setGuidedSelectedCourts([])
     setShowCourtPicker(false)
     setSearchingGuidedCourts(true)
     setGuidedError(null)
@@ -437,7 +451,7 @@ export default function VenueCourtsPage() {
         </Box>
       )}
 
-      <Container maxWidth="lg" sx={{ pt: 1, pb: bookingMode === 'free' && freeSelectedCourts.length > 0 ? 10 : 4 }}>
+      <Container maxWidth="lg" sx={{ pt: 1, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -600,13 +614,7 @@ export default function VenueCourtsPage() {
               </>
             )}
 
-            {guidedSelectedCourts.length === requestedCourtCount && requestedCourtCount > 0 && guidedSelectedSlot && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <Button variant="contained" color="primary" size="large" onClick={() => setShowBookingModal(true)}>
-                  {t('booking.proceedToBooking')}
-                </Button>
-              </Box>
-            )}
+
 
             {guidedSelectedCourts.length === requestedCourtCount && guidedSelectedSlot && venue && (
               <CourtBookingModal
@@ -656,6 +664,40 @@ export default function VenueCourtsPage() {
         )}
       </Container>
 
+      {/* Floating summary bar — guided mode */}
+      {bookingMode === 'guided' && guidedSelectedSlot && guidedSelectedCourts.length > 0 && (
+        <Paper
+          elevation={6}
+          sx={{
+            position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
+            borderRadius: 2, borderTop: '1px solid #e0e0e0', bgcolor: 'background.paper',
+          }}
+        >
+          <Box sx={{ px: { xs: 2, md: 3 }, py: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+            <Box sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer', pb: 0.5 }} onClick={() => setShowGuidedDrawer(true)}>
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1, display: 'block' }}>
+                tap for details
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="primary" sx={{ mt: 2, lineHeight: 1.2 }}>
+                {fmtPrice(guidedTotalPrice)} {guidedCurrency}
+              </Typography>
+            </Box>
+            <Button variant="outlined" size="small" onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setShowCourtPicker(false) }}>
+              {t('booking.clearSelection')}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              size="medium"
+              disabled={guidedSelectedCourts.length !== requestedCourtCount}
+              onClick={() => setShowBookingModal(true)}
+            >
+              {t('booking.proceedToBooking')}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
       {/* Floating selection summary bar for free mode — sits above the 56px bottom nav */}
       {bookingMode === 'free' && freeSelectedCourts.length > 0 && (
         <Paper
@@ -674,10 +716,10 @@ export default function VenueCourtsPage() {
                 tap for details
               </Typography>
               <Typography variant="h5" fontWeight={700} color="primary" sx={{ mt: 2, lineHeight: 1.2 }}>
-                {freeTotalPrice.toFixed(2)} {freeCurrency}
+                {fmtPrice(freeTotalPrice)} {freeCurrency}
               </Typography>
             </Box>
-            <Button size="small" onClick={() => setSelectedCells(new Map())}>
+            <Button variant="outlined" size="small" onClick={() => setSelectedCells(new Map())}>
               {t('booking.clearSelection')}
             </Button>
             <Button
@@ -691,6 +733,57 @@ export default function VenueCourtsPage() {
           </Box>
         </Paper>
       )}
+
+      {/* Guided mode detail drawer */}
+      <Drawer
+        anchor="bottom"
+        open={showGuidedDrawer}
+        onClose={() => setShowGuidedDrawer(false)}
+        PaperProps={{ sx: { borderTopLeftRadius: 12, borderTopRightRadius: 12, maxHeight: '70vh', pb: 'env(safe-area-inset-bottom, 0px)' } }}
+      >
+        <Box sx={{ px: 3, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" fontWeight={600}>{t('booking.selectedCourts')}</Typography>
+          <Button size="small" onClick={() => setShowGuidedDrawer(false)}>Close</Button>
+        </Box>
+        <Divider />
+        {guidedSelectedSlot && (
+          <List dense sx={{ overflowY: 'auto' }}>
+            {guidedSelectedCourts.map((court) => {
+              const price = calcRangePrice(court, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime)
+              return (
+                <ListItem key={court.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1.5, gap: 0.5 }}>
+                  <Typography variant="body2" fontWeight={600}>{court.name}</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {guidedSelectedSlot.startTime} – {guidedSelectedSlot.endTime}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {fmtPrice(price)} {court.currency}
+                    </Typography>
+                  </Box>
+                </ListItem>
+              )
+            })}
+          </List>
+        )}
+        <Divider />
+        <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
+            Total: {fmtPrice(guidedTotalPrice)} {guidedCurrency}
+          </Typography>
+          <Button variant="outlined" onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setShowCourtPicker(false); setShowGuidedDrawer(false) }} color="error" size="small">
+            {t('booking.clearSelection')}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={guidedSelectedCourts.length !== requestedCourtCount}
+            onClick={() => { setShowGuidedDrawer(false); setShowBookingModal(true) }}
+          >
+            {t('booking.proceedToBooking')}
+          </Button>
+        </Box>
+      </Drawer>
 
       {/* Selection detail drawer */}
       <Drawer
@@ -719,7 +812,7 @@ export default function VenueCourtsPage() {
                         {r.startTime} – {r.endTime}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {price.toFixed(2)} {court.currency}
+                        {fmtPrice(price)} {court.currency}
                       </Typography>
                     </Box>
                   )
@@ -731,9 +824,9 @@ export default function VenueCourtsPage() {
         <Divider />
         <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
-            Total: {freeTotalPrice.toFixed(2)} {freeCurrency}
+            Total: {fmtPrice(freeTotalPrice)} {freeCurrency}
           </Typography>
-          <Button onClick={() => { setSelectedCells(new Map()); setShowSelectionDrawer(false) }} color="error" size="small">
+          <Button variant="outlined" onClick={() => { setSelectedCells(new Map()); setShowSelectionDrawer(false) }} color="error" size="small">
             {t('booking.clearSelection')}
           </Button>
           <Button
