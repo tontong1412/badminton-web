@@ -24,6 +24,11 @@ import {
   Divider,
   Tabs,
   Tab,
+  Card,
+  CardContent,
+  CardActions,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import { Booking, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
@@ -266,7 +271,7 @@ export default function MyBookingsPage() {
     if (!payTargetBundleID || !slipPreview) return
     try {
       setPaySubmitting(true)
-      const result = await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
+      await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
       setBookingsState((prev) => {
         const updated = prev.map((booking) =>
           payTargetBookingIds.includes(booking.id)
@@ -314,6 +319,9 @@ export default function MyBookingsPage() {
     }
   }
 
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
   if (loading) {
     return (
       <Layout>
@@ -356,104 +364,183 @@ export default function MyBookingsPage() {
             No {activeTab === 'cancelled' ? 'cancelled' : activeTab === 'past' ? 'past' : 'upcoming'} bookings found.
           </Alert>
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableRow>
-                  <TableCell>Venue</TableCell>
-                  <TableCell>{t('booking.date')}</TableCell>
-                  <TableCell>{t('booking.court')}</TableCell>
-                  <TableCell>{t('booking.time')}</TableCell>
-                  <TableCell>{t('booking.price')}</TableCell>
-                  <TableCell>{t('booking.status')}</TableCell>
-                  <TableCell>{t('booking.paymentStatus')}</TableCell>
-                  <TableCell align="right">{t('booking.actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {displayedBookings.map((group) => {
-                  const firstCourt = courtDetails[group.bookings[0]?.courtID]
-                  const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
-                  return (
-                  <TableRow key={group.groupKey} hover>
-                    <TableCell>
-                      {venue ? (venue.name.en || venue.name.th) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {moment(group.date).format('DD/MM/YYYY')}
-                    </TableCell>
-                    <TableCell>
+          isMobile ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {displayedBookings.map((group) => {
+                const firstCourt = courtDetails[group.bookings[0]?.courtID]
+                const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
+                return (
+                  <Card key={group.groupKey} variant="outlined">
+                    <CardContent sx={{ pb: 1 }}>
+                      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
+                        {venue ? (venue.name.en || venue.name.th) : '—'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {moment(group.date).format('DD MMM YYYY')}
+                      </Typography>
                       {group.bookings.map((booking) => (
-                        <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
-                          {courtDetails[booking.courtID]?.name || '—'}
-                        </Typography>
+                        <Box key={booking.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.25 }}>
+                          <Typography variant="body2">{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                          <Typography variant="body2" color="text.secondary">{booking.startTime} – {booking.endTime}</Typography>
+                        </Box>
                       ))}
-                    </TableCell>
-                    <TableCell>
-                      {group.bookings.map((booking) => (
-                        <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
-                          {booking.startTime} – {booking.endTime}
+                      <Divider sx={{ my: 1 }} />
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>
+                          {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
                         </Typography>
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={group.status}
-                        size="small"
-                        color={getStatusColor(group.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={group.paymentStatus}
-                        size="small"
-                        color={getPaymentStatusColor(group.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
-                        variant="outlined"
-                      />
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          <Chip
+                            label={group.status}
+                            size="small"
+                            color={getStatusColor(group.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={group.paymentStatus}
+                            size="small"
+                            color={getPaymentStatusColor(group.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            variant="outlined"
+                          />
+                        </Box>
+                      </Box>
                       {group.paymentStatus === 'unpaid' && group.status !== 'cancelled' &&
                         group.bookings[0]?.createdAt && (
-                          <BookingCountdown createdAt={group.bookings[0].createdAt} />
-                        )}
-                    </TableCell>
-                    <TableCell align="right">
-                      {(group.status === 'confirmed' || group.status === 'pending') && (
-                        <>
-                          {group.status === 'confirmed' &&
-                            moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
-                            <Button
-                              size="small"
-                              color="error"
-                              variant="outlined"
-                              onClick={() => handleCancelClick(group.bookings.map((booking) => booking.id))}
-                            >
-                              {t('booking.cancel')}
-                            </Button>
-                          )}
-                          {group.paymentStatus === 'unpaid' && group.bundleID && (
-                            <Button
-                              size="small"
-                              color="primary"
-                              variant="contained"
-                              sx={{ ml: 1 }}
-                              onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
-                              disabled={payingBundleID === group.bundleID}
-                            >
-                              {t('booking.pay')}
-                            </Button>
-                          )}
-                        </>
+                        <BookingCountdown createdAt={group.bookings[0].createdAt} />
                       )}
-                    </TableCell>
+                    </CardContent>
+                    {(group.status === 'confirmed' || group.status === 'pending') && (
+                      <CardActions sx={{ pt: 0, px: 2, pb: 1.5, gap: 1 }}>
+                        {group.status === 'confirmed' &&
+                          moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
+                          <Button
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            onClick={() => handleCancelClick(group.bookings.map((b) => b.id))}
+                          >
+                            {t('booking.cancel')}
+                          </Button>
+                        )}
+                        {group.paymentStatus === 'unpaid' && group.bundleID &&
+                          (!group.bookings[0]?.createdAt || Date.now() < new Date(group.bookings[0].createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000) && (
+                          <Button
+                            size="small"
+                            color="primary"
+                            variant="contained"
+                            onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
+                            disabled={payingBundleID === group.bundleID}
+                          >
+                            {t('booking.pay')}
+                          </Button>
+                        )}
+                      </CardActions>
+                    )}
+                  </Card>
+                )
+              })}
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow>
+                    <TableCell>Venue</TableCell>
+                    <TableCell>{t('booking.date')}</TableCell>
+                    <TableCell>{t('booking.court')}</TableCell>
+                    <TableCell>{t('booking.time')}</TableCell>
+                    <TableCell>{t('booking.price')}</TableCell>
+                    <TableCell>{t('booking.status')}</TableCell>
+                    <TableCell>{t('booking.paymentStatus')}</TableCell>
+                    <TableCell align="right">{t('booking.actions')}</TableCell>
                   </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {displayedBookings.map((group) => {
+                    const firstCourt = courtDetails[group.bookings[0]?.courtID]
+                    const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
+                    return (
+                      <TableRow key={group.groupKey} hover>
+                        <TableCell>
+                          {venue ? (venue.name.en || venue.name.th) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {moment(group.date).format('DD/MM/YYYY')}
+                        </TableCell>
+                        <TableCell>
+                          {group.bookings.map((booking) => (
+                            <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
+                              {courtDetails[booking.courtID]?.name || '—'}
+                            </Typography>
+                          ))}
+                        </TableCell>
+                        <TableCell>
+                          {group.bookings.map((booking) => (
+                            <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
+                              {booking.startTime} – {booking.endTime}
+                            </Typography>
+                          ))}
+                        </TableCell>
+                        <TableCell>
+                          {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={group.status}
+                            size="small"
+                            color={getStatusColor(group.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={group.paymentStatus}
+                            size="small"
+                            color={getPaymentStatusColor(group.paymentStatus) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            variant="outlined"
+                          />
+                          {group.paymentStatus === 'unpaid' && group.status !== 'cancelled' &&
+                            group.bookings[0]?.createdAt && (
+                            <BookingCountdown createdAt={group.bookings[0].createdAt} />
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          {(group.status === 'confirmed' || group.status === 'pending') && (
+                            <>
+                              {group.status === 'confirmed' &&
+                                moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
+                                <Button
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  onClick={() => handleCancelClick(group.bookings.map((booking) => booking.id))}
+                                >
+                                  {t('booking.cancel')}
+                                </Button>
+                              )}
+                              {group.paymentStatus === 'unpaid' && group.bundleID &&
+                                (!group.bookings[0]?.createdAt || Date.now() < new Date(group.bookings[0].createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000) && (
+                                <Button
+                                  size="small"
+                                  color="primary"
+                                  variant="contained"
+                                  sx={{ ml: 1 }}
+                                  onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
+                                  disabled={payingBundleID === group.bundleID}
+                                >
+                                  {t('booking.pay')}
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )
         )}
 
         <Dialog
@@ -536,7 +623,6 @@ export default function MyBookingsPage() {
                     <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
                   )}
                   {payTargetVenue.payment.qrCodeUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={payTargetVenue.payment.qrCodeUrl}
                       alt="QR Code"
@@ -567,7 +653,6 @@ export default function MyBookingsPage() {
               />
             </Button>
             {slipPreview && (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={slipPreview}
                 alt="slip preview"
