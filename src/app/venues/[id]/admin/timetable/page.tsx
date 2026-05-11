@@ -68,11 +68,27 @@ function getStatusLabel(paymentStatus: PaymentStatus): string {
   return 'Unpaid'
 }
 
-function getEndTimeOptions(startTime: string): string[] {
+function getMaxAvailableMinutes(courtID: string, startTime: string, bookings: Booking[]): number {
   const startMin = timeToMinutes(startTime)
-  const opts: string[] = []
-  for (let m = startMin + 30; m <= timeToMinutes('23:00'); m += 30) {
-    opts.push(minutesToTime(m))
+  let maxMin = timeToMinutes('23:00') - startMin
+  for (const b of bookings) {
+    if (b.courtID !== courtID || b.status === BookingStatus.Cancelled) continue
+    const bStart = timeToMinutes(b.startTime)
+    if (bStart >= startMin && bStart < startMin + maxMin) {
+      maxMin = bStart - startMin
+    }
+  }
+  return maxMin
+}
+
+function getDurationOptions(startTime: string, maxAvailableMinutes: number): { value: number; label: string }[] {
+  const startMin = timeToMinutes(startTime)
+  const maxDuration = Math.min(maxAvailableMinutes, timeToMinutes('23:00') - startMin)
+  const opts: { value: number; label: string }[] = []
+  for (let d = 30; d <= maxDuration; d += 30) {
+    const hours = d / 60
+    const label = d === 30 ? '30 min' : Number.isInteger(hours) ? `${hours} hour${hours > 1 ? 's' : ''}` : `${hours} hours`
+    opts.push({ value: d, label })
   }
   return opts
 }
@@ -131,7 +147,7 @@ export default function VenueTimetablePage() {
 
   // Single-cell booking state
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
-  const [bookEndTime, setBookEndTime] = useState('')
+  const [bookDurationMinutes, setBookDurationMinutes] = useState(60)
   const [bookError, setBookError] = useState<string | null>(null)
   const [bookSubmitting, setBookSubmitting] = useState(false)
 
@@ -215,9 +231,10 @@ export default function VenueTimetablePage() {
   const activeSlots = ALL_SLOTS.slice(0, ALL_SLOTS.length - 1)
 
   const openSingleBookDialog = (court: Court, slot: string) => {
-    const opts = getEndTimeOptions(slot)
+    const maxAvail = getMaxAvailableMinutes(court.id, slot, bookings)
+    const defaultDuration = maxAvail >= 60 ? 60 : maxAvail >= 30 ? 30 : 30
     setBookDialog({ court, startTime: slot })
-    setBookEndTime(opts[0] || '')
+    setBookDurationMinutes(defaultDuration)
     setGuestName('')
     setGuestPhone('')
     setGuestEmail('')
@@ -235,12 +252,13 @@ export default function VenueTimetablePage() {
   }
 
   const handleSingleBook = async() => {
-    if (!bookDialog || !bookEndTime) return
+    if (!bookDialog) return
     try {
       setBookSubmitting(true)
       setBookError(null)
+      const endTime = minutesToTime(timeToMinutes(bookDialog.startTime) + bookDurationMinutes)
       await bookingsService.createBundle({
-        items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime: bookEndTime }],
+        items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime }],
         guestName: guestName || undefined,
         guestPhone: guestPhone || undefined,
         guestEmail: guestEmail || undefined,
@@ -683,10 +701,10 @@ export default function VenueTimetablePage() {
               <TextField size="small" label="Start" value={bookDialog?.startTime || ''} InputProps={{ readOnly: true }} fullWidth />
             </Box>
             <FormControl size="small" fullWidth>
-              <InputLabel>End Time</InputLabel>
-              <Select label="End Time" value={bookEndTime} onChange={(e) => setBookEndTime(e.target.value)}>
-                {bookDialog && getEndTimeOptions(bookDialog.startTime).map((t) => (
-                  <MenuItem key={t} value={t}>{t}</MenuItem>
+              <InputLabel>Duration</InputLabel>
+              <Select label="Duration" value={bookDurationMinutes} onChange={(e) => setBookDurationMinutes(Number(e.target.value))}>
+                {bookDialog && getDurationOptions(bookDialog.startTime, getMaxAvailableMinutes(bookDialog.court.id, bookDialog.startTime, bookings)).map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -697,7 +715,7 @@ export default function VenueTimetablePage() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setBookDialog(null)} disabled={bookSubmitting}>Cancel</Button>
-            <Button variant="contained" onClick={handleSingleBook} disabled={!bookEndTime || bookSubmitting}>
+            <Button variant="contained" onClick={handleSingleBook} disabled={bookSubmitting}>
               {bookSubmitting ? <CircularProgress size={18} /> : 'Book'}
             </Button>
           </DialogActions>
