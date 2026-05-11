@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import {
   Avatar,
   Container,
@@ -138,12 +138,15 @@ export default function VenueCourtsPage() {
     }
   }, [venueId])
 
+  const router = useRouter()
+
   const handleBookingComplete = () => {
     setShowBookingModal(false)
     setGuidedSelectedCourts([])
     setGuidedSelectedSlot(null)
     setGuidedAvailableCourts([])
     setSelectedCells(new Map())
+    router.push('/bookings')
   }
 
   // ── Guided mode effects & handlers ─────────────────────────────────────────
