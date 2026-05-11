@@ -82,6 +82,7 @@ export default function VenueCourtsPage() {
   const [loadingGuided, setLoadingGuided] = useState(false)
   const [searchingGuidedCourts, setSearchingGuidedCourts] = useState(false)
   const [guidedError, setGuidedError] = useState<string | null>(null)
+  const [showCourtPicker, setShowCourtPicker] = useState(false)
 
   const requestedDurationMinutes = requestedHours * 60
 
@@ -208,6 +209,7 @@ export default function VenueCourtsPage() {
     setGuidedSelectedSlot(null)
     setGuidedSelectedCourts([])
     setGuidedAvailableCourts([])
+    setShowCourtPicker(false)
   }, [requestedCourtCount])
 
   /**
@@ -251,6 +253,7 @@ export default function VenueCourtsPage() {
     }
     setGuidedSelectedSlot(slot)
     setGuidedSelectedCourts([])
+    setShowCourtPicker(false)
     setSearchingGuidedCourts(true)
     setGuidedError(null)
 
@@ -515,25 +518,50 @@ export default function VenueCourtsPage() {
 
             {guidedSelectedSlot && (
               <>
-                <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                  {t('booking.selectCourt')}
-                </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                  {t('booking.selectedCourtsCount', {
-                    selected: guidedSelectedCourts.length,
-                    required: requestedCourtCount,
-                  })}
-                </Typography>
-                <CourtSelection
-                  courts={guidedAvailableCourts}
-                  selectedCourtIds={guidedSelectedCourts.map((c) => c.id)}
-                  onToggleCourt={handleToggleGuidedCourt}
-                  maxSelectable={requestedCourtCount}
-                  loading={searchingGuidedCourts}
-                  error={null}
-                  slotStartTime={guidedSelectedSlot?.startTime}
-                  slotEndTime={guidedSelectedSlot?.endTime}
-                />
+                {searchingGuidedCourts ? (
+                  <Box sx={{ py: 2 }}><CircularProgress size={24} /></Box>
+                ) : showCourtPicker ? (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="subtitle1">
+                        {t('booking.selectCourt')}
+                      </Typography>
+                      <Button size="small" onClick={() => setShowCourtPicker(false)}>
+                        {t('action.done')}
+                      </Button>
+                    </Box>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                      {t('booking.selectedCourtsCount', {
+                        selected: guidedSelectedCourts.length,
+                        required: requestedCourtCount,
+                      })}
+                    </Typography>
+                    <CourtSelection
+                      courts={guidedAvailableCourts}
+                      selectedCourtIds={guidedSelectedCourts.map((c) => c.id)}
+                      onToggleCourt={handleToggleGuidedCourt}
+                      maxSelectable={requestedCourtCount}
+                      loading={false}
+                      error={null}
+                      slotStartTime={guidedSelectedSlot?.startTime}
+                      slotEndTime={guidedSelectedSlot?.endTime}
+                    />
+                  </>
+                ) : (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      {t('booking.selectedCourts')}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      {guidedSelectedCourts.map((c) => (
+                        <Chip key={String(c.id)} label={c.name} color="primary" size="small" />
+                      ))}
+                      <Button size="small" variant="outlined" onClick={() => setShowCourtPicker(true)}>
+                        {t('booking.changeCourts')}
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
               </>
             )}
 

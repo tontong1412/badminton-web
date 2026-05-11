@@ -20,7 +20,8 @@
     "approvePayment": "จ่ายแล้ว",
     "rejectPayment": "ยังไม่จ่าย",
     "confirm": "ยืนยัน",
-    "save": "บันทึก"
+    "save": "บันทึก",
+    "done": "เสร็จสิ้น"
   },
   "login": {
     "title": "เข้าสู่ระบบ",
@@ -184,6 +185,8 @@
     "unselect": "ยกเลิกเลือก",
     "selected": "เลือกแล้ว",
     "selectedCourtsCount": "เลือกแล้ว {{selected}} จาก {{required}} สนาม",
+    "selectedCourts": "สนามที่เลือก",
+    "changeCourts": "เปลี่ยนสนาม",
     "viewCourts": "ดูสนาม",
     "selectCourt": "เลือกสนาม",
     "selectDateTimeFirst": "เลือกวันที่",

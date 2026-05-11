@@ -20,7 +20,8 @@
     "approvePayment": "Approve",
     "rejectPayment": "Reject",
     "confirm": "Confirm",
-    "save": "Save"
+    "save": "Save",
+    "done": "Done"
   },
   "login": {
     "title": "Login",
@@ -181,6 +182,8 @@
     "unselect": "Unselect",
     "selected": "Selected",
     "selectedCourtsCount": "Selected {{selected}} of {{required}} courts",
+    "selectedCourts": "Selected Courts",
+    "changeCourts": "Change Courts",
     "viewCourts": "View Courts",
     "selectCourt": "Select a Court",
     "selectDateTimeFirst": "Select Date",
