@@ -489,123 +489,128 @@ export default function VenueTimetablePage() {
         {sortedCourts.length === 0 ? (
           <Alert severity="info" sx={{ mt: 1 }}>No active courts found for this venue.</Alert>
         ) : (
-          <Paper sx={{ overflow: 'auto' }}>
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={28} />
-              </Box>
-            ) : (
-              <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
-                  <tr>
-                    <th style={{
-                      width: 64, minWidth: 64, padding: '8px 4px',
-                      background: '#f5f5f5', borderBottom: '2px solid #e0e0e0',
-                      borderRight: '1px solid #e0e0e0', fontSize: 12, color: '#666',
-                      position: 'sticky', left: 0, top: 0, zIndex: 4,
-                    }}>
-                      Time
-                    </th>
-                    {sortedCourts.map((court) => (
-                      <th key={court.id} style={{
-                        padding: '8px 12px', background: '#f5f5f5',
-                        borderBottom: '2px solid #e0e0e0', borderRight: '1px solid #e0e0e0',
-                        fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'center',
-                        position: 'sticky', top: 0, zIndex: 2,
+          <Paper>
+            <Box sx={{
+              overflow: 'auto',
+              maxHeight: { xs: 'calc(100dvh - 340px)', md: 'calc(100dvh - 350px)' },
+            }}>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={28} />
+                </Box>
+              ) : (
+                <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 600 }}>
+                  <thead>
+                    <tr>
+                      <th style={{
+                        width: 64, minWidth: 64, padding: '8px 4px',
+                        background: '#f5f5f5', borderBottom: '2px solid #e0e0e0',
+                        borderRight: '1px solid #e0e0e0', fontSize: 12, color: '#666',
+                        position: 'sticky', left: 0, top: 0, zIndex: 4,
                       }}>
-                        {court.name}
+                        Time
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeSlots.map((slot) => (
-                    <tr key={slot}>
-                      <td style={{
-                        padding: '2px 6px', fontSize: 11, color: '#888',
-                        borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #f0f0f0',
-                        background: '#fafafa', whiteSpace: 'nowrap', verticalAlign: 'top',
-                        position: 'sticky', left: 0, zIndex: 1, height: 36,
-                      }}>
-                        {slot}
-                      </td>
-                      {sortedCourts.map((court) => {
-                        const courtSlots = cellMap.get(court.id)!
-                        const cell = courtSlots.get(slot)
+                      {sortedCourts.map((court) => (
+                        <th key={court.id} style={{
+                          padding: '8px 12px', background: '#f5f5f5',
+                          borderBottom: '2px solid #e0e0e0', borderRight: '1px solid #e0e0e0',
+                          fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'center',
+                          position: 'sticky', top: 0, zIndex: 2,
+                        }}>
+                          {court.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeSlots.map((slot) => (
+                      <tr key={slot}>
+                        <td style={{
+                          padding: '2px 6px', fontSize: 11, color: '#888',
+                          borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #f0f0f0',
+                          background: '#fafafa', whiteSpace: 'nowrap', verticalAlign: 'top',
+                          position: 'sticky', left: 0, zIndex: 1, height: 36,
+                        }}>
+                          {slot}
+                        </td>
+                        {sortedCourts.map((court) => {
+                          const courtSlots = cellMap.get(court.id)!
+                          const cell = courtSlots.get(slot)
 
-                        const isOccupied = Array.from(courtSlots.entries()).some(([cellSlot, c]) => {
-                          if (cellSlot === slot) return false
-                          const cellStart = timeToMinutes(cellSlot)
-                          const cellEnd = cellStart + c.rowSpan * 30
-                          const slotMin = timeToMinutes(slot)
-                          return slotMin > cellStart && slotMin < cellEnd
-                        })
+                          const isOccupied = Array.from(courtSlots.entries()).some(([cellSlot, c]) => {
+                            if (cellSlot === slot) return false
+                            const cellStart = timeToMinutes(cellSlot)
+                            const cellEnd = cellStart + c.rowSpan * 30
+                            const slotMin = timeToMinutes(slot)
+                            return slotMin > cellStart && slotMin < cellEnd
+                          })
 
-                        if (isOccupied) return null
+                          if (isOccupied) return null
 
-                        if (cell) {
-                          const { booking, rowSpan } = cell
+                          if (cell) {
+                            const { booking, rowSpan } = cell
+                            return (
+                              <td
+                                key={court.id}
+                                rowSpan={rowSpan}
+                                onClick={() => !selectMode && setDetailBooking(booking)}
+                                style={{
+                                  background: getStatusColor(booking.status, booking.paymentStatus),
+                                  border: '2px solid white',
+                                  padding: '4px 8px',
+                                  verticalAlign: 'top',
+                                  cursor: selectMode ? 'default' : 'pointer',
+                                  fontSize: 12,
+                                  lineHeight: 1.4,
+                                  height: rowSpan * 36,
+                                }}
+                              >
+                                <div style={{ fontWeight: 600 }}>{booking.startTime}–{booking.endTime}</div>
+                                {(booking.guestName || booking.bookerName) && (
+                                  <div style={{ color: '#444' }}>{booking.guestName || booking.bookerName}</div>
+                                )}
+                                {(booking.guestPhone || booking.bookerPhone) && (
+                                  <div style={{ color: '#666', fontSize: 11 }}>{booking.guestPhone || booking.bookerPhone}</div>
+                                )}
+                                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(0,0,0,0.08)' }}>
+                                  {getStatusLabel(booking.paymentStatus)}
+                                </span>
+                              </td>
+                            )
+                          }
+
+                          const cellKey = `${court.id}:${slot}`
+                          const isSelected = selectedCells.has(cellKey)
+                          const isDragPreview = dragPreview.has(cellKey)
+
                           return (
                             <td
                               key={court.id}
-                              rowSpan={rowSpan}
-                              onClick={() => !selectMode && setDetailBooking(booking)}
-                              style={{
-                                background: getStatusColor(booking.status, booking.paymentStatus),
-                                border: '2px solid white',
-                                padding: '4px 8px',
-                                verticalAlign: 'top',
-                                cursor: selectMode ? 'default' : 'pointer',
-                                fontSize: 12,
-                                lineHeight: 1.4,
-                                height: rowSpan * 36,
+                              onMouseDown={() => handleCellMouseDown(court.id, slot)}
+                              onMouseEnter={() => handleCellMouseEnter(court.id, slot)}
+                              onMouseUp={() => handleCellMouseUp(court.id, slot)}
+                              onClick={() => {
+                                if (!selectMode) openSingleBookDialog(court, slot)
                               }}
-                            >
-                              <div style={{ fontWeight: 600 }}>{booking.startTime}–{booking.endTime}</div>
-                              {(booking.guestName || booking.bookerName) && (
-                                <div style={{ color: '#444' }}>{booking.guestName || booking.bookerName}</div>
-                              )}
-                              {(booking.guestPhone || booking.bookerPhone) && (
-                                <div style={{ color: '#666', fontSize: 11 }}>{booking.guestPhone || booking.bookerPhone}</div>
-                              )}
-                              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(0,0,0,0.08)' }}>
-                                {getStatusLabel(booking.paymentStatus)}
-                              </span>
-                            </td>
+                              style={{
+                                borderRight: '1px solid #e0e0e0',
+                                borderBottom: '1px solid #f0f0f0',
+                                height: 36,
+                                cursor: selectMode ? 'cell' : 'pointer',
+                                background: isSelected ? '#ffe0b2' : isDragPreview ? '#fff3e0' : '',
+                                outline: isSelected ? '2px solid #fb8c00' : isDragPreview ? '2px solid #ffb74d' : '',
+                                outlineOffset: '-2px',
+                                userSelect: 'none',
+                              }}
+                            />
                           )
-                        }
-
-                        const cellKey = `${court.id}:${slot}`
-                        const isSelected = selectedCells.has(cellKey)
-                        const isDragPreview = dragPreview.has(cellKey)
-
-                        return (
-                          <td
-                            key={court.id}
-                            onMouseDown={() => handleCellMouseDown(court.id, slot)}
-                            onMouseEnter={() => handleCellMouseEnter(court.id, slot)}
-                            onMouseUp={() => handleCellMouseUp(court.id, slot)}
-                            onClick={() => {
-                              if (!selectMode) openSingleBookDialog(court, slot)
-                            }}
-                            style={{
-                              borderRight: '1px solid #e0e0e0',
-                              borderBottom: '1px solid #f0f0f0',
-                              height: 36,
-                              cursor: selectMode ? 'cell' : 'pointer',
-                              background: isSelected ? '#ffe0b2' : isDragPreview ? '#fff3e0' : '',
-                              outline: isSelected ? '2px solid #fb8c00' : isDragPreview ? '2px solid #ffb74d' : '',
-                              outlineOffset: '-2px',
-                              userSelect: 'none',
-                            }}
-                          />
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </Box>
           </Paper>
         )}
 
