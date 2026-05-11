@@ -218,6 +218,7 @@
     "pay": "Pay",
     "available": "Available",
     "unavailable": "Unavailable",
+    "booked": "Booked",
     "selectTimeSlotFirst": "Please select a time slot first",
     "fillRequiredFields": "Please fill in all required fields",
     "mustAgreeTerms": "You must agree to the terms and conditions",

@@ -221,6 +221,7 @@
     "pay": "ชำระเงิน",
     "available": "ว่าง",
     "unavailable": "ไม่ว่าง",
+    "booked": "จองแล้ว",
     "selectTimeSlotFirst": "กรุณาเลือกช่วงเวลาก่อน",
     "fillRequiredFields": "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด",
     "mustAgreeTerms": "คุณต้องตกลงกับข้อกำหนดและเงื่อนไข",

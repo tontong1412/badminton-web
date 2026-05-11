@@ -17,11 +17,16 @@ import {
   Grid,
   Chip,
   IconButton,
+  Paper,
+  Drawer,
+  List,
+  ListItem,
+  Divider,
 } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
-import { BookingAvailability, Court, Venue } from '@/type'
+import { BookingAvailability, Court, CourtPricingRule, Venue } from '@/type'
 import venueService from '../../services/venues'
 import courtsService from '../../services/courts'
 import CourtSelection from '../../components/CourtSelection'
@@ -43,6 +48,7 @@ export default function VenueCourtsPage() {
   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'))
   const [bookingMode, setBookingMode] = useState<'guided' | 'free'>('guided')
   const [showBookingModal, setShowBookingModal] = useState(false)
+  const [showSelectionDrawer, setShowSelectionDrawer] = useState(false)
 
   const slotDurationMinutes = venue?.slotDurationMinutes ?? 30
 
@@ -94,6 +100,28 @@ export default function VenueCourtsPage() {
 
   const freeSelectedCourts = courts.filter((c) => (selectedCells.get(c.id)?.size ?? 0) > 0)
 
+  const calcRangePrice = (court: Court, startTime: string, endTime: string): number => {
+    const rules = court.pricingRules ?? []
+    const toM = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const segStart = toM(startTime)
+    const segEnd = toM(endTime)
+    if (rules.length === 0) return Number(((court.pricePerHour / 60) * (segEnd - segStart)).toFixed(2))
+    const boundaries = new Set<number>([segStart, segEnd])
+    for (const rule of rules) {
+      const rs = toM(rule.startTime), re = toM(rule.endTime)
+      if (rs > segStart && rs < segEnd) boundaries.add(rs)
+      if (re > segStart && re < segEnd) boundaries.add(re)
+    }
+    const sorted = Array.from(boundaries).sort((a, b) => a - b)
+    let total = 0
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const s = sorted[i], e = sorted[i + 1]
+      const rule = rules.find((r: CourtPricingRule) => toM(r.startTime) <= s && toM(r.endTime) >= e)
+      total += ((rule ? rule.pricePerHour : court.pricePerHour) / 60) * (e - s)
+    }
+    return Number(total.toFixed(2))
+  }
+
   const freeBookingItems = Array.from(selectedCells.entries())
     .filter(([, times]) => times.size > 0)
     .flatMap(([courtId, times]) =>
@@ -104,6 +132,13 @@ export default function VenueCourtsPage() {
         endTime,
       }))
     )
+
+  const freeTotalPrice = freeBookingItems.reduce((sum, item) => {
+    const court = courts.find((c) => c.id === item.courtID)
+    if (!court) return sum
+    return sum + calcRangePrice(court, item.startTime, item.endTime)
+  }, 0)
+  const freeCurrency = freeSelectedCourts[0]?.currency ?? ''
 
   const freeSelectionValidation = (() => {
     if (selectedCells.size === 0) return { valid: false, error: null }
@@ -402,7 +437,7 @@ export default function VenueCourtsPage() {
         </Box>
       )}
 
-      <Container maxWidth="lg" sx={{ pt: 1, pb: 4 }}>
+      <Container maxWidth="lg" sx={{ pt: 1, pb: bookingMode === 'free' && freeSelectedCourts.length > 0 ? 10 : 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -607,33 +642,6 @@ export default function VenueCourtsPage() {
               <Alert severity="warning" sx={{ mt: 2 }}>{freeSelectionValidation.error}</Alert>
             )}
 
-            {freeSelectedCourts.length > 0 && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                {freeSelectedCourts.map((court) => {
-                  const times = Array.from(selectedCells.get(court.id) ?? []).sort()
-                  const ranges = mergeSlots(times)
-                  return (
-                    <Typography key={court.id} variant="body2">
-                      <strong>{court.name}:</strong> {ranges.map((r) => `${r.startTime}–${r.endTime}`).join(', ')}
-                    </Typography>
-                  )
-                })}
-                <Box sx={{ mt: 1 }}>
-                  <Button size="small" onClick={() => setSelectedCells(new Map())}>
-                    {t('booking.clearSelection')}
-                  </Button>
-                </Box>
-              </Box>
-            )}
-
-            {freeSelectionValidation.valid && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <Button variant="contained" color="primary" size="large" onClick={() => setShowBookingModal(true)}>
-                  {t('booking.proceedToBooking')}
-                </Button>
-              </Box>
-            )}
-
             {freeSelectionValidation.valid && venue && (
               <CourtBookingModal
                 open={showBookingModal}
@@ -647,6 +655,96 @@ export default function VenueCourtsPage() {
           </Box>
         )}
       </Container>
+
+      {/* Floating selection summary bar for free mode — sits above the 56px bottom nav */}
+      {bookingMode === 'free' && freeSelectedCourts.length > 0 && (
+        <Paper
+          elevation={6}
+          sx={{
+            position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
+            borderRadius: 2, borderTop: '1px solid #e0e0e0', bgcolor: 'background.paper',
+          }}
+        >
+          <Box sx={{ px: { xs: 2, md: 3 }, py: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+            <Box
+              sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer', pb: 0.5 }}
+              onClick={() => setShowSelectionDrawer(true)}
+            >
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1, display: 'block' }}>
+                tap for details
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="primary" sx={{ mt: 2, lineHeight: 1.2 }}>
+                {freeTotalPrice.toFixed(2)} {freeCurrency}
+              </Typography>
+            </Box>
+            <Button size="small" onClick={() => setSelectedCells(new Map())}>
+              {t('booking.clearSelection')}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              size="medium"
+              onClick={() => setShowBookingModal(true)}
+            >
+              {t('booking.proceedToBooking')}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {/* Selection detail drawer */}
+      <Drawer
+        anchor="bottom"
+        open={showSelectionDrawer}
+        onClose={() => setShowSelectionDrawer(false)}
+        PaperProps={{ sx: { borderTopLeftRadius: 12, borderTopRightRadius: 12, maxHeight: '70vh', pb: 'env(safe-area-inset-bottom, 0px)' } }}
+      >
+        <Box sx={{ px: 3, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" fontWeight={600}>{t('booking.selectedCourts')}</Typography>
+          <Button size="small" onClick={() => setShowSelectionDrawer(false)}>Close</Button>
+        </Box>
+        <Divider />
+        <List dense sx={{ overflowY: 'auto' }}>
+          {freeSelectedCourts.map((court) => {
+            const times = Array.from(selectedCells.get(court.id) ?? []).sort()
+            const ranges = mergeSlots(times)
+            return (
+              <ListItem key={court.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1.5, gap: 0.5 }}>
+                <Typography variant="body2" fontWeight={600}>{court.name}</Typography>
+                {ranges.map((r) => {
+                  const price = calcRangePrice(court, r.startTime, r.endTime)
+                  return (
+                    <Box key={r.startTime} sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {r.startTime} – {r.endTime}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {price.toFixed(2)} {court.currency}
+                      </Typography>
+                    </Box>
+                  )
+                })}
+              </ListItem>
+            )
+          })}
+        </List>
+        <Divider />
+        <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
+            Total: {freeTotalPrice.toFixed(2)} {freeCurrency}
+          </Typography>
+          <Button onClick={() => { setSelectedCells(new Map()); setShowSelectionDrawer(false) }} color="error" size="small">
+            {t('booking.clearSelection')}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => { setShowSelectionDrawer(false); setShowBookingModal(true) }}
+          >
+            {t('booking.proceedToBooking')}
+          </Button>
+        </Box>
+      </Drawer>
     </Layout>
   )
 }

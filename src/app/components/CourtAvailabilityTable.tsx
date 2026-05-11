@@ -4,7 +4,6 @@ import {
   Box,
   CircularProgress,
   Paper,
-  Tooltip,
   Typography,
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -37,11 +36,6 @@ const getSlotPrice = (court: Court, startTime: string, slotDurationMinutes: numb
   return Number(total.toFixed(2))
 }
 
-const addMinutes = (time: string, minutes: number): string => {
-  const [h, m] = time.split(':').map(Number)
-  const total = h * 60 + m + minutes
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
-}
 
 interface CourtAvailabilityTableProps {
   courts: Court[]
@@ -94,12 +88,18 @@ export default function CourtAvailabilityTable({
 
   // Build lookup: courtId -> startTime -> available
   const availabilityMap = new Map<string, Map<string, boolean>>()
+  const reasonMap = new Map<string, Map<string, string>>() // courtId -> startTime -> reason
   availabilityByCourt.forEach((avail) => {
     const courtSlotMap = new Map<string, boolean>()
+    const courtReasonMap = new Map<string, string>()
     avail.slots.forEach((slot) => {
       courtSlotMap.set(slot.startTime, slot.available)
+      if (!slot.available && slot.reason) {
+        courtReasonMap.set(slot.startTime, slot.reason)
+      }
     })
     availabilityMap.set(avail.court.id, courtSlotMap)
+    reasonMap.set(avail.court.id, courtReasonMap)
   })
 
   if (sortedSlots.length === 0) {
@@ -153,9 +153,10 @@ export default function CourtAvailabilityTable({
                     const courtSlotMap = availabilityMap.get(court.id)
                     const available = courtSlotMap?.get(slot.startTime) ?? false
                     const isSelectedCell = selectedCells.get(court.id)?.has(slot.startTime) ?? false
-
+                    const reason = reasonMap.get(court.id)?.get(slot.startTime)
+                    const bookedTime = reason?.match(/(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1]
                     return (
-                      <td key={court.id} style={{ textAlign: 'center', padding: '4px 8px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #e0e0e0' }}>
+                      <td key={court.id} style={{ textAlign: 'center', padding: '4px 8px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #e0e0e0', background: available ? undefined : '#fafafa' }}>
                         {available ? (
                           <div
                             onClick={() => onCellClick(slot.startTime, court)}
@@ -173,10 +174,8 @@ export default function CourtAvailabilityTable({
                               {getSlotPrice(court, slot.startTime, slotDurationMinutes).toFixed(0)} {court.currency}
                             </span>
                           </div>
-                        ) : (
-                          <Tooltip title={t('booking.unavailable')}>
-                            <CancelIcon color="disabled" sx={{ fontSize: 22 }} />
-                          </Tooltip>
+                        ) : bookedTime ? null : (
+                          <CancelIcon color="disabled" sx={{ fontSize: 22 }} />
                         )}
                       </td>
                     )
