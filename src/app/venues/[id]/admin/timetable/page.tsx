@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Container,
   Typography,
@@ -156,6 +156,10 @@ export default function VenueTimetablePage() {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
   const [multiBookDialog, setMultiBookDialog] = useState(false)
 
+  // Drag selection state
+  const dragAnchor = useRef<{ courtID: string; slot: string } | null>(null)
+  const [dragPreview, setDragPreview] = useState<Set<string>>(new Set())
+
   // Shared guest info
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
@@ -250,6 +254,71 @@ export default function VenueTimetablePage() {
       return next
     })
   }
+
+  const getCellsBetween = (courtID: string, slotA: string, slotB: string): Set<string> => {
+    const minA = timeToMinutes(slotA)
+    const minB = timeToMinutes(slotB)
+    const lo = Math.min(minA, minB)
+    const hi = Math.max(minA, minB)
+    const result = new Set<string>()
+    for (let m = lo; m <= hi; m += 30) {
+      const key = `${courtID}:${minutesToTime(m)}`
+      // only add if not occupied by a booking
+      const courtSlots = cellMap.get(courtID)
+      if (!courtSlots) continue
+      const isBooked = Array.from(courtSlots.entries()).some(([cellSlot, c]) => {
+        const cellStart = timeToMinutes(cellSlot)
+        const cellEnd = cellStart + c.rowSpan * 30
+        return m >= cellStart && m < cellEnd
+      })
+      if (!isBooked) result.add(key)
+    }
+    return result
+  }
+
+  const handleCellMouseDown = (courtID: string, slot: string) => {
+    if (!selectMode) return
+    dragAnchor.current = { courtID, slot }
+    setDragPreview(getCellsBetween(courtID, slot, slot))
+  }
+
+  const handleCellMouseEnter = (courtID: string, slot: string) => {
+    if (!selectMode || !dragAnchor.current) return
+    if (dragAnchor.current.courtID !== courtID) return
+    setDragPreview(getCellsBetween(courtID, dragAnchor.current.slot, slot))
+  }
+
+  const handleCellMouseUp = (courtID: string, slot: string) => {
+    if (!selectMode || !dragAnchor.current) return
+    if (dragAnchor.current.courtID === courtID) {
+      const cells = getCellsBetween(courtID, dragAnchor.current.slot, slot)
+      // capture before nulling the ref
+      const anchorKey = `${dragAnchor.current.courtID}:${dragAnchor.current.slot}`
+      setSelectedCells((prev) => {
+        const next = new Set(prev)
+        if (prev.has(anchorKey) && cells.size === 1) {
+          next.delete(anchorKey)
+        } else {
+          cells.forEach((k) => next.add(k))
+        }
+        return next
+      })
+    }
+    dragAnchor.current = null
+    setDragPreview(new Set())
+  }
+
+  // Cancel drag on mouseup outside table
+  useEffect(() => {
+    const onMouseUp = () => {
+      if (dragAnchor.current) {
+        dragAnchor.current = null
+        setDragPreview(new Set())
+      }
+    }
+    window.addEventListener('mouseup', onMouseUp)
+    return () => window.removeEventListener('mouseup', onMouseUp)
+  }, [])
 
   const handleSingleBook = async() => {
     if (!bookDialog) return
@@ -514,25 +583,26 @@ export default function VenueTimetablePage() {
 
                         const cellKey = `${court.id}:${slot}`
                         const isSelected = selectedCells.has(cellKey)
+                        const isDragPreview = dragPreview.has(cellKey)
 
                         return (
                           <td
                             key={court.id}
-                            onClick={() => selectMode ? toggleCellSelection(court.id, slot) : openSingleBookDialog(court, slot)}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) (e.currentTarget as HTMLTableCellElement).style.background = '#f0f7ff'
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) (e.currentTarget as HTMLTableCellElement).style.background = ''
+                            onMouseDown={() => handleCellMouseDown(court.id, slot)}
+                            onMouseEnter={() => handleCellMouseEnter(court.id, slot)}
+                            onMouseUp={() => handleCellMouseUp(court.id, slot)}
+                            onClick={() => {
+                              if (!selectMode) openSingleBookDialog(court, slot)
                             }}
                             style={{
                               borderRight: '1px solid #e0e0e0',
                               borderBottom: '1px solid #f0f0f0',
                               height: 36,
-                              cursor: 'pointer',
-                              background: isSelected ? '#ffe0b2' : '',
-                              outline: isSelected ? '2px solid #fb8c00' : '',
+                              cursor: selectMode ? 'cell' : 'pointer',
+                              background: isSelected ? '#ffe0b2' : isDragPreview ? '#fff3e0' : '',
+                              outline: isSelected ? '2px solid #fb8c00' : isDragPreview ? '2px solid #ffb74d' : '',
                               outlineOffset: '-2px',
+                              userSelect: 'none',
                             }}
                           />
                         )
