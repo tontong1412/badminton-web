@@ -13,7 +13,6 @@ import {
   Button,
   ToggleButton,
   ToggleButtonGroup,
-  Stack,
   Grid,
   Chip,
   IconButton,
@@ -458,8 +457,9 @@ export default function VenueCourtsPage() {
           </Alert>
         )}
 
-        {/* Shared date picker + mode toggle */}
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-start' }}>
+        {/* Shared controls row: date picker + guided inputs + mode toggle */}
+        {/* Row 1 (all screens): date picker + toggle */}
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <IconButton
               size="small"
@@ -481,27 +481,12 @@ export default function VenueCourtsPage() {
               <ChevronRightIcon fontSize="small" />
             </IconButton>
           </Box>
-          <ToggleButtonGroup
-            value={bookingMode}
-            exclusive
-            onChange={(_e, val) => { if (val) handleModeChange(_e, val) }}
-            size="small"
-          >
-            <ToggleButton value="guided">{t('booking.modeGuided')}</ToggleButton>
-            <ToggleButton value="free">{t('booking.modeFree')}</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
 
-        {/* ── GUIDED MODE ─────────────────────────────────────────────────── */}
-        {bookingMode === 'guided' && (
-          <Box>
-            <Stack direction="row" spacing={2} sx={{ mb: 3, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+          {/* Court count + hours — desktop only (inline) */}
+          {bookingMode === 'guided' && (
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <IconButton
-                  size="small"
-                  onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))}
-                  disabled={requestedCourtCount <= 1}
-                >
+                <IconButton size="small" onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))} disabled={requestedCourtCount <= 1}>
                   <ChevronLeftIcon fontSize="small" />
                 </IconButton>
                 <TextField
@@ -513,19 +498,12 @@ export default function VenueCourtsPage() {
                   sx={{ width: 100 }}
                   inputProps={{ min: 1, style: { textAlign: 'center' } }}
                 />
-                <IconButton
-                  size="small"
-                  onClick={() => setRequestedCourtCount((v) => v + 1)}
-                >
+                <IconButton size="small" onClick={() => setRequestedCourtCount((v) => v + 1)}>
                   <ChevronRightIcon fontSize="small" />
                 </IconButton>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <IconButton
-                  size="small"
-                  onClick={() => setRequestedHours((v) => Math.max(1, v - 1))}
-                  disabled={requestedHours <= 1}
-                >
+                <IconButton size="small" onClick={() => setRequestedHours((v) => Math.max(1, v - 1))} disabled={requestedHours <= 1}>
                   <ChevronLeftIcon fontSize="small" />
                 </IconButton>
                 <TextField
@@ -537,15 +515,69 @@ export default function VenueCourtsPage() {
                   sx={{ width: 100 }}
                   inputProps={{ min: 1, style: { textAlign: 'center' } }}
                 />
-                <IconButton
-                  size="small"
-                  onClick={() => setRequestedHours((v) => v + 1)}
-                >
+                <IconButton size="small" onClick={() => setRequestedHours((v) => v + 1)}>
                   <ChevronRightIcon fontSize="small" />
                 </IconButton>
               </Box>
-            </Stack>
+            </Box>
+          )}
 
+          {/* Mode toggle — always right-aligned */}
+          <ToggleButtonGroup
+            value={bookingMode}
+            exclusive
+            onChange={(_e, val) => { if (val) handleModeChange(_e, val) }}
+            size="small"
+            sx={{ ml: 'auto' }}
+          >
+            <ToggleButton value="guided">{t('booking.modeGuided')}</ToggleButton>
+            <ToggleButton value="free">{t('booking.modeFree')}</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {/* Row 2 (mobile only): court count + hours */}
+        {bookingMode === 'guided' && (
+          <Box sx={{ mb: 3, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton size="small" onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))} disabled={requestedCourtCount <= 1}>
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+              <TextField
+                size="small"
+                label={t('booking.numberOfCourts')}
+                type="number"
+                value={requestedCourtCount}
+                onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
+                sx={{ width: 100 }}
+                inputProps={{ min: 1, style: { textAlign: 'center' } }}
+              />
+              <IconButton size="small" onClick={() => setRequestedCourtCount((v) => v + 1)}>
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton size="small" onClick={() => setRequestedHours((v) => Math.max(1, v - 1))} disabled={requestedHours <= 1}>
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+              <TextField
+                size="small"
+                label={t('booking.numberOfHours')}
+                type="number"
+                value={requestedHours}
+                onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
+                sx={{ width: 100 }}
+                inputProps={{ min: 1, style: { textAlign: 'center' } }}
+              />
+              <IconButton size="small" onClick={() => setRequestedHours((v) => v + 1)}>
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
+        )}
+
+        {/* ── GUIDED MODE ─────────────────────────────────────────────────── */}
+        {bookingMode === 'guided' && (
+          <Box>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
               {t('booking.availableSlots')}
             </Typography>
