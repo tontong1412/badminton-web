@@ -180,7 +180,7 @@ export default function VenuePaymentsPage() {
 
   return (
     <Layout>
-      <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, md: 4 } }}>
+      <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => router.push('/admin')} sx={{ mr: 1 }}>
             All Venues
@@ -194,10 +194,12 @@ export default function VenuePaymentsPage() {
           value="bookings"
           sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
           onChange={(_, v) => {
+            if (v === 'dashboard') router.push(`/venues/${venueID}/admin/dashboard`)
             if (v === 'timetable') router.push(`/venues/${venueID}/admin/timetable`)
             if (v === 'settings') router.push(`/venues/${venueID}/admin/settings`)
           }}
         >
+          <Tab label="Dashboard" value="dashboard" />
           <Tab label="Timetable" value="timetable" />
           <Tab label="Payments" value="bookings" />
           <Tab label="Settings" value="settings" />

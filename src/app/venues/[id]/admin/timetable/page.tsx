@@ -418,7 +418,7 @@ export default function VenueTimetablePage() {
 
   return (
     <Layout>
-      <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, pb: selectedCells.size > 0 ? 10 : 4 }}>
+      <Container maxWidth="lg" sx={{ pt: 2, pb: selectedCells.size > 0 ? 10 : 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => router.push('/admin')} sx={{ mr: 1 }}>
             All Venues
@@ -428,23 +428,25 @@ export default function VenueTimetablePage() {
           {venue?.name.en || venue?.name.th}
         </Typography>
 
-        {/* Sticky control panel */}
+        <Tabs
+          value="timetable"
+          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+          onChange={(_, v) => {
+            if (v === 'dashboard') router.push(`/venues/${venueID}/admin/dashboard`)
+            if (v === 'bookings') router.push(`/venues/${venueID}/admin/bookings`)
+            if (v === 'settings') router.push(`/venues/${venueID}/admin/settings`)
+          }}
+        >
+          <Tab label="Dashboard" value="dashboard" />
+          <Tab label="Timetable" value="timetable" />
+          <Tab label="Payments" value="bookings" />
+          <Tab label="Settings" value="settings" />
+        </Tabs>
+
+        {error && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>{error}</Alert>}
+
+        {/* Sticky toolbar */}
         <Box sx={{ position: 'sticky', top: 0, zIndex: 10, bgcolor: 'background.default', pb: 1 }}>
-          <Tabs
-            value="timetable"
-            sx={{ mb: 1, borderBottom: 1, borderColor: 'divider' }}
-            onChange={(_, v) => {
-              if (v === 'bookings') router.push(`/venues/${venueID}/admin/bookings`)
-              if (v === 'settings') router.push(`/venues/${venueID}/admin/settings`)
-            }}
-          >
-            <Tab label="Timetable" value="timetable" />
-            <Tab label="Payments" value="bookings" />
-            <Tab label="Settings" value="settings" />
-          </Tabs>
-
-          {error && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>{error}</Alert>}
-
           {/* Toolbar */}
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -820,7 +822,7 @@ export default function VenueTimetablePage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
+      </Container>
     </Layout>
   )
 }

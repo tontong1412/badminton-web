@@ -265,26 +265,28 @@ export default function VenueSettingsPage() {
 
   return (
     <Layout>
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => router.push('/admin')} sx={{ mr: 1 }}>
             All Venues
           </Button>
         </Box>
 
-        <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>
+        <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
           {venue?.name.en || venue?.name.th}
         </Typography>
 
         {/* Navigation tabs */}
         <Tabs
           value="settings"
-          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
           onChange={(_, v) => {
+            if (v === 'dashboard') router.push(`/venues/${venueID}/admin/dashboard`)
             if (v === 'timetable') router.push(`/venues/${venueID}/admin/timetable`)
             if (v === 'bookings') router.push(`/venues/${venueID}/admin/bookings`)
           }}
         >
+          <Tab label="Dashboard" value="dashboard" />
           <Tab label="Timetable" value="timetable" />
           <Tab label="Payments" value="bookings" />
           <Tab label="Settings" value="settings" />
