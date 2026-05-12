@@ -461,7 +461,11 @@ export default function VenueCourtsPage() {
         {/* Shared date picker */}
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-            <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}>
+            <IconButton
+              size="small"
+              onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}
+              disabled={moment(selectedDate).subtract(1, 'day').isBefore(moment(), 'day')}
+            >
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
             <TextField
@@ -471,6 +475,7 @@ export default function VenueCourtsPage() {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               sx={{ maxWidth: 200 }}
+              inputProps={{ min: moment().format('YYYY-MM-DD') }}
             />
             <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).add(1, 'day').format('YYYY-MM-DD'))}>
               <ChevronRightIcon fontSize="small" />
