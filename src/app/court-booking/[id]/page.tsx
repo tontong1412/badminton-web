@@ -11,8 +11,8 @@ import {
   CircularProgress,
   TextField,
   Button,
-  Tab,
-  Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
   Stack,
   Grid,
   Chip,
@@ -458,9 +458,9 @@ export default function VenueCourtsPage() {
           </Alert>
         )}
 
-        {/* Shared date picker */}
-        <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+        {/* Shared date picker + mode toggle */}
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-start' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <IconButton
               size="small"
               onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}
@@ -481,13 +481,16 @@ export default function VenueCourtsPage() {
               <ChevronRightIcon fontSize="small" />
             </IconButton>
           </Box>
+          <ToggleButtonGroup
+            value={bookingMode}
+            exclusive
+            onChange={(_e, val) => { if (val) handleModeChange(_e, val) }}
+            size="small"
+          >
+            <ToggleButton value="guided">{t('booking.modeGuided')}</ToggleButton>
+            <ToggleButton value="free">{t('booking.modeFree')}</ToggleButton>
+          </ToggleButtonGroup>
         </Box>
-
-        {/* Mode tabs */}
-        <Tabs value={bookingMode} onChange={handleModeChange} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Tab value="guided" label={t('booking.modeGuided')} />
-          <Tab value="free" label={t('booking.modeFree')} />
-        </Tabs>
 
         {/* ── GUIDED MODE ─────────────────────────────────────────────────── */}
         {bookingMode === 'guided' && (
