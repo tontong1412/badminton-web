@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Avatar,
   Container,
   Typography,
   Box,
@@ -24,7 +23,9 @@ import {
 } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
 import { BookingAvailability, Court, CourtPricingRule, Venue } from '@/type'
 import venueService from '../../services/venues'
 import courtsService from '../../services/courts'
@@ -396,9 +397,9 @@ export default function VenueCourtsPage() {
   if (loading) {
     return (
       <Layout>
-        <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress />
-        </Container>
+        <Box sx={{ minHeight: '100vh', bgcolor: '#FBF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CircularProgress sx={{ color: '#80644f' }} />
+        </Box>
       </Layout>
     )
   }
@@ -406,61 +407,64 @@ export default function VenueCourtsPage() {
   return (
     <Layout>
       {venue && (
-        <Box sx={{ width: '100vw', ml: 'calc(50% - 50vw)', backgroundColor: '#80644f', mb: 2 }}>
-          <Container maxWidth="lg" sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-            <Box
-              component="section"
-              sx={{
-                p: 2,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Avatar sx={{ width: 160, height: 160, bgcolor: '#ff7961' }}>
-                <SportsTennisIcon sx={{ fontSize: 80 }} />
-              </Avatar>
-            </Box>
-
-            <Box
-              component="section"
-              sx={{
-                p: 2,
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: { xs: 'center', md: 'flex-start' },
-                justifyContent: 'center',
-                color: 'grey.200',
-              }}
-            >
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                {venue.name.en || venue.name.th}
-              </Typography>
-              {venue.name.th && venue.name.en && (
-                <Typography variant="h6" sx={{ mt: 1 }}>
-                  {venue.name.th}
+        <Box sx={{ width: '100vw', ml: 'calc(50% - 50vw)', bgcolor: '#80644f' }}>
+          <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 48, height: 48, borderRadius: 2,
+                  bgcolor: '#695241', border: '1px solid #9c795f',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}
+              >
+                <SportsTennisIcon sx={{ fontSize: 24, color: '#D4B8A0' }} />
+              </Box>
+              <Box>
+                <Typography variant="overline" sx={{ color: '#D4B8A0', fontWeight: 700, letterSpacing: 2, fontSize: '0.65rem', lineHeight: 1.2 }}>
+                  VENUE
                 </Typography>
-              )}
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {venue.address}
-              </Typography>
+                <Typography variant="h5" fontWeight={800} sx={{ color: '#FFF3E6', lineHeight: 1.2, mb: 0.3 }}>
+                  {venue.name.en || venue.name.th}
+                </Typography>
+                {venue.name.th && venue.name.en && (
+                  <Typography variant="caption" sx={{ color: '#C4A68A', display: 'block', mb: 0.5 }}>
+                    {venue.name.th}
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <PlaceOutlinedIcon sx={{ fontSize: 13, color: '#C4A68A' }} />
+                  <Typography variant="caption" sx={{ color: '#C4A68A' }}>
+                    {venue.address}
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </Container>
         </Box>
       )}
 
-      <Container maxWidth="lg" sx={{ pt: 1, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
+      <Box sx={{ bgcolor: '#FBF5EE', minHeight: '60vh' }}>
+      <Container maxWidth="lg" sx={{ pt: 3, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        {/* Shared controls row: date picker + guided inputs + mode toggle */}
+        {/* ── Controls card ─────────────────────────────────────── */}
+        <Box
+          sx={{
+            bgcolor: '#fff',
+            border: '1px solid #D4B8A0',
+            borderRadius: 2,
+            px: { xs: 2, md: 3 },
+            py: 2,
+            mb: 3,
+          }}
+        >
         {/* Row 1 (all screens): date picker + toggle */}
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ mb: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
             <IconButton
               size="small"
               onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}
@@ -474,7 +478,7 @@ export default function VenueCourtsPage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              sx={{ maxWidth: 200 }}
+              sx={{ width: { xs: 130, sm: 160 } }}
               inputProps={{ min: moment().format('YYYY-MM-DD') }}
             />
             <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).add(1, 'day').format('YYYY-MM-DD'))}>
@@ -522,13 +526,28 @@ export default function VenueCourtsPage() {
             </Box>
           )}
 
-          {/* Mode toggle — always right-aligned */}
+          {/* Mode toggle — right-aligned, compact */}
           <ToggleButtonGroup
             value={bookingMode}
             exclusive
             onChange={(_e, val) => { if (val) handleModeChange(_e, val) }}
             size="small"
-            sx={{ ml: 'auto' }}
+            sx={{
+              ml: 'auto',
+              flexShrink: 0,
+              '& .MuiToggleButton-root': {
+                textTransform: 'none', fontWeight: 600,
+                fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                px: { xs: 1, sm: 2 },
+                py: 0.5,
+                color: '#695241', border: '1px solid #D4B8A0',
+                whiteSpace: 'nowrap',
+              },
+              '& .Mui-selected': {
+                bgcolor: '#80644f !important', color: '#fff !important',
+                borderColor: '#80644f !important',
+              },
+            }}
           >
             <ToggleButton value="guided">{t('booking.modeGuided')}</ToggleButton>
             <ToggleButton value="free">{t('booking.modeFree')}</ToggleButton>
@@ -537,7 +556,7 @@ export default function VenueCourtsPage() {
 
         {/* Row 2 (mobile only): court count + hours */}
         {bookingMode === 'guided' && (
-          <Box sx={{ mb: 3, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 2 }}>
+          <Box sx={{ mt: 2, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <IconButton size="small" onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))} disabled={requestedCourtCount <= 1}>
                 <ChevronLeftIcon fontSize="small" />
@@ -574,31 +593,50 @@ export default function VenueCourtsPage() {
             </Box>
           </Box>
         )}
+        </Box> {/* end controls card */}
 
         {/* ── GUIDED MODE ─────────────────────────────────────────────────── */}
         {bookingMode === 'guided' && (
           <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              {t('booking.availableSlots')}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: '#80644f' }} />
+              <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#3D2200' }}>
+                {t('booking.availableSlots')}
+              </Typography>
+            </Box>
 
             {loadingGuided ? (
               <Box sx={{ py: 2 }}><CircularProgress size={24} /></Box>
             ) : filteredGuidedSlots.length === 0 ? (
               <Alert severity="info" sx={{ mb: 2 }}>{t('booking.noSlotsAvailable')}</Alert>
             ) : (
-              <Grid container spacing={1} sx={{ mb: 3 }}>
-                {filteredGuidedSlots.map((slot) => (
-                  <Grid item key={`${slot.startTime}-${slot.endTime}`}>
-                    <Chip
-                      label={`${slot.startTime} – ${slot.endTime} (${slot.courtCount})`}
-                      color={guidedSelectedSlot?.startTime === slot.startTime ? 'primary' : 'default'}
-                      variant={guidedSelectedSlot?.startTime === slot.startTime ? 'filled' : 'outlined'}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                {filteredGuidedSlots.map((slot) => {
+                  const isSelected = guidedSelectedSlot?.startTime === slot.startTime
+                  return (
+                    <Box
+                      key={`${slot.startTime}-${slot.endTime}`}
                       onClick={() => handleSelectGuidedSlot({ startTime: slot.startTime, endTime: slot.endTime })}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
+                      sx={{
+                        px: 2, py: 1,
+                        borderRadius: 2,
+                        border: `1px solid ${isSelected ? '#80644f' : '#D4B8A0'}`,
+                        bgcolor: isSelected ? '#80644f' : '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        '&:hover': { borderColor: '#80644f', bgcolor: isSelected ? '#695241' : '#F5EDE4' },
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? '#fff' : '#3D2200', lineHeight: 1.2 }}>
+                        {slot.startTime} – {slot.endTime}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.65rem', color: isSelected ? 'rgba(255,255,255,0.75)' : '#9c795f', mt: 0.25 }}>
+                        {slot.courtCount} court{slot.courtCount !== 1 ? 's' : ''}
+                      </Typography>
+                    </Box>
+                  )
+                })}
+              </Box>
             )}
 
             {guidedError && (
@@ -708,33 +746,42 @@ export default function VenueCourtsPage() {
           </Box>
         )}
       </Container>
+      </Box>
 
       {/* Floating summary bar — guided mode */}
       {bookingMode === 'guided' && guidedSelectedSlot && guidedSelectedCourts.length > 0 && (
         <Paper
-          elevation={6}
+          elevation={0}
           sx={{
             position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
-            borderRadius: 2, borderTop: '1px solid #e0e0e0', bgcolor: 'background.paper',
+            borderRadius: 2.5, border: '1px solid #D4B8A0', bgcolor: '#fff',
+            overflow: 'hidden',
           }}
         >
-          <Box sx={{ px: { xs: 2, md: 3 }, py: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-            <Box sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer', pb: 0.5 }} onClick={() => setShowGuidedDrawer(true)}>
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1, display: 'block' }}>
+          <Box sx={{ height: 3, bgcolor: '#80644f' }} />
+          <Box sx={{ px: { xs: 2, md: 3 }, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }} onClick={() => setShowGuidedDrawer(true)}>
+              <Typography variant="caption" sx={{ color: '#9c795f', lineHeight: 1, display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                 tap for details
               </Typography>
-              <Typography variant="h5" fontWeight={700} color="primary" sx={{ mt: 2, lineHeight: 1.2 }}>
-                {fmtPrice(guidedTotalPrice)} {guidedCurrency}
+              <Typography variant="h5" fontWeight={800} sx={{ color: '#2D1800', mt: 0.5, lineHeight: 1.1 }}>
+                {fmtPrice(guidedTotalPrice)}
+                <Typography component="span" variant="body2" sx={{ color: '#9c795f', fontWeight: 600, ml: 0.75 }}>{guidedCurrency}</Typography>
               </Typography>
             </Box>
-            <Button variant="outlined" size="small" onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setShowCourtPicker(false) }}>
+            <Button
+              variant="outlined"
+              size="small"
+              sx={{ borderColor: '#D4B8A0', color: '#695241', textTransform: 'none', fontWeight: 600, '&:hover': { borderColor: '#80644f' } }}
+              onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setShowCourtPicker(false) }}
+            >
               {t('booking.clearSelection')}
             </Button>
             <Button
               variant="contained"
-              color="primary"
               size="medium"
               disabled={guidedSelectedCourts.length !== requestedCourtCount}
+              sx={{ bgcolor: '#80644f', textTransform: 'none', fontWeight: 700, px: 3, '&:hover': { bgcolor: '#695241' } }}
               onClick={() => setShowBookingModal(true)}
             >
               {t('booking.proceedToBooking')}
@@ -746,31 +793,36 @@ export default function VenueCourtsPage() {
       {/* Floating selection summary bar for free mode — sits above the 56px bottom nav */}
       {bookingMode === 'free' && freeSelectedCourts.length > 0 && (
         <Paper
-          elevation={6}
+          elevation={0}
           sx={{
             position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
-            borderRadius: 2, borderTop: '1px solid #e0e0e0', bgcolor: 'background.paper',
+            borderRadius: 2.5, border: '1px solid #D4B8A0', bgcolor: '#fff',
+            overflow: 'hidden',
           }}
         >
-          <Box sx={{ px: { xs: 2, md: 3 }, py: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-            <Box
-              sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer', pb: 0.5 }}
-              onClick={() => setShowSelectionDrawer(true)}
-            >
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1, display: 'block' }}>
+          <Box sx={{ height: 3, bgcolor: '#80644f' }} />
+          <Box sx={{ px: { xs: 2, md: 3 }, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }} onClick={() => setShowSelectionDrawer(true)}>
+              <Typography variant="caption" sx={{ color: '#9c795f', lineHeight: 1, display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                 tap for details
               </Typography>
-              <Typography variant="h5" fontWeight={700} color="primary" sx={{ mt: 2, lineHeight: 1.2 }}>
-                {fmtPrice(freeTotalPrice)} {freeCurrency}
+              <Typography variant="h5" fontWeight={800} sx={{ color: '#2D1800', mt: 0.5, lineHeight: 1.1 }}>
+                {fmtPrice(freeTotalPrice)}
+                <Typography component="span" variant="body2" sx={{ color: '#9c795f', fontWeight: 600, ml: 0.75 }}>{freeCurrency}</Typography>
               </Typography>
             </Box>
-            <Button variant="outlined" size="small" onClick={() => setSelectedCells(new Map())}>
+            <Button
+              variant="outlined"
+              size="small"
+              sx={{ borderColor: '#D4B8A0', color: '#695241', textTransform: 'none', fontWeight: 600, '&:hover': { borderColor: '#80644f' } }}
+              onClick={() => setSelectedCells(new Map())}
+            >
               {t('booking.clearSelection')}
             </Button>
             <Button
               variant="contained"
-              color="primary"
               size="medium"
+              sx={{ bgcolor: '#80644f', textTransform: 'none', fontWeight: 700, px: 3, '&:hover': { bgcolor: '#695241' } }}
               onClick={() => setShowBookingModal(true)}
             >
               {t('booking.proceedToBooking')}

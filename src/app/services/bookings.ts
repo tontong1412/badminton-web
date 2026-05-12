@@ -1,4 +1,4 @@
-import { Booking, NewBooking } from '@/type'
+import { Booking, BookingType, NewBooking } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 
@@ -28,7 +28,7 @@ interface CreateSingleBookingPayload extends NewBooking {
   guestName?: string;
   guestPhone?: string;
   guestEmail?: string;
-  bookingType: 'singleShot';
+  bookingType: BookingType.SingleShot;
 }
 
 const createSingle = (booking: CreateSingleBookingPayload): Promise<Booking> => {
@@ -80,7 +80,7 @@ interface CreateRecurringBookingPayload extends NewBooking {
   currency: string;
   dayOfWeek: number[];
   bookerType: 'guest' | 'user';
-  bookingType: 'recurring';
+  bookingType: BookingType.Recurring;
 }
 
 const createRecurring = (booking: CreateRecurringBookingPayload): Promise<Booking> => {

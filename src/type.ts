@@ -352,9 +352,8 @@ export enum BookingResaleOutcome {
 }
 
 export interface DailySchedule {
-  isOpen: boolean;
-  openTime: string;
-  closeTime: string;
+  open: string;
+  close: string;
 }
 
 export interface HolidaySchedule {
@@ -393,6 +392,7 @@ export interface Venue {
     minimumGapMinutes: number;
   };
   payment?: VenuePayment;
+  coverImage?: string;
 }
 
 export interface CourtPricingRule {
