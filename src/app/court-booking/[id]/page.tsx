@@ -622,7 +622,12 @@ export default function VenueCourtsPage() {
                 onClose={() => setShowBookingModal(false)}
                 courts={guidedSelectedCourts}
                 venue={venue}
-                preselectedSlot={{ date: selectedDate, startTime: guidedSelectedSlot.startTime, endTime: guidedSelectedSlot.endTime }}
+                bookingItems={guidedSelectedCourts.map((court) => ({
+                  courtID: court.id,
+                  date: selectedDate,
+                  startTime: guidedSelectedSlot.startTime,
+                  endTime: guidedSelectedSlot.endTime,
+                }))}
                 onBookingComplete={handleBookingComplete}
               />
             )}
