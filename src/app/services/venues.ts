@@ -19,8 +19,37 @@ const getCourts = (): Promise<Court[]> => {
   return axios.get(courtsUrl).then((response) => response.data as Court[])
 }
 
+const update = (id: string, payload: Partial<Venue>): Promise<Venue> => {
+  return axios.put(`${baseUrl}/${id}`, payload, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
+const setSchedule = (
+  id: string,
+  payload: {
+    weeklySchedule?: Record<string, { open: string; close: string } | null>;
+    gapPolicy?: { enabled: boolean; minimumGapMinutes: 30 | 60 };
+  },
+): Promise<Venue> => {
+  return axios.put(`${baseUrl}/${id}/schedule`, payload, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
+const addHoliday = (
+  id: string,
+  holiday: { date: string; isClosed: boolean; openTime?: string; closeTime?: string },
+): Promise<Venue> => {
+  return axios.post(`${baseUrl}/${id}/holidays`, holiday, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
+const removeHoliday = (id: string, date: string): Promise<Venue> => {
+  return axios.delete(`${baseUrl}/${id}/holidays/${date}`, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
 export default {
   getAll,
   getById,
   getCourts,
+  update,
+  setSchedule,
+  addHoliday,
+  removeHoliday,
 }

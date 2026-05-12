@@ -193,10 +193,14 @@ export default function VenuePaymentsPage() {
         <Tabs
           value="bookings"
           sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
-          onChange={(_, v) => v === 'timetable' && router.push(`/venues/${venueID}/admin/timetable`)}
+          onChange={(_, v) => {
+            if (v === 'timetable') router.push(`/venues/${venueID}/admin/timetable`)
+            if (v === 'settings') router.push(`/venues/${venueID}/admin/settings`)
+          }}
         >
           <Tab label="Timetable" value="timetable" />
           <Tab label="Payments" value="bookings" />
+          <Tab label="Settings" value="settings" />
         </Tabs>
 
         {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}

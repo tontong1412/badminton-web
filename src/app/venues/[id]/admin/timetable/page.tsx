@@ -433,10 +433,14 @@ export default function VenueTimetablePage() {
           <Tabs
             value="timetable"
             sx={{ mb: 1, borderBottom: 1, borderColor: 'divider' }}
-            onChange={(_, v) => v === 'bookings' && router.push(`/venues/${venueID}/admin/bookings`)}
+            onChange={(_, v) => {
+              if (v === 'bookings') router.push(`/venues/${venueID}/admin/bookings`)
+              if (v === 'settings') router.push(`/venues/${venueID}/admin/settings`)
+            }}
           >
             <Tab label="Timetable" value="timetable" />
             <Tab label="Payments" value="bookings" />
+            <Tab label="Settings" value="settings" />
           </Tabs>
 
           {error && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>{error}</Alert>}
