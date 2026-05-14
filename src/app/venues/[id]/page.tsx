@@ -475,6 +475,78 @@ export default function VenueCourtsPage() {
         </Box>
       )}
 
+      {/* ── Venue Details Section ────────────────────────────── */}
+      {venue && (
+        <Box sx={{ width: '100vw', ml: 'calc(50% - 50vw)', bgcolor: '#faf7f5', borderBottom: '1px solid #e8d8c8' }}>
+          <Container maxWidth="lg" sx={{ py: 3 }}>
+            <Grid container spacing={3}>
+              {/* Map */}
+              {venue.location?.coordinates && (
+                <Grid item xs={12} md={venue.coverImage ? 4 : 6} sx={{ order: { xs: 0, md: 3 } }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+                    Location
+                  </Typography>
+                  <Box
+                    component="iframe"
+                    src={`https://www.google.com/maps?q=${venue.location.coordinates[1]},${venue.location.coordinates[0]}&z=15&output=embed`}
+                    sx={{ width: '100%', height: { xs: 120, md: 220 }, border: 'none', borderRadius: 2 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Venue location"
+                  />
+                </Grid>
+              )}
+
+              {/* Opening Hours */}
+              <Grid item xs={12} md={venue.coverImage ? 4 : venue.location?.coordinates ? 6 : 12} sx={{ order: { xs: 1, md: 1 } }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+                  Opening Hours
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const).map((dayName, i) => {
+                    const schedule = venue.weeklySchedule[String(i)]
+                    const todayIndex = new Date().getDay()
+                    const isToday = i === todayIndex
+                    return (
+                      <Box
+                        key={i}
+                        sx={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          px: 1, py: 0.4, borderRadius: 1,
+                          bgcolor: isToday ? 'rgba(128,100,79,0.12)' : 'transparent',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: isToday ? 700 : 400, color: isToday ? '#80644f' : 'text.primary', minWidth: 90 }}>
+                          {dayName}{isToday ? ' (Today)' : ''}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: isToday ? 700 : 400, color: schedule ? (isToday ? '#80644f' : 'text.primary') : 'text.disabled' }}>
+                          {schedule ? `${schedule.open} – ${schedule.close}` : 'Closed'}
+                        </Typography>
+                      </Box>
+                    )
+                  })}
+                </Box>
+              </Grid>
+
+              {/* Cover Image / Gallery */}
+              {venue.coverImage && (
+                <Grid item xs={12} md={4} sx={{ order: { xs: 2, md: 2 } }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+                    Photos
+                  </Typography>
+                  <Box
+                    component="img"
+                    src={venue.coverImage}
+                    alt={venue.name.en || venue.name.th}
+                    sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 2, display: 'block' }}
+                  />
+                </Grid>
+              )}
+            </Grid>
+          </Container>
+        </Box>
+      )}
+
       <Box sx={{ bgcolor: '#fff', minHeight: '60vh' }}>
         <Container maxWidth="lg" sx={{ pt: 3, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
           {error && (

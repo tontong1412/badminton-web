@@ -436,8 +436,8 @@ export default function MyBookingsPage() {
               <Table stickyHeader sx={{ minWidth: 800 }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ position: 'sticky', left: 0, top: 0, zIndex: 4, bgcolor: '#f5f5f5', fontWeight: 700 }}>Ref</TableCell>
-                    <TableCell sx={{ position: 'sticky', left: 0, top: 0, zIndex: 4, bgcolor: '#f5f5f5', fontWeight: 700 }}>Venue</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>Ref</TableCell>
+                    <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>Venue</TableCell>
                     <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.date')}</TableCell>
                     <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.court')}</TableCell>
                     <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.time')}</TableCell>
@@ -453,12 +453,12 @@ export default function MyBookingsPage() {
                     const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
                     return (
                       <TableRow key={group.groupKey} hover>
-                        <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: 'white' }}>
+                        <TableCell>
                           {group.bookingRef ? (
                             <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: 1 }}>#{group.bookingRef}</Typography>
                           ) : '—'}
                         </TableCell>
-                        <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: 'white', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
+                        <TableCell>
                           {venue ? (venue.name.en || venue.name.th) : '—'}
                         </TableCell>
                         <TableCell>
