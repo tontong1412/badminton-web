@@ -767,7 +767,7 @@ export default function VenueCourtsPage() {
         <Paper
           elevation={0}
           sx={{
-            position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
+            position: 'fixed', bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
             borderRadius: 2.5, border: '1px solid #D4B8A0', bgcolor: '#fff',
             overflow: 'hidden',
           }}
@@ -809,7 +809,7 @@ export default function VenueCourtsPage() {
         <Paper
           elevation={0}
           sx={{
-            position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
+            position: 'fixed', bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 16px)', left: { xs: 8, md: 24 }, right: { xs: 8, md: 24 }, zIndex: 100,
             borderRadius: 2.5, border: '1px solid #D4B8A0', bgcolor: '#fff',
             overflow: 'hidden',
           }}
