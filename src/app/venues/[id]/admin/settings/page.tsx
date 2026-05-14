@@ -109,7 +109,7 @@ export default function VenueSettingsPage() {
   const [holidayError, setHolidayError] = useState<string | null>(null)
 
   useEffect(() => {
-    const init = async () => {
+    const init = async() => {
       try {
         const v = await venueService.getById(venueID)
         const userID = (user as unknown as { id: string } | null)?.id
@@ -163,7 +163,7 @@ export default function VenueSettingsPage() {
     playerService.getWithAccount().then(setAllPlayers).catch(() => {/* non-critical */})
   }, [])
 
-  const handleAddManager = async () => {
+  const handleAddManager = async() => {
     if (!selectedPlayer) return
     setManagerAdding(true)
     setManagerError(null)
@@ -179,7 +179,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleRemoveManager = async (userID: string) => {
+  const handleRemoveManager = async(userID: string) => {
     setManagerError(null)
     try {
       const updated = await venueService.removeManager(venueID, userID)
@@ -190,7 +190,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleSaveGeneral = async () => {
+  const handleSaveGeneral = async() => {
     setGeneralSaving(true)
     setGeneralSuccess(false)
     setError(null)
@@ -218,7 +218,7 @@ export default function VenueSettingsPage() {
       reader.readAsDataURL(file)
     })
 
-  const handleUploadCover = async (file: File) => {
+  const handleUploadCover = async(file: File) => {
     setCoverUploading(true)
     setCoverSuccess(false)
     setError(null)
@@ -237,7 +237,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleUploadLogo = async (file: File) => {
+  const handleUploadLogo = async(file: File) => {
     setLogoUploading(true)
     setLogoSuccess(false)
     setError(null)
@@ -256,7 +256,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleSaveSchedule = async () => {
+  const handleSaveSchedule = async() => {
     setScheduleSaving(true)
     setScheduleSuccess(false)
     setError(null)
@@ -280,7 +280,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleSaveGapPolicy = async () => {
+  const handleSaveGapPolicy = async() => {
     setGapSaving(true)
     setGapSuccess(false)
     setError(null)
@@ -299,7 +299,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleSavePayment = async () => {
+  const handleSavePayment = async() => {
     setPaymentSaving(true)
     setPaymentSuccess(false)
     setError(null)
@@ -318,7 +318,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleAddHoliday = async () => {
+  const handleAddHoliday = async() => {
     if (!newHolidayDate) return
     setHolidaySaving(true)
     setHolidayError(null)
@@ -339,7 +339,7 @@ export default function VenueSettingsPage() {
     }
   }
 
-  const handleRemoveHoliday = async (date: string) => {
+  const handleRemoveHoliday = async(date: string) => {
     setHolidayError(null)
     try {
       const updated = await venueService.removeHoliday(venueID, date)
@@ -513,9 +513,10 @@ export default function VenueSettingsPage() {
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Operating Hours</Typography>
 
           {weekDays.map((day, i) => (
-            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
+            <Box key={i} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5, alignItems: 'center' }}>
+              {/* Toggle + day name — allowed to wrap to its own row */}
               <FormControlLabel
-                sx={{ width: 130, m: 0 }}
+                sx={{ m: 0, minWidth: 140, flexShrink: 0 }}
                 control={
                   <Switch
                     checked={day.isOpen}
@@ -526,7 +527,8 @@ export default function VenueSettingsPage() {
                 label={<Typography variant="body2" sx={{ width: 80 }}>{DAYS[i]}</Typography>}
               />
               {day.isOpen ? (
-                <>
+                /* Time pickers always on the same row as each other */
+                <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                   <TextField
                     size="small"
                     label="Open"
@@ -545,7 +547,7 @@ export default function VenueSettingsPage() {
                     sx={{ width: 130 }}
                     inputProps={{ step: 1800 }}
                   />
-                </>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">Closed</Typography>
               )}
