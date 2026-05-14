@@ -5,12 +5,14 @@ import { DEFAULT_LANGUAGE, SUPPORTED_LANG } from '@/app/constants'
 
 interface AppState {
   user: User | null;
+  userReady: boolean;
   activeMenu: AppMenu | TournamentMenu;
   language: Language
 }
 
 const initialState: AppState = {
   user: null,
+  userReady: false,
   activeMenu: AppMenu.Home,
   language: DEFAULT_LANGUAGE as Language
 }
@@ -21,9 +23,14 @@ const appSlice = createSlice({
   reducers: {
     login(state, action: PayloadAction<User>) {
       state.user = { ...state.user, ...action.payload }
+      state.userReady = true
     },
     logout(state) {
       state.user = null
+      state.userReady = true
+    },
+    setUserReady(state) {
+      state.userReady = true
     },
     setActiveMenu(state, action: PayloadAction<AppMenu | TournamentMenu>) {
       state.activeMenu = action.payload
@@ -62,5 +69,5 @@ const appSlice = createSlice({
   }
 })
 
-export const { login, logout, setActiveMenu, changeLanguage, initializeLanguage } = appSlice.actions
+export const { login, logout, setUserReady, setActiveMenu, changeLanguage, initializeLanguage } = appSlice.actions
 export default appSlice.reducer

@@ -51,6 +51,10 @@ export interface Player {
   }
 }
 
+export interface PlayerWithAccount extends Player {
+  userID: string;
+}
+
 
 
 export interface User {
@@ -393,6 +397,7 @@ export interface Venue {
   };
   payment?: VenuePayment;
   coverImage?: string;
+  logo?: string;
 }
 
 export interface CourtPricingRule {

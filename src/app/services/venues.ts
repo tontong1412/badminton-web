@@ -44,6 +44,18 @@ const removeHoliday = (id: string, date: string): Promise<Venue> => {
   return axios.delete(`${baseUrl}/${id}/holidays/${date}`, { withCredentials: true }).then((r) => r.data as Venue)
 }
 
+const uploadImage = (id: string, type: 'coverImage' | 'logo', image: string): Promise<Venue> => {
+  return axios.post(`${baseUrl}/${id}/upload`, { type, image }, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
+const addManager = (id: string, userID: string): Promise<Venue> => {
+  return axios.post(`${baseUrl}/${id}/managers`, { userID }, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
+const removeManager = (id: string, userID: string): Promise<Venue> => {
+  return axios.delete(`${baseUrl}/${id}/managers/${userID}`, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
 export default {
   getAll,
   getById,
@@ -52,4 +64,7 @@ export default {
   setSchedule,
   addHoliday,
   removeHoliday,
+  uploadImage,
+  addManager,
+  removeManager,
 }

@@ -397,7 +397,7 @@ export default function VenueCourtsPage() {
   if (loading) {
     return (
       <Layout>
-        <Box sx={{ minHeight: '100vh', bgcolor: '#FBF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ minHeight: '100vh', bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CircularProgress sx={{ color: '#80644f' }} />
         </Box>
       </Layout>
@@ -412,28 +412,38 @@ export default function VenueCourtsPage() {
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
               <Box
                 sx={{
-                  width: 48, height: 48, borderRadius: 2,
-                  bgcolor: '#695241', border: '1px solid #9c795f',
+                  width: 100, height: 100, borderRadius: '50%',
+                  bgcolor: '#695241', border: '2px solid rgba(255,255,255,0.25)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  overflow: 'hidden',
                 }}
               >
-                <SportsTennisIcon sx={{ fontSize: 24, color: '#D4B8A0' }} />
+                {venue.logo ? (
+                  <Box
+                    component="img"
+                    src={venue.logo}
+                    alt={venue.name.en || venue.name.th}
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <SportsTennisIcon sx={{ fontSize: 36, color: 'rgba(255,255,255,0.9)' }} />
+                )}
               </Box>
               <Box>
-                <Typography variant="overline" sx={{ color: '#D4B8A0', fontWeight: 700, letterSpacing: 2, fontSize: '0.65rem', lineHeight: 1.2 }}>
+                <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 700, letterSpacing: 2, fontSize: '0.65rem', lineHeight: 1.2 }}>
                   VENUE
                 </Typography>
-                <Typography variant="h5" fontWeight={800} sx={{ color: '#FFF3E6', lineHeight: 1.2, mb: 0.3 }}>
+                <Typography variant="h5" fontWeight={800} sx={{ color: '#fff', lineHeight: 1.2, mb: 0.3 }}>
                   {venue.name.en || venue.name.th}
                 </Typography>
                 {venue.name.th && venue.name.en && (
-                  <Typography variant="caption" sx={{ color: '#C4A68A', display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)', display: 'block', mb: 0.5 }}>
                     {venue.name.th}
                   </Typography>
                 )}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <PlaceOutlinedIcon sx={{ fontSize: 13, color: '#C4A68A' }} />
-                  <Typography variant="caption" sx={{ color: '#C4A68A' }}>
+                  <PlaceOutlinedIcon sx={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }} />
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
                     {venue.address}
                   </Typography>
                 </Box>
@@ -443,7 +453,7 @@ export default function VenueCourtsPage() {
         </Box>
       )}
 
-      <Box sx={{ bgcolor: '#FBF5EE', minHeight: '60vh' }}>
+      <Box sx={{ bgcolor: '#fff', minHeight: '60vh' }}>
       <Container maxWidth="lg" sx={{ pt: 3, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

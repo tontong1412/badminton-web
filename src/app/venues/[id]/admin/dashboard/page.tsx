@@ -56,6 +56,7 @@ export default function VenueDashboardPage() {
   const router = useRouter()
   const venueID = params.id as string
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
+  const userReady = useSelector((state: RootState) => state.app.userReady)
 
   const [venue, setVenue] = useState<Venue | null>(null)
   const [courts, setCourts] = useState<Court[]>([])
@@ -74,6 +75,7 @@ export default function VenueDashboardPage() {
         const userID = (user as unknown as { id: string } | null)?.id
         const isOwner = v.ownerUserID === userID
         const isManager = v.managerUserIDs.includes(userID ?? '')
+        if (!userReady) return
         if (!userID || (!isOwner && !isManager)) {
           router.replace('/admin')
           return
@@ -91,7 +93,7 @@ export default function VenueDashboardPage() {
       }
     }
     init()
-  }, [venueID, user, router])
+  }, [venueID, user, userReady, router])
 
   const rangeStart = useMemo(() => {
     const map: Record<DateRange, moment.Moment> = {

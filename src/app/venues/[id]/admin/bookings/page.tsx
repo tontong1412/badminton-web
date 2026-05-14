@@ -54,6 +54,7 @@ export default function VenuePaymentsPage() {
   const router = useRouter()
   const venueID = params.id as string
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
+  const userReady = useSelector((state: RootState) => state.app.userReady)
 
   const [venue, setVenue] = useState<Venue | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -68,6 +69,7 @@ export default function VenuePaymentsPage() {
   const [approving, setApproving] = useState(false)
 
   useEffect(() => {
+    if (!userReady) return
     const userID = (user as unknown as { id: string } | null)?.id
     venueService.getById(venueID)
       .then((v) => {
@@ -81,7 +83,7 @@ export default function VenuePaymentsPage() {
       })
       .catch((e) => { setError('Failed to load venue'); console.error(e) })
       .finally(() => setInitLoading(false))
-  }, [venueID, user, router])
+  }, [venueID, user, userReady, router])
 
   const loadBookings = async(status: string) => {
     try {

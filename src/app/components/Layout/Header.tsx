@@ -13,7 +13,7 @@ import Tooltip from '@mui/material/Tooltip'
 import MenuItem from '@mui/material/MenuItem'
 import { useState, MouseEvent, useEffect } from 'react'
 import { RootState, useAppDispatch } from '@/app/libs/redux/store'
-import { login, logout } from '@/app/libs/redux/slices/appSlice'
+import { login, logout, setUserReady } from '@/app/libs/redux/slices/appSlice'
 // import { useRouter } from 'next/navigation'
 import LoginModal from '../LoginModal'
 import LanguageSettingModal from '../LanguageSettingModal'
@@ -69,9 +69,10 @@ const  ResponsiveAppBar = () => {
           email: response.data.user.email,
           player: response.data.player
         }
-        dispatch(login(userObj))
+        dispatch(login(userObj)) // login already sets userReady = true
       }catch(err){
         console.log('Error fetching user data:', err)
+        dispatch(setUserReady()) // not logged in, but auth check is done
       }
     }
     getUser()

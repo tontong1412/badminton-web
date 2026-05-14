@@ -25,8 +25,11 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { HolidaySchedule, User, Venue } from '@/type'
+import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import { Autocomplete } from '@mui/material'
+import { HolidaySchedule, PlayerWithAccount, User, Venue } from '@/type'
 import venueService from '../../../../services/venues'
+import playerService from '../../../../services/players'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
@@ -46,6 +49,7 @@ export default function VenueSettingsPage() {
   const router = useRouter()
   const venueID = params.id as string
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
+  const userReady = useSelector((state: RootState) => state.app.userReady)
 
   const [venue, setVenue] = useState<Venue | null>(null)
   const [initLoading, setInitLoading] = useState(true)
@@ -57,6 +61,21 @@ export default function VenueSettingsPage() {
   const [address, setAddress] = useState('')
   const [generalSaving, setGeneralSaving] = useState(false)
   const [generalSuccess, setGeneralSuccess] = useState(false)
+
+  // Photos & branding state
+  const [coverImage, setCoverImage] = useState('')
+  const [logo, setLogo] = useState('')
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [coverSuccess, setCoverSuccess] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoSuccess, setLogoSuccess] = useState(false)
+
+  // Manager state
+  const [managerUserIDs, setManagerUserIDs] = useState<string[]>([])
+  const [allPlayers, setAllPlayers] = useState<PlayerWithAccount[]>([])
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithAccount | null>(null)
+  const [managerAdding, setManagerAdding] = useState(false)
+  const [managerError, setManagerError] = useState<string | null>(null)
 
   // Weekly schedule state
   const [weekDays, setWeekDays] = useState<DayScheduleState[]>(
@@ -96,6 +115,7 @@ export default function VenueSettingsPage() {
         const userID = (user as unknown as { id: string } | null)?.id
         const isOwner = v.ownerUserID === userID
         const isManager = v.managerUserIDs.includes(userID ?? '')
+        if (!userReady) return
         if (!userID || (!isOwner && !isManager)) {
           router.replace('/admin')
           return
@@ -105,6 +125,9 @@ export default function VenueSettingsPage() {
         setNameTH(v.name.th)
         setNameEN(v.name.en)
         setAddress(v.address)
+        setCoverImage(v.coverImage ?? '')
+        setLogo(v.logo ?? '')
+        setManagerUserIDs(v.managerUserIDs ?? [])
 
         // Weekly schedule
         const days: DayScheduleState[] = Array.from({ length: 7 }, (_, i) => {
@@ -133,7 +156,39 @@ export default function VenueSettingsPage() {
       }
     }
     init()
-  }, [venueID, user, router])
+  }, [venueID, user, userReady, router])
+
+  // Load players with accounts for manager search
+  useEffect(() => {
+    playerService.getWithAccount().then(setAllPlayers).catch(() => {/* non-critical */})
+  }, [])
+
+  const handleAddManager = async () => {
+    if (!selectedPlayer) return
+    setManagerAdding(true)
+    setManagerError(null)
+    try {
+      const updated = await venueService.addManager(venueID, selectedPlayer.userID)
+      setManagerUserIDs(updated.managerUserIDs)
+      setSelectedPlayer(null)
+    } catch (e) {
+      setManagerError('Failed to add manager')
+      console.error(e)
+    } finally {
+      setManagerAdding(false)
+    }
+  }
+
+  const handleRemoveManager = async (userID: string) => {
+    setManagerError(null)
+    try {
+      const updated = await venueService.removeManager(venueID, userID)
+      setManagerUserIDs(updated.managerUserIDs)
+    } catch (e) {
+      setManagerError('Failed to remove manager')
+      console.error(e)
+    }
+  }
 
   const handleSaveGeneral = async () => {
     setGeneralSaving(true)
@@ -152,6 +207,52 @@ export default function VenueSettingsPage() {
       console.error(e)
     } finally {
       setGeneralSaving(false)
+    }
+  }
+
+  const readFileAsBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+  const handleUploadCover = async (file: File) => {
+    setCoverUploading(true)
+    setCoverSuccess(false)
+    setError(null)
+    try {
+      const base64 = await readFileAsBase64(file)
+      const updated = await venueService.uploadImage(venueID, 'coverImage', base64)
+      setVenue(updated)
+      setCoverImage(updated.coverImage ?? '')
+      setCoverSuccess(true)
+      setTimeout(() => setCoverSuccess(false), 3000)
+    } catch (e) {
+      setError('Failed to upload cover photo')
+      console.error(e)
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+
+  const handleUploadLogo = async (file: File) => {
+    setLogoUploading(true)
+    setLogoSuccess(false)
+    setError(null)
+    try {
+      const base64 = await readFileAsBase64(file)
+      const updated = await venueService.uploadImage(venueID, 'logo', base64)
+      setVenue(updated)
+      setLogo(updated.logo ?? '')
+      setLogoSuccess(true)
+      setTimeout(() => setLogoSuccess(false), 3000)
+    } catch (e) {
+      setError('Failed to upload logo')
+      console.error(e)
+    } finally {
+      setLogoUploading(false)
     }
   }
 
@@ -329,6 +430,84 @@ export default function VenueSettingsPage() {
           </Box>
         </Paper>
 
+        {/* ── Photos & Branding ─────────────────────────────────────────── */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>Photos &amp; Branding</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Upload a cover photo and logo for your venue.
+          </Typography>
+
+          {/* Cover image */}
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Cover Photo</Typography>
+          {coverImage && (
+            <Box
+              component="img"
+              src={coverImage}
+              alt="Cover"
+              sx={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 1, mb: 1.5, border: '1px solid', borderColor: 'divider', display: 'block' }}
+            />
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              component="label"
+              disabled={coverUploading}
+            >
+              {coverUploading ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+              {coverImage ? 'Replace Cover Photo' : 'Upload Cover Photo'}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleUploadCover(file)
+                  e.target.value = ''
+                }}
+              />
+            </Button>
+            {coverSuccess && <Typography variant="body2" color="success.main">Uploaded!</Typography>}
+          </Box>
+
+          <Divider sx={{ my: 2.5 }} />
+
+          {/* Logo */}
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Logo</Typography>
+          {logo && (
+            <Box sx={{ mb: 1.5 }}>
+              <Box
+                component="img"
+                src={logo}
+                alt="Logo"
+                sx={{ width: 100, height: 100, objectFit: 'cover', borderRadius: '50%', border: '1px solid', borderColor: 'divider' }}
+              />
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              component="label"
+              disabled={logoUploading}
+            >
+              {logoUploading ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+              {logo ? 'Replace Logo' : 'Upload Logo'}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleUploadLogo(file)
+                  e.target.value = ''
+                }}
+              />
+            </Button>
+            {logoSuccess && <Typography variant="body2" color="success.main">Uploaded!</Typography>}
+          </Box>
+        </Paper>
+
         {/* ── Operating Hours & Slot Duration ──────────────────────────── */}
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Operating Hours</Typography>
@@ -443,6 +622,80 @@ export default function VenueSettingsPage() {
               {paymentSaving ? <CircularProgress size={18} /> : 'Save'}
             </Button>
             {paymentSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
+          </Box>
+        </Paper>
+
+        {/* ── Managers ─────────────────────────────────────────────────── */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>Managers</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Managers can access this venue&apos;s admin panel.
+          </Typography>
+
+          {managerError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setManagerError(null)}>{managerError}</Alert>}
+
+          {/* Current managers */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {managerUserIDs.length === 0 && (
+              <Typography variant="body2" color="text.secondary">No managers added yet.</Typography>
+            )}
+            {managerUserIDs.map((uid) => {
+              const player = allPlayers.find((p) => p.userID === uid)
+              const label = player
+                ? (player.displayName?.en || player.displayName?.th || player.officialName.en || player.officialName.th || player.officialName.pronunciation)
+                : uid
+              return (
+                <Chip
+                  key={uid}
+                  label={label}
+                  avatar={player?.photo ? <Box component="img" src={player.photo} sx={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /> : undefined}
+                  onDelete={() => handleRemoveManager(uid)}
+                  deleteIcon={<DeleteIcon />}
+                  variant="outlined"
+                  size="small"
+                />
+              )
+            })}
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Add manager */}
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Add Manager</Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Autocomplete
+              options={allPlayers.filter((p) => !managerUserIDs.includes(p.userID))}
+              getOptionLabel={(p) =>
+                `${p.displayName?.en || p.displayName?.th || p.officialName.en || p.officialName.th || p.officialName.pronunciation}`
+              }
+              value={selectedPlayer}
+              onChange={(_, val) => setSelectedPlayer(val)}
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="Search player" sx={{ minWidth: 260 }} />
+              )}
+              renderOption={(props, p) => (
+                <Box component="li" {...props} key={p.userID} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {p.photo && (
+                    <Box component="img" src={p.photo} sx={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  )}
+                  <Typography variant="body2">
+                    {p.displayName?.en || p.displayName?.th || p.officialName.en || p.officialName.th || p.officialName.pronunciation}
+                  </Typography>
+                </Box>
+              )}
+              isOptionEqualToValue={(a, b) => a.userID === b.userID}
+              size="small"
+              sx={{ minWidth: 260 }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={managerAdding ? <CircularProgress size={14} color="inherit" /> : <PersonAddIcon />}
+              onClick={handleAddManager}
+              disabled={!selectedPlayer || managerAdding}
+            >
+              Add
+            </Button>
           </Box>
         </Paper>
 
