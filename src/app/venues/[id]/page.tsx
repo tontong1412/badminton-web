@@ -657,45 +657,49 @@ export default function VenueCourtsPage() {
               <>
                 {searchingGuidedCourts ? (
                   <Box sx={{ py: 2 }}><CircularProgress size={24} /></Box>
-                ) : showCourtPicker ? (
-                  <>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography variant="subtitle1">
-                        {t('booking.selectCourt')}
-                      </Typography>
-                      <Button size="small" onClick={() => setShowCourtPicker(false)}>
-                        {t('action.done')}
-                      </Button>
-                    </Box>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                      {t('booking.selectedCourtsCount', {
-                        selected: guidedSelectedCourts.length,
-                        required: requestedCourtCount,
-                      })}
-                    </Typography>
-                    <CourtSelection
-                      courts={guidedAvailableCourts}
-                      selectedCourtIds={guidedSelectedCourts.map((c) => c.id)}
-                      onToggleCourt={handleToggleGuidedCourt}
-                      maxSelectable={requestedCourtCount}
-                      loading={false}
-                      error={null}
-                      slotStartTime={guidedSelectedSlot?.startTime}
-                      slotEndTime={guidedSelectedSlot?.endTime}
-                    />
-                  </>
                 ) : (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      {t('booking.selectedCourts')}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                      {guidedSelectedCourts.map((c) => (
-                        <Chip key={String(c.id)} label={c.name} color="primary" size="small" />
-                      ))}
-                      <Button size="small" variant="outlined" onClick={() => setShowCourtPicker(true)}>
-                        {t('booking.changeCourts')}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        {showCourtPicker
+                          ? `${t('booking.selectCourt')} (${guidedSelectedCourts.length}/${requestedCourtCount})`
+                          : t('booking.selectedCourts')}
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={() => setShowCourtPicker((v) => !v)}
+                        sx={{ color: '#695241', textTransform: 'none', fontWeight: 600 }}
+                      >
+                        {showCourtPicker ? t('action.done') : t('booking.changeCourts')}
                       </Button>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {(showCourtPicker ? guidedAvailableCourts : guidedSelectedCourts).map((c) => {
+                        const isSelected = guidedSelectedCourts.some((s) => s.id === c.id)
+                        const price = guidedSelectedSlot ? calcRangePrice(c, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime) : 0
+                        return (
+                          <Box
+                            key={String(c.id)}
+                            onClick={showCourtPicker ? () => handleToggleGuidedCourt(c) : undefined}
+                            sx={{
+                              px: 2, py: 1,
+                              borderRadius: 2,
+                              border: `1px solid ${isSelected ? '#80644f' : '#D4B8A0'}`,
+                              bgcolor: isSelected ? '#80644f' : '#fff',
+                              cursor: showCourtPicker ? 'pointer' : 'default',
+                              transition: 'all 0.15s',
+                              ...(showCourtPicker && { '&:hover': { borderColor: '#80644f', bgcolor: isSelected ? '#695241' : '#F5EDE4' } }),
+                            }}
+                          >
+                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? '#fff' : '#3D2200', lineHeight: 1.2 }}>
+                              {c.name}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.65rem', color: isSelected ? 'rgba(255,255,255,0.75)' : '#9c795f', mt: 0.25 }}>
+                              {fmtPrice(price)} {c.currency}
+                            </Typography>
+                          </Box>
+                        )
+                      })}
                     </Box>
                   </Box>
                 )}
