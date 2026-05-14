@@ -372,7 +372,7 @@ export default function VenuePaymentsPage() {
                         ? `on ${moment(selectedBundle.slipTimestamp).format('DD/MM/YYYY [at] HH:mm')}`
                         : ''}:
                     </Typography>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img src={selectedBundle.slip} alt="Payment slip"
                       style={{ width: '100%', maxHeight: 420, objectFit: 'contain', borderRadius: 4 }} />
                   </>

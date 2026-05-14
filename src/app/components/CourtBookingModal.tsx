@@ -17,10 +17,12 @@ import {
   CircularProgress,
   FormControlLabel,
   Checkbox,
+  Divider,
 } from '@mui/material'
 import { Court, Venue } from '@/type'
 import BookingAvailability from './BookingAvailability'
 import Transition from './ModalTransition'
+import LoginModal from './LoginModal'
 import { useTranslation } from 'react-i18next'
 import bookingsService from '../services/bookings'
 import { useAppDispatch, useAppSelector } from '../libs/redux/store'
@@ -45,7 +47,7 @@ interface CourtBookingModalProps {
     endTime: string;
   };
   bookingItems?: BookingItemInput[];
-  onBookingComplete: () => void;
+  onBookingComplete: (isGuest: boolean) => void;
 }
 
 const steps = ['Select Time', 'Enter Details', 'Confirm Booking']
@@ -74,6 +76,7 @@ export default function CourtBookingModal({
   const [loading, setLoading] = useState(false)
   const [error, setErrorState] = useState<string | null>(null)
   const [agreeTerms, setAgreeTerms] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   const isItemsPreselected = Boolean(bookingItems && bookingItems.length > 0)
   const isSlotPreselected = Boolean(preselectedSlot?.date && preselectedSlot?.startTime && preselectedSlot?.endTime)
@@ -216,7 +219,7 @@ export default function CourtBookingModal({
 
       setErrorState(null)
       setActiveStep(0)
-      onBookingComplete()
+      onBookingComplete(!currentUser?.id)
 
       // Reset form
       setSelectedDate('')
@@ -260,6 +263,7 @@ export default function CourtBookingModal({
   }, [open, preselectedSlot])
 
   return (
+    <>
     <Dialog
       open={open}
       onClose={handleClose}
@@ -324,6 +328,18 @@ export default function CourtBookingModal({
                 </Alert>
               ) : (
                 <>
+                  <Box sx={{ mb: 2, p: 1.5, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 160 }}>
+                      Have an account? Book faster without filling this in.
+                    </Typography>
+                    <Button size="small" variant="outlined" onClick={() => setLoginModalOpen(true)} sx={{ borderColor: '#80644f', color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      Sign In
+                    </Button>
+                    <Button size="small" href="/register" sx={{ color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      Sign Up
+                    </Button>
+                  </Box>
+                  <Divider sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary">or continue as guest</Typography></Divider>
                   <TextField
                     size='small'
                     fullWidth
@@ -447,5 +463,8 @@ export default function CourtBookingModal({
         )}
       </DialogActions>
     </Dialog>
+
+    <LoginModal visible={loginModalOpen} setVisible={setLoginModalOpen} />
+    </>
   )
 }

@@ -109,11 +109,27 @@ export interface PayBookingResponse {
   bookings: Booking[];
 }
 
-const payBooking = (bookingBundleID: string, payload: PayBookingPayload): Promise<PayBookingResponse> => {
+const payBooking = (bookingBundleID: string, payload: PayBookingPayload, guestEmail?: string): Promise<PayBookingResponse> => {
+  const params = guestEmail ? { guestEmail } : undefined
   const request = axios.put(`${baseUrl}/bundles/${bookingBundleID}/pay`, payload, {
-    withCredentials: true,
+    withCredentials: !guestEmail,
+    params,
   })
   return request.then((response) => response.data as PayBookingResponse)
+}
+
+export interface BundleResponse {
+  bookings: import('@/type').Booking[];
+  venue: import('@/type').Venue | null;
+  court: import('@/type').Court | null;
+}
+
+const getBundle = (bookingBundleID: string, guestEmail?: string): Promise<BundleResponse> => {
+  const params = guestEmail ? { guestEmail } : undefined
+  return axios.get(`${baseUrl}/bundles/${bookingBundleID}`, {
+    withCredentials: !guestEmail,
+    params,
+  }).then((response) => response.data as BundleResponse)
 }
 
 interface VenueBookingsParams {
@@ -144,6 +160,7 @@ const markAsPaid = (bookingID: string): Promise<{ message: string; booking: Book
 export default {
   getAll,
   getById,
+  getBundle,
   createSingle,
   createBundle,
   createRecurring,
