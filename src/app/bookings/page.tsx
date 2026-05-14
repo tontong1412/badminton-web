@@ -131,6 +131,7 @@ export default function MyBookingsPage() {
       return {
         groupKey,
         bundleID: first.bookingBundleID,
+        bookingRef: first.bookingRef,
         bookings: sortedItems,
         date: first.date,
         startTime: first.startTime,
@@ -355,9 +356,16 @@ export default function MyBookingsPage() {
                 return (
                   <Card key={group.groupKey} variant="outlined">
                     <CardContent sx={{ pb: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
-                        {venue ? (venue.name.en || venue.name.th) : '—'}
-                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.25 }}>
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          {venue ? (venue.name.en || venue.name.th) : '—'}
+                        </Typography>
+                        {group.bookingRef && (
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1, fontWeight: 700, letterSpacing: 1 }}>
+                            #{group.bookingRef}
+                          </Typography>
+                        )}
+                      </Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                         {moment(group.date).format('DD MMM YYYY')}
                       </Typography>
@@ -428,6 +436,7 @@ export default function MyBookingsPage() {
               <Table stickyHeader sx={{ minWidth: 800 }}>
                 <TableHead>
                   <TableRow>
+                    <TableCell sx={{ position: 'sticky', left: 0, top: 0, zIndex: 4, bgcolor: '#f5f5f5', fontWeight: 700 }}>Ref</TableCell>
                     <TableCell sx={{ position: 'sticky', left: 0, top: 0, zIndex: 4, bgcolor: '#f5f5f5', fontWeight: 700 }}>Venue</TableCell>
                     <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.date')}</TableCell>
                     <TableCell sx={{ bgcolor: '#f5f5f5', fontWeight: 700 }}>{t('booking.court')}</TableCell>
@@ -444,6 +453,11 @@ export default function MyBookingsPage() {
                     const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
                     return (
                       <TableRow key={group.groupKey} hover>
+                        <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: 'white' }}>
+                          {group.bookingRef ? (
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: 1 }}>#{group.bookingRef}</Typography>
+                          ) : '—'}
+                        </TableCell>
                         <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, bgcolor: 'white', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                           {venue ? (venue.name.en || venue.name.th) : '—'}
                         </TableCell>

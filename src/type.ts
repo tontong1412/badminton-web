@@ -427,6 +427,7 @@ export interface Court {
 export interface Booking {
   id: string;
   bookingBundleID?: string;
+  bookingRef?: string;
   courtID: string;
   date: string;
   startTime: string;
