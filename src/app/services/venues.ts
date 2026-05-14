@@ -48,6 +48,10 @@ const uploadImage = (id: string, type: 'coverImage' | 'logo', image: string): Pr
   return axios.post(`${baseUrl}/${id}/upload`, { type, image }, { withCredentials: true }).then((r) => r.data as Venue)
 }
 
+const setFacilities = (id: string, facilities: string[]): Promise<Venue> => {
+  return axios.put(`${baseUrl}/${id}/facilities`, { facilities }, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
 const addManager = (id: string, userID: string): Promise<Venue> => {
   return axios.post(`${baseUrl}/${id}/managers`, { userID }, { withCredentials: true }).then((r) => r.data as Venue)
 }
@@ -62,6 +66,7 @@ export default {
   getCourts,
   update,
   setSchedule,
+  setFacilities,
   addHoliday,
   removeHoliday,
   uploadImage,

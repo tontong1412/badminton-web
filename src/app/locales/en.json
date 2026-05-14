@@ -237,7 +237,7 @@
     "selectSameTimeRange": "All selected courts must cover the same time range",
     "clearSelection": "Clear",
     "selectedCourt": "Courts",
-    "modeGuided": "Normal",
+    "modeGuided": "Default",
     "modeFree": "Table",
     "uploadSlip": "Upload Payment Slip",
     "uploadSlipInstruction": "Please upload a photo of your payment slip to confirm payment.",

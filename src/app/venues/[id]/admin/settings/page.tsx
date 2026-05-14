@@ -39,6 +39,11 @@ import { RootState } from '../../../../libs/redux/store'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const FACILITY_OPTIONS = [
+  'Parking', 'Shower', 'Locker', 'Cafe / Snack Bar', 'Air Conditioning',
+  'Equipment Rental', 'CCTV', 'WiFi', 'Spectator Area', 'Wheelchair Accessible',
+]
+
 interface DayScheduleState {
   isOpen: boolean;
   open: string;
@@ -113,6 +118,11 @@ export default function VenueSettingsPage() {
   const [holidays, setHolidays] = useState<HolidaySchedule[]>([])
   const [newHolidayDate, setNewHolidayDate] = useState('')
   const [newHolidayIsClosed, setNewHolidayIsClosed] = useState(true)
+
+  // Facilities state
+  const [facilities, setFacilities] = useState<string[]>([])
+  const [facilitiesSaving, setFacilitiesSaving] = useState(false)
+  const [facilitiesSuccess, setFacilitiesSuccess] = useState(false)
   const [newHolidayOpen, setNewHolidayOpen] = useState('08:00')
   const [newHolidayClose, setNewHolidayClose] = useState('22:00')
   const [holidaySaving, setHolidaySaving] = useState(false)
@@ -156,6 +166,7 @@ export default function VenueSettingsPage() {
     setSlipokHasApiKey(v.slipok?.hasApiKey ?? false)
     setSlipokEnabled(v.slipok?.enabled ?? false)
     setHolidays(v.holidays ?? [])
+    setFacilities(v.facilities ?? [])
     setInitLoading(false)
   // Only run when SWR data first arrives; userReady/user/router guard on changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -379,6 +390,23 @@ export default function VenueSettingsPage() {
       console.error(e)
     } finally {
       setSlipokSaving(false)
+    }
+  }
+
+  const handleSaveFacilities = async() => {
+    setFacilitiesSaving(true)
+    setFacilitiesSuccess(false)
+    try {
+      const updated = await venueService.setFacilities(venueID, facilities)
+      setVenueState(updated)
+      setFacilities(updated.facilities ?? [])
+      setFacilitiesSuccess(true)
+      setTimeout(() => setFacilitiesSuccess(false), 3000)
+    } catch (e) {
+      setError('Failed to save facilities')
+      console.error(e)
+    } finally {
+      setFacilitiesSaving(false)
     }
   }
 
@@ -888,6 +916,32 @@ export default function VenueSettingsPage() {
             >
               {holidaySaving ? <CircularProgress size={18} /> : <AddIcon />}
             </IconButton>
+          </Box>
+        </Paper>
+
+        {/* ── Facilities ─────────────────────────────────────── */}
+        <Paper sx={{ p: 3, mt: 3 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Facilities</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {FACILITY_OPTIONS.map((f) => {
+              const selected = facilities.includes(f)
+              return (
+                <Chip
+                  key={f}
+                  label={f}
+                  onClick={() => setFacilities((prev) => selected ? prev.filter((x) => x !== f) : [...prev, f])}
+                  color={selected ? 'primary' : 'default'}
+                  variant={selected ? 'filled' : 'outlined'}
+                  sx={selected ? { bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' } } : {}}
+                />
+              )
+            })}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Button variant="contained" size="small" onClick={handleSaveFacilities} disabled={facilitiesSaving} sx={{ bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' } }}>
+              {facilitiesSaving ? <CircularProgress size={18} /> : 'Save'}
+            </Button>
+            {facilitiesSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
           </Box>
         </Paper>
       </Container>

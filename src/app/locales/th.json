@@ -240,7 +240,7 @@
     "selectSameTimeRange": "สนามที่เลือกทั้งหมดต้องอยู่ในช่วงเวลาเดียวกัน",
     "clearSelection": "ล้างการเลือก",
     "selectedCourt": "สนามที่เลือก",
-    "modeGuided": "Normal",
+    "modeGuided": "Default",
     "modeFree": "Table",
     "uploadSlip": "อัพโหลดสลิปโอน",
     "uploadSlipInstruction": "กรุณาอัพโหลดภาพสลิปโอนเงินเพื่อยืนยันการชำระเงิน",

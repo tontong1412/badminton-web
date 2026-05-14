@@ -542,6 +542,20 @@ export default function VenueCourtsPage() {
                   />
                 </Grid>
               )}
+
+              {/* Facilities */}
+              {venue.facilities && venue.facilities.length > 0 && (
+                <Grid item xs={12} sx={{ order: { xs: 3, md: 4 } }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+                    Facilities
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {venue.facilities.map((f) => (
+                      <Chip key={f} label={f} size="small" variant="outlined" sx={{ borderColor: '#c4a882', color: '#80644f' }} />
+                    ))}
+                  </Box>
+                </Grid>
+              )}
             </Grid>
           </Container>
         </Box>

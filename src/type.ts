@@ -404,6 +404,7 @@ export interface Venue {
   };
   coverImage?: string;
   logo?: string;
+  facilities?: string[];
 }
 
 export interface CourtPricingRule {
