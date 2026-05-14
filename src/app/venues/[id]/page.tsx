@@ -7,6 +7,7 @@ import {
   Typography,
   Box,
   Alert,
+  Avatar,
   CircularProgress,
   TextField,
   Button,
@@ -429,46 +430,45 @@ export default function VenueCourtsPage() {
         </Box>
       )}
       {venue && (
-        <Box sx={{ width: '100vw', ml: 'calc(50% - 50vw)', bgcolor: '#80644f' }}>
-          <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 100, height: 100, borderRadius: '50%',
-                  bgcolor: '#695241', border: '2px solid rgba(255,255,255,0.25)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  overflow: 'hidden',
-                }}
+        <Box sx={{ width: '100vw', ml: 'calc(50% - 50vw)', backgroundColor: '#80644f' }}>
+          <Container maxWidth="xl" sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+            <Box
+              component="section"
+              sx={{ p: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Avatar
+                src={venue.logo || '/avatar.png'}
+                alt={venue.name.en || venue.name.th}
+                sx={{ width: 200, height: 200 }}
               >
-                {venue.logo ? (
-                  <Box
-                    component="img"
-                    src={venue.logo}
-                    alt={venue.name.en || venue.name.th}
-                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <SportsTennisIcon sx={{ fontSize: 36, color: 'rgba(255,255,255,0.9)' }} />
-                )}
-              </Box>
-              <Box>
-                <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 700, letterSpacing: 2, fontSize: '0.65rem', lineHeight: 1.2 }}>
-                  VENUE
-                </Typography>
-                <Typography variant="h5" fontWeight={800} sx={{ color: '#fff', lineHeight: 1.2, mb: 0.3 }}>
-                  {venue.name.en || venue.name.th}
-                </Typography>
-                {venue.name.th && venue.name.en && (
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)', display: 'block', mb: 0.5 }}>
-                    {venue.name.th}
-                  </Typography>
-                )}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <PlaceOutlinedIcon sx={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
-                    {venue.address}
-                  </Typography>
+                <SportsTennisIcon sx={{ fontSize: 80 }} />
+              </Avatar>
+            </Box>
+            <Box
+              component="section"
+              sx={{ p: 2, width: '100%', display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', md: 'flex-start' }, justifyContent: 'center' }}
+            >
+              <div className="text-gray-200">
+                <h1 className="text-2xl">{venue.name.en || venue.name.th}</h1>
+                <Box sx={{ pt: 1 }}>
+                  {venue.name.th && venue.name.en && (
+                    <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.9rem' }}>{venue.name.th}</Typography>
+                  )}
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                    <PlaceOutlinedIcon sx={{ fontSize: 18 }} />
+                    <Typography>{venue.address}</Typography>
+                  </Box>
                 </Box>
+              </div>
+              <Box sx={{ pt: 3 }}>
+                <Button
+                  href="#booking"
+                  variant="contained"
+                  size="large"
+                  sx={{ borderRadius: 5, backgroundColor: '#ff7961' }}
+                >
+                  Book a Court
+                </Button>
               </Box>
             </Box>
           </Container>
@@ -547,7 +547,7 @@ export default function VenueCourtsPage() {
         </Box>
       )}
 
-      <Box sx={{ bgcolor: '#fff', minHeight: '60vh' }}>
+      <Box id="booking" sx={{ bgcolor: '#fff', minHeight: '60vh' }}>
         <Container maxWidth="lg" sx={{ pt: 3, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
