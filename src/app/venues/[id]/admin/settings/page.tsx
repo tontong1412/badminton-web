@@ -103,6 +103,7 @@ export default function VenueSettingsPage() {
   const [slipokBranchId, setSlipokBranchId] = useState('')
   const [slipokApiKey, setSlipokApiKey] = useState('')
   const [slipokHasApiKey, setSlipokHasApiKey] = useState(false)
+  const [slipokEnabled, setSlipokEnabled] = useState(false)
   const [slipokSaving, setSlipokSaving] = useState(false)
   const [slipokSuccess, setSlipokSuccess] = useState(false)
   const [slipokError, setSlipokError] = useState<string | null>(null)
@@ -157,6 +158,7 @@ export default function VenueSettingsPage() {
 
         setSlipokBranchId(v.slipok?.branchId ?? '')
         setSlipokHasApiKey(v.slipok?.hasApiKey ?? false)
+        setSlipokEnabled(v.slipok?.enabled ?? false)
 
         setHolidays(v.holidays ?? [])
       } catch (e) {
@@ -366,12 +368,15 @@ export default function VenueSettingsPage() {
     setSlipokSuccess(false)
     setSlipokError(null)
     try {
-      const slipokPayload: { branchId?: string; apiKey?: string } = {}
+      const isAdmin = user?.role === 'admin'
+      const slipokPayload: { branchId?: string; apiKey?: string; enabled?: boolean } = {}
       if (slipokBranchId) slipokPayload.branchId = slipokBranchId
       if (slipokApiKey) slipokPayload.apiKey = slipokApiKey
+      if (isAdmin) slipokPayload.enabled = slipokEnabled
       const updated = await venueService.update(venueID, { slipok: slipokPayload } as Partial<Venue>)
       setVenue(updated)
       setSlipokHasApiKey(updated.slipok?.hasApiKey ?? false)
+      setSlipokEnabled(updated.slipok?.enabled ?? false)
       setSlipokApiKey('')
       setSlipokSuccess(true)
       setTimeout(() => setSlipokSuccess(false), 3000)
@@ -668,6 +673,24 @@ export default function VenueSettingsPage() {
           </Typography>
 
           {slipokError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSlipokError(null)}>{slipokError}</Alert>}
+
+          {user?.role === 'admin' && (
+            <Box sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={slipokEnabled}
+                    onChange={(e) => setSlipokEnabled(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Enable SlipOK verification"
+              />
+              <Typography variant="caption" color="text.secondary" display="block">
+                Only system admins can enable or disable SlipOK verification.
+              </Typography>
+            </Box>
+          )}
 
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             <TextField

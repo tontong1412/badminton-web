@@ -55,6 +55,7 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
       const savedLoginData = {
         id: loginData.user.id,
         email: loginData.user.email,
+        role: loginData.user.role,
         player: loginData.player,
       }
       dispatch(login(savedLoginData))

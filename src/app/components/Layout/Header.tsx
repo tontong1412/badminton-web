@@ -67,6 +67,7 @@ const  ResponsiveAppBar = () => {
         const userObj = {
           id: response.data.user.id,
           email: response.data.user.email,
+          role: response.data.user.role,
           player: response.data.player
         }
         dispatch(login(userObj)) // login already sets userReady = true

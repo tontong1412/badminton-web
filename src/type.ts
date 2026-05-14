@@ -60,6 +60,7 @@ export interface PlayerWithAccount extends Player {
 export interface User {
   id: string;
   email: string;
+  role?: string;
   player: {
     id: string;
     officialName: {
@@ -399,6 +400,7 @@ export interface Venue {
   slipok?: {
     branchId?: string;
     hasApiKey?: boolean;
+    enabled?: boolean;
   };
   coverImage?: string;
   logo?: string;
