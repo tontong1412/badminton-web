@@ -38,6 +38,7 @@ import { setBookings, removeBooking, setError as setBookingError } from '../libs
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 import Layout from '../components/Layout'
+import axios from 'axios'
 
 const EXPIRY_MINUTES = 10
 
@@ -100,6 +101,7 @@ export default function MyBookingsPage() {
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
   const [slipNote, setSlipNote] = useState('')
   const [paySubmitting, setPaySubmitting] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
 
   const groupedBookings = useMemo(() => {
@@ -251,6 +253,7 @@ export default function MyBookingsPage() {
     setSlipFile(null)
     setSlipPreview(null)
     setSlipNote('')
+    setPayError(null)
     setPayDialogOpen(true)
   }
 
@@ -270,6 +273,7 @@ export default function MyBookingsPage() {
     if (!payTargetBundleID || !slipPreview) return
     try {
       setPaySubmitting(true)
+      setPayError(null)
       await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
       setBookingsState((prev) => {
         const updated = prev.map((booking) =>
@@ -282,8 +286,12 @@ export default function MyBookingsPage() {
       })
       setPayDialogOpen(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to pay booking'
-      setError(message)
+      if (axios.isAxiosError(err)) {
+        const msg = (err.response?.data as { message?: string } | undefined)?.message
+        setPayError(msg ?? 'Failed to verify payment slip. Please try again.')
+      } else {
+        setPayError(err instanceof Error ? err.message : 'Failed to pay booking')
+      }
     } finally {
       setPaySubmitting(false)
       setPayingBundleID(null)
@@ -651,6 +659,9 @@ export default function MyBookingsPage() {
                 onChange={handleSlipFileChange}
               />
             </Button>
+            {payError && (
+              <Alert severity="error" sx={{ mb: 2 }}>{payError}</Alert>
+            )}
             {slipPreview && (
               <img
                 src={slipPreview}
