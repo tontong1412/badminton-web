@@ -46,7 +46,10 @@ interface BundleGroup {
   slip?: string;
   slipTimestamp?: string;
   bookerName: string;
-  bookerContact: string;
+  bookerPhone: string;
+  bookerEmail: string;
+  bookerType: string;
+  note: string;
 }
 
 export default function VenuePaymentsPage() {
@@ -148,8 +151,11 @@ export default function VenuePaymentsPage() {
         paymentStatus: first.paymentStatus,
         slip: first.slip,
         slipTimestamp: first.slipTimestamp,
-        bookerName: String(first.guestName || first.userID || 'Unknown'),
-        bookerContact: first.guestPhone || first.guestEmail || '',
+        bookerName: first.bookerName || first.guestName || first.userID || 'Unknown',
+        bookerPhone: first.bookerPhone || first.guestPhone || '',
+        bookerEmail: first.guestEmail || '',
+        bookerType: first.bookerType || 'guest',
+        note: first.note || '',
       }
     }).filter((g) => Boolean(g.slip)).sort((a, b) =>
       moment(b.slipTimestamp || b.date).valueOf() - moment(a.slipTimestamp || a.date).valueOf()
@@ -251,9 +257,15 @@ export default function VenuePaymentsPage() {
                       <TableCell>{moment(group.date).format('DD/MM/YYYY')}</TableCell>
                       <TableCell>{group.startTime} – {group.endTime}</TableCell>
                       <TableCell>
-                        <Typography variant="body2">{group.bookerName}</Typography>
-                        {group.bookerContact && (
-                          <Typography variant="caption" color="text.secondary">{group.bookerContact}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{group.bookerName}</Typography>
+                        {group.bookerPhone && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{group.bookerPhone}</Typography>
+                        )}
+                        {group.bookerEmail && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{group.bookerEmail}</Typography>
+                        )}
+                        {group.bookerType === 'user' && (
+                          <Typography variant="caption" color="primary" sx={{ display: 'block' }}>Registered user</Typography>
                         )}
                       </TableCell>
                       <TableCell>{group.totalPrice.toFixed(2)} {group.currency}</TableCell>
@@ -295,14 +307,23 @@ export default function VenuePaymentsPage() {
                     {tab === 'paid' && <Chip size="small" label="Approved" color="success" />}
                   </Box>
 
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mt: 1 }}>
                     <Box>
-                      <Typography variant="body2">{group.bookerName}</Typography>
-                      {group.bookerContact && (
-                        <Typography variant="caption" color="text.secondary">{group.bookerContact}</Typography>
+                      <Typography variant="body2" fontWeight={600}>{group.bookerName}</Typography>
+                      {group.bookerPhone && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>📞 {group.bookerPhone}</Typography>
+                      )}
+                      {group.bookerEmail && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>✉️ {group.bookerEmail}</Typography>
+                      )}
+                      {group.bookerType === 'user' && (
+                        <Typography variant="caption" color="primary" sx={{ display: 'block' }}>Registered user</Typography>
+                      )}
+                      {group.note && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>Note: {group.note}</Typography>
                       )}
                     </Box>
-                    <Typography variant="subtitle2" fontWeight={700}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ flexShrink: 0, ml: 1 }}>
                       {group.totalPrice.toFixed(2)} {group.currency}
                     </Typography>
                   </Box>
