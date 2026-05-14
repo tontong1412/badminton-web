@@ -640,7 +640,11 @@ export default function VenueCourtsPage() {
               {loadingGuided ? (
                 <Box sx={{ py: 2 }}><CircularProgress size={24} /></Box>
               ) : filteredGuidedSlots.length === 0 ? (
-                <Alert severity="info" sx={{ mb: 2 }}>{t('booking.noSlotsAvailable')}</Alert>
+                <Box sx={{ mb: 2, p: 2, bgcolor: '#f5efe8', border: '1px solid #e8d8c8', borderRadius: 1.5 }}>
+                  <Typography variant="body2" sx={{ color: '#80644f', fontWeight: 600 }}>
+                    {t('booking.noSlotsAvailable')}
+                  </Typography>
+                </Box>
               ) : (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
                   {filteredGuidedSlots.map((slot) => {

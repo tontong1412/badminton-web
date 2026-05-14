@@ -50,7 +50,7 @@ interface CourtBookingModalProps {
   onBookingComplete: (isGuest: boolean) => void;
 }
 
-const steps = ['Select Time', 'Enter Details', 'Confirm Booking']
+const steps = ['Enter Details', 'Confirm Booking']
 
 export default function CourtBookingModal({
   open,
@@ -72,6 +72,7 @@ export default function CourtBookingModal({
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
+  const [userPhone, setUserPhone] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setErrorState] = useState<string | null>(null)
@@ -145,20 +146,13 @@ export default function CourtBookingModal({
 
   const handleNext = () => {
     if (activeStep === 0) {
-      if (!isPreselected && (!selectedDate || !startTime || !endTime)) {
-        setErrorState(t('booking.selectTimeSlotFirst'))
-        return
-      }
-
-      if (!isItemsPreselected) {
-        const bookingStartAt = moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
-        if (bookingStartAt.isSameOrBefore(moment())) {
-          setErrorState(t('booking.pastTimeNotAllowed'))
+      if (currentUser) {
+        const profilePhone = currentUser.player.contact?.tel
+        if (!profilePhone && !userPhone) {
+          setErrorState('Please enter your phone number so the venue can contact you.')
           return
         }
-      }
-    } else if (activeStep === 1) {
-      if (!currentUser && (!guestName || !guestPhone)) {
+      } else if (!guestName || !guestPhone) {
         setErrorState(t('booking.fillRequiredFields'))
         return
       }
@@ -206,6 +200,9 @@ export default function CourtBookingModal({
           guestPhone,
           guestEmail,
         }),
+        ...(currentUser?.id && (userPhone || currentUser.player.contact?.tel) && {
+          guestPhone: userPhone || currentUser.player.contact?.tel,
+        }),
         ...(note && { note }),
       })
 
@@ -228,6 +225,7 @@ export default function CourtBookingModal({
       setGuestName('')
       setGuestPhone('')
       setGuestEmail('')
+      setUserPhone('')
       setNote('')
       setAgreeTerms(false)
     } catch (err) {
@@ -248,6 +246,7 @@ export default function CourtBookingModal({
     setGuestName('')
     setGuestPhone('')
     setGuestEmail('')
+    setUserPhone('')
     setNote('')
     setAgreeTerms(false)
     setErrorState(null)
@@ -277,7 +276,7 @@ export default function CourtBookingModal({
           <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
             {steps.map((label) => (
               <Step key={label}>
-                <StepLabel>{t(`booking.step${steps.indexOf(label) + 1}`)}</StepLabel>
+                <StepLabel>{label}</StepLabel>
               </Step>
             ))}
           </Stepper>
@@ -290,42 +289,34 @@ export default function CourtBookingModal({
 
           {activeStep === 0 && (
             <Box>
-              <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                {t('booking.courts')}: {courts.map((court) => court.name).join(', ')}
-              </Typography>
-              <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                {t('booking.venue')}: {venue.name.en || venue.name.th}
-              </Typography>
-              {isItemsPreselected && bookingItems ? (
-                <Box>
-                  {bookingItems.map((item) => {
-                    const court = courts.find((c) => c.id === item.courtID)
-                    return (
-                      <Typography key={`${item.courtID}-${item.startTime}`} variant="body2" sx={{ mb: 0.5 }}>
-                        {court?.name ?? item.courtID}: {item.date} {item.startTime} – {item.endTime}
-                      </Typography>
-                    )
-                  })}
-                </Box>
-              ) : isSlotPreselected ? (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  {t('booking.selectedTimeSlot')}: {selectedDate} {startTime} - {endTime}
-                </Alert>
-              ) : (
-                <BookingAvailability
-                  court={courts[0]}
-                  onSlotSelected={handleSlotSelected}
-                />
-              )}
-            </Box>
-          )}
-
-          {activeStep === 1 && (
-            <Box>
               {currentUser ? (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  {t('booking.bookingAs')}: {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.email}
-                </Alert>
+                <Box sx={{ mb: 2, p: 2, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#80644f' }}>
+                    Booking as
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Name:</strong> {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.player.officialName.th || '—'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Email:</strong> {currentUser.email}
+                  </Typography>
+                  {currentUser.player.contact?.tel ? (
+                    <Typography variant="body2">
+                      <strong>Phone:</strong> {currentUser.player.contact.tel}
+                    </Typography>
+                  ) : (
+                    <TextField
+                      size="small"
+                      fullWidth
+                      label="Phone number"
+                      value={userPhone}
+                      onChange={(e) => setUserPhone(e.target.value)}
+                      sx={{ mt: 1.5 }}
+                      required
+                      helperText="Required so the venue can contact you"
+                    />
+                  )}
+                </Box>
               ) : (
                 <>
                   <Box sx={{ mb: 2, p: 1.5, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -382,7 +373,7 @@ export default function CourtBookingModal({
             </Box>
           )}
 
-          {activeStep === 2 && (
+          {activeStep === 1 && (
             <Box>
               <Typography variant="h6" sx={{ mb: 2 }}>
                 {t('booking.bookingSummary')}
