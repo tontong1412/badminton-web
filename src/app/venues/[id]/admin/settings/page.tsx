@@ -665,24 +665,39 @@ export default function VenueSettingsPage() {
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <Autocomplete
               options={allPlayers.filter((p) => !managerUserIDs.includes(p.userID))}
-              getOptionLabel={(p) =>
-                `${p.displayName?.en || p.displayName?.th || p.officialName.en || p.officialName.th || p.officialName.pronunciation}`
-              }
               value={selectedPlayer}
               onChange={(_, val) => setSelectedPlayer(val)}
+              filterOptions={(options, { inputValue }) =>
+                inputValue.length < 3 ? [] : options.filter((p) => {
+                  const q = inputValue.toLowerCase()
+                  return (
+                    p.officialName.en?.toLowerCase().includes(q) ||
+                    p.officialName.th?.toLowerCase().includes(q) ||
+                    p.officialName.pronunciation?.toLowerCase().includes(q) ||
+                    p.displayName?.en?.toLowerCase().includes(q) ||
+                    p.displayName?.th?.toLowerCase().includes(q)
+                  )
+                })
+              }
+              noOptionsText={allPlayers.length === 0 ? 'Loading...' : 'Type at least 3 characters'}
               renderInput={(params) => (
                 <TextField {...params} size="small" label="Search player" sx={{ minWidth: 260 }} />
               )}
-              renderOption={(props, p) => (
-                <Box component="li" {...props} key={p.userID} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {p.photo && (
-                    <Box component="img" src={p.photo} sx={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  )}
-                  <Typography variant="body2">
-                    {p.displayName?.en || p.displayName?.th || p.officialName.en || p.officialName.th || p.officialName.pronunciation}
-                  </Typography>
-                </Box>
-              )}
+              renderOption={({ key, ...props }, p) => {
+                const displayName = p.displayName?.en || p.displayName?.th
+                const officialName = p.officialName.en || p.officialName.th || p.officialName.pronunciation
+                return (
+                  <Box component="li" key={p.userID} {...props} sx={{ flexDirection: 'column', alignItems: 'flex-start !important' }}>
+                    <Typography variant="body2" fontWeight={600}>{displayName || officialName}</Typography>
+                    {displayName && (
+                      <Typography variant="caption" color="text.secondary">{officialName}</Typography>
+                    )}
+                  </Box>
+                )
+              }}
+              getOptionLabel={(p) =>
+                p.displayName?.en || p.displayName?.th || p.officialName.en || p.officialName.th || p.officialName.pronunciation
+              }
               isOptionEqualToValue={(a, b) => a.userID === b.userID}
               size="small"
               sx={{ minWidth: 260 }}
