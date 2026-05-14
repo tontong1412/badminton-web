@@ -39,7 +39,7 @@ const pages: Page[] = [
   },
   {
     name: 'Court Booking',
-    action: '/court-booking'
+    action: '/venues'
   }
 ]
 const settings: string[] = [

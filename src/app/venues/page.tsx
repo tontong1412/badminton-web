@@ -190,7 +190,7 @@ export default function VenuesPage() {
                         </Box>
 
                         {/* CTA */}
-                        <Link href={`/court-booking/${venue.id}`} style={{ textDecoration: 'none', marginTop: 'auto' }}>
+                        <Link href={`/venues/${venue.id}`} style={{ textDecoration: 'none', marginTop: 'auto' }}>
                           <Button
                             fullWidth
                             endIcon={<ArrowForwardIcon sx={{ fontSize: '16px !important' }} />}
