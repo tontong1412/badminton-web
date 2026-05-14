@@ -27,8 +27,8 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
 import { BookingAvailability, Court, CourtPricingRule, Venue } from '@/type'
-import venueService from '../../services/venues'
 import courtsService from '../../services/courts'
+import { useVenue, useCourts } from '../../libs/data'
 import CourtSelection from '../../components/CourtSelection'
 import CourtBookingModal from '../../components/CourtBookingModal'
 import CourtAvailabilityTable from '../../components/CourtAvailabilityTable'
@@ -153,33 +153,22 @@ export default function VenueCourtsPage() {
     return { valid: true, error: null }
   })()
 
+  const { venue: swrVenue, isLoading: venueLoading, isError: venueError } = useVenue(venueId)
+  const { courts: allCourts, isLoading: courtsLoading, isError: courtsError } = useCourts()
+
+  // Sync SWR data into local state (other code reads these variables)
   useEffect(() => {
-    const loadData = async() => {
-      try {
-        setLoading(true)
-        const [venueData, allCourts] = await Promise.all([
-          venueService.getById(venueId),
-          courtsService.getAll(),
-        ])
-
-        setVenue(venueData)
-        // Filter courts for this venue
-        const venueCourts = allCourts.filter((c) => c.venueID === venueId)
-        setCourts(venueCourts)
-        setError(null)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load venue or courts'
-        setError(message)
-        console.error('Error loading data:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (venueId) {
-      loadData()
-    }
-  }, [venueId])
+    if (swrVenue) setVenue(swrVenue)
+  }, [swrVenue])
+  useEffect(() => {
+    if (allCourts.length > 0) setCourts(allCourts.filter((c) => c.venueID === venueId))
+  }, [allCourts, venueId])
+  useEffect(() => {
+    setLoading(venueLoading || courtsLoading)
+  }, [venueLoading, courtsLoading])
+  useEffect(() => {
+    if (venueError || courtsError) setError('Failed to load venue or courts')
+  }, [venueError, courtsError])
 
   const router = useRouter()
 

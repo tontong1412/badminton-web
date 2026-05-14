@@ -27,7 +27,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Booking, Court, User, Venue } from '@/type'
 import bookingsService from '../../../../services/bookings'
 import courtsService from '../../../../services/courts'
-import venueService from '../../../../services/venues'
+import { useVenue, useVenueBookings } from '../../../../libs/data'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
@@ -59,71 +59,52 @@ export default function VenuePaymentsPage() {
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
   const userReady = useSelector((state: RootState) => state.app.userReady)
 
-  const [venue, setVenue] = useState<Venue | null>(null)
-  const [bookings, setBookings] = useState<Booking[]>([])
   const [courtDetails, setCourtDetails] = useState<Record<string, Court>>({})
   const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
-  const [loading, setLoading] = useState(true)
-  const [initLoading, setInitLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<'pending' | 'paid'>('pending')
   const [slipDialogOpen, setSlipDialogOpen] = useState(false)
   const [selectedBundle, setSelectedBundle] = useState<BundleGroup | null>(null)
   const [approving, setApproving] = useState(false)
 
+  const { venue, isLoading: initLoading, isError: venueError } = useVenue(venueID)
+  const { bookings, isLoading: loading, isError: bookingsError, mutate: mutateBookings } = useVenueBookings({ venueID, paymentStatus: tab })
+
+  const error = venueError || bookingsError ? 'Failed to load data' : null
+
+  // Auth / access guard
   useEffect(() => {
-    if (!userReady) return
+    if (!userReady || !venue) return
     const userID = (user as unknown as { id: string } | null)?.id
-    venueService.getById(venueID)
-      .then((v) => {
-        const isOwner = v.ownerUserID === userID
-        const isManager = v.managerUserIDs.includes(userID ?? '')
-        if (!userID || (!isOwner && !isManager)) {
-          router.replace('/admin')
-          return
-        }
-        setVenue(v)
-      })
-      .catch((e) => { setError('Failed to load venue'); console.error(e) })
-      .finally(() => setInitLoading(false))
-  }, [venueID, user, userReady, router])
+    const isOwner = venue.ownerUserID === userID
+    const isManager = venue.managerUserIDs.includes(userID ?? '')
+    if (!userID || (!isOwner && !isManager)) router.replace('/admin')
+  }, [venue, user, userReady, router])
 
-  const loadBookings = async(status: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await bookingsService.getVenueBookings({ paymentStatus: status, venueID })
-      setBookings(data)
-
-      const courtIds = [...new Set(data.map((b) => b.courtID))]
-      const courts: Record<string, Court> = {}
-      const venues: Record<string, Venue> = {}
-
+  // Load court/venue details whenever bookings change
+  useEffect(() => {
+    if (bookings.length === 0) return
+    const load = async() => {
+      const courtIds = [...new Set(bookings.map((b) => b.courtID))]
+      const courts: Record<string, Court> = { ...courtDetails }
+      const venues: Record<string, Venue> = { ...venueDetails }
       for (const courtId of courtIds) {
+        if (courts[courtId]) continue
         try {
           const court = await courtsService.getById(courtId)
           courts[courtId] = court
           if (!venues[court.venueID]) {
-            const v = await venueService.getById(court.venueID)
-            venues[court.venueID] = v
+            venues[court.venueID] = venue!
           }
         } catch (err) {
           console.error(`Failed to load court ${courtId}:`, err)
         }
       }
-
       setCourtDetails(courts)
       setVenueDetails(venues)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load bookings')
-    } finally {
-      setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    loadBookings(tab)
-  }, [tab, venueID])
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings])
 
   const groupedBundles = useMemo<BundleGroup[]>(() => {
     const map = new Map<string, Booking[]>()
@@ -168,9 +149,9 @@ export default function VenuePaymentsPage() {
       setApproving(true)
       await bookingsService.approvePayment(selectedBundle.bundleID)
       setSlipDialogOpen(false)
-      await loadBookings(tab)
+      mutateBookings()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve payment')
+      console.error(err)
     } finally {
       setApproving(false)
     }

@@ -29,12 +29,13 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { Booking, Court, PaymentStatus, Venue } from '@/type'
+import { Booking, Court, Venue } from '@/type'
 import bookingsService from '../services/bookings'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
+import { useMyBookings } from '../libs/data'
 import { useAppDispatch } from '../libs/redux/store'
-import { setBookings, removeBooking, setError as setBookingError } from '../libs/redux/slices/bookingSlice'
+import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 import Layout from '../components/Layout'
@@ -82,10 +83,9 @@ export default function MyBookingsPage() {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
 
-  const [bookings, setBookingsState] = useState<Booking[]>([])
+  const { bookings, isLoading: loading, mutate: mutateBookings } = useMyBookings()
   const [courtDetails, setCourtDetails] = useState<Record<string, Court>>({})
   const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
@@ -171,48 +171,32 @@ export default function MyBookingsPage() {
   )
   const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeTab === 'past' ? pastBookings : activeBookings
 
+  // Sync bookings into redux + load court/venue details whenever SWR data changes
   useEffect(() => {
-    const loadBookings = async() => {
-      try {
-        setLoading(true)
-        const data = await bookingsService.getAll()
-        console.log(data)
-        setBookingsState(data)
-        dispatch(setBookings(data))
-
-        // Load court details for all bookings
-        const courtIds = [...new Set(data.map((b) => b.courtID))]
-        const courts: Record<string, Court> = {}
-        const venues: Record<string, Venue> = {}
-
-        for (const courtId of courtIds) {
-          try {
-            const court = await courtsService.getById(courtId)
-            courts[courtId] = court
-            if (!venues[court.venueID]) {
-              const venue = await venueService.getById(court.venueID)
-              venues[court.venueID] = venue
-            }
-          } catch (err) {
-            console.error(`Failed to load court ${courtId}:`, err)
+    if (!bookings.length) return
+    dispatch(setBookings(bookings))
+    const load = async() => {
+      const courtIds = [...new Set(bookings.map((b) => b.courtID))]
+      const courts: Record<string, Court> = {}
+      const venues: Record<string, Venue> = {}
+      for (const courtId of courtIds) {
+        try {
+          const court = await courtsService.getById(courtId)
+          courts[courtId] = court
+          if (!venues[court.venueID]) {
+            const venue = await venueService.getById(court.venueID)
+            venues[court.venueID] = venue
           }
+        } catch (err) {
+          console.error(`Failed to load court ${courtId}:`, err)
         }
-
-        setCourtDetails(courts)
-        setVenueDetails(venues)
-        setError(null)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load bookings'
-        setError(message)
-        dispatch(setBookingError(message))
-        console.error('Error loading bookings:', err)
-      } finally {
-        setLoading(false)
       }
+      setCourtDetails(courts)
+      setVenueDetails(venues)
     }
-
-    loadBookings()
-  }, [dispatch])
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings])
 
   const handleCancelClick = (bookingIds: string[]) => {
     setSelectedBookingIds(bookingIds)
@@ -226,7 +210,7 @@ export default function MyBookingsPage() {
       setCancelling(true)
       await Promise.all(selectedBookingIds.map((bookingId) => bookingsService.cancel(bookingId)))
 
-      setBookingsState((prev) => prev.filter((booking) => !selectedBookingIds.includes(booking.id)))
+      mutateBookings()
       selectedBookingIds.forEach((bookingId) => dispatch(removeBooking(bookingId)))
 
       setCancelDialogOpen(false)
@@ -275,16 +259,8 @@ export default function MyBookingsPage() {
       setPaySubmitting(true)
       setPayError(null)
       await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
-      setBookingsState((prev) => {
-        const updated = prev.map((booking) =>
-          payTargetBookingIds.includes(booking.id)
-            ? { ...booking, paymentStatus: PaymentStatus.Pending }
-            : booking
-        )
-        dispatch(setBookings(updated))
-        return updated
-      })
       setPayDialogOpen(false)
+      mutateBookings()
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const msg = (err.response?.data as { message?: string } | undefined)?.message

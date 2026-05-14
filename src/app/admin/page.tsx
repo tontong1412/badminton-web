@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import {
   Container,
   Typography,
@@ -15,7 +15,7 @@ import {
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import PaymentIcon from '@mui/icons-material/Payment'
 import { Venue, User } from '@/type'
-import venueService from '../services/venues'
+import { useVenues } from '../libs/data'
 import { useSelector } from 'react-redux'
 import { RootState } from '../libs/redux/store'
 import { useRouter } from 'next/navigation'
@@ -24,28 +24,18 @@ import Layout from '../components/Layout/index'
 export default function AdminHubPage() {
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
   const router = useRouter()
-  const [venues, setVenues] = useState<Venue[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { venues: allVenues, isLoading: loading, isError } = useVenues()
+  const error = isError ? 'Failed to load venues' : null
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/')
-      return
-    }
-    const load = async() => {
-      try {
-        const all = await venueService.getAll()
-        setVenues(all.filter((v) => v.ownerUserID === (user as unknown as { id: string }).id))
-      } catch (e) {
-        setError('Failed to load venues')
-        console.error(e)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [user, router])
+  const venues = useMemo(() => {
+    const userID = (user as unknown as { id: string } | null)?.id
+    return allVenues.filter((v) => v.ownerUserID === userID)
+  }, [allVenues, user])
+
+  if (!user) {
+    router.push('/')
+    return null
+  }
 
   return (
     <Layout>

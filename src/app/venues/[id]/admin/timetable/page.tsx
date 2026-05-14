@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Container,
   Typography,
@@ -31,7 +31,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SelectAllIcon from '@mui/icons-material/SelectAll'
 import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
 import bookingsService, { BookingBundleItem } from '../../../../services/bookings'
-import venueService from '../../../../services/venues'
+import { useVenue, useCourts, useVenueBookings } from '../../../../libs/data'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
@@ -138,13 +138,25 @@ export default function VenueTimetablePage() {
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
   const userReady = useSelector((state: RootState) => state.app.userReady)
 
-  const [venue, setVenue] = useState<Venue | null>(null)
-  const [courts, setCourts] = useState<Court[]>([])
   const [date, setDate] = useState<string>(moment().format('YYYY-MM-DD'))
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(false)
-  const [initLoading, setInitLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const { venue, isLoading: initLoading } = useVenue(venueID)
+  const { courts: allCourts } = useCourts()
+  const courts = useMemo(
+    () => allCourts.filter((c) => c.venueID === venueID && c.status === 'active'),
+    [allCourts, venueID]
+  )
+  const { bookings, isLoading: loading, mutate: mutateBookings } = useVenueBookings({ venueID, date })
+
+  // Auth / access guard
+  useEffect(() => {
+    if (!userReady || !venue) return
+    const userID = (user as unknown as { id: string } | null)?.id
+    const isOwner = venue.ownerUserID === userID
+    const isManager = venue.managerUserIDs.includes(userID ?? '')
+    if (!userID || (!isOwner && !isManager)) router.replace('/admin')
+  }, [venue, user, userReady, router])
 
   // Single-cell booking state
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
@@ -172,49 +184,6 @@ export default function VenueTimetablePage() {
   const [cancelling, setCancelling] = useState(false)
   const [approving, setApproving] = useState(false)
 
-  useEffect(() => {
-    const init = async() => {
-      try {
-        const [v, allCourts] = await Promise.all([
-          venueService.getById(venueID),
-          venueService.getCourts(),
-        ])
-        const userID = (user as unknown as { id: string } | null)?.id
-        const isOwner = v.ownerUserID === userID
-        const isManager = v.managerUserIDs.includes(userID ?? '')
-        if (!userReady) return
-        if (!userID || (!isOwner && !isManager)) {
-          router.replace('/admin')
-          return
-        }
-        setVenue(v)
-        setCourts(allCourts.filter((c) => c.venueID === venueID && c.status === 'active'))
-      } catch (e) {
-        setError('Failed to load venue')
-        console.error(e)
-      } finally {
-        setInitLoading(false)
-      }
-    }
-    init()
-  }, [venueID, user, userReady, router])
-
-  const refreshBookings = useCallback(async() => {
-    if (!date) return
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await bookingsService.getVenueBookings({ date, venueID })
-      setBookings(data)
-    } catch (e) {
-      setError('Failed to load bookings')
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [date, venueID])
-
-  useEffect(() => { refreshBookings() }, [refreshBookings])
   useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
@@ -326,7 +295,7 @@ export default function VenueTimetablePage() {
         bookedAsAdmin: true,
       })
       setBookDialog(null)
-      await refreshBookings()
+      mutateBookings()
     } catch (e) {
       setBookError('Failed to create booking')
       console.error(e)
@@ -350,7 +319,7 @@ export default function VenueTimetablePage() {
       })
       setMultiBookDialog(false)
       setSelectedCells(new Set())
-      await refreshBookings()
+      mutateBookings()
     } catch (e) {
       setBookError('Failed to create bookings')
       console.error(e)
@@ -365,7 +334,7 @@ export default function VenueTimetablePage() {
       setApproving(true)
       await bookingsService.approvePayment(detailBooking.bookingBundleID)
       setDetailBooking(null)
-      await refreshBookings()
+      mutateBookings()
     } catch (e) {
       setError('Failed to approve payment')
       console.error(e)
@@ -380,7 +349,7 @@ export default function VenueTimetablePage() {
       setApproving(true)
       await bookingsService.markAsPaid(detailBooking.id)
       setDetailBooking(null)
-      await refreshBookings()
+      mutateBookings()
     } catch (e) {
       setError('Failed to mark as paid')
       console.error(e)
@@ -396,7 +365,7 @@ export default function VenueTimetablePage() {
       await bookingsService.cancel(detailBooking.id)
       setCancelConfirm(false)
       setDetailBooking(null)
-      await refreshBookings()
+      mutateBookings()
     } catch (e) {
       setError('Failed to cancel booking')
       console.error(e)

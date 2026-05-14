@@ -18,9 +18,7 @@ import {
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
-import bookingsService from '../../../../services/bookings'
-import courtsService from '../../../../services/courts'
-import venueService from '../../../../services/venues'
+import { useVenue, useCourts, useVenueBookings } from '../../../../libs/data'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
@@ -58,42 +56,26 @@ export default function VenueDashboardPage() {
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
   const userReady = useSelector((state: RootState) => state.app.userReady)
 
-  const [venue, setVenue] = useState<Venue | null>(null)
-  const [courts, setCourts] = useState<Court[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [initLoading, setInitLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [range, setRange] = useState<DateRange>('30d')
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const [v, allCourts] = await Promise.all([
-          venueService.getById(venueID),
-          courtsService.getAll(),
-        ])
-        const userID = (user as unknown as { id: string } | null)?.id
-        const isOwner = v.ownerUserID === userID
-        const isManager = v.managerUserIDs.includes(userID ?? '')
-        if (!userReady) return
-        if (!userID || (!isOwner && !isManager)) {
-          router.replace('/admin')
-          return
-        }
-        setVenue(v)
-        setCourts(allCourts.filter((c) => c.venueID === venueID))
+  const { venue, isLoading: venueLoading, isError: venueError } = useVenue(venueID)
+  const { courts: allCourts, isLoading: courtsLoading } = useCourts()
+  const { bookings, isLoading: bookingsLoading, isError: bookingsError } = useVenueBookings({ venueID })
 
-        const all = await bookingsService.getVenueBookings({ venueID })
-        setBookings(all)
-      } catch (e) {
-        setError('Failed to load dashboard data')
-        console.error(e)
-      } finally {
-        setInitLoading(false)
-      }
-    }
-    init()
-  }, [venueID, user, userReady, router])
+  const courts = useMemo(() => allCourts.filter((c) => c.venueID === venueID), [allCourts, venueID])
+
+  const initLoading = venueLoading || courtsLoading || bookingsLoading
+  const error = venueError || bookingsError ? 'Failed to load dashboard data' : null
+
+  // Auth / access guard
+  useEffect(() => {
+    if (!userReady) return
+    if (!venue) return
+    const userID = (user as unknown as { id: string } | null)?.id
+    const isOwner = venue.ownerUserID === userID
+    const isManager = venue.managerUserIDs.includes(userID ?? '')
+    if (!userID || (!isOwner && !isManager)) router.replace('/admin')
+  }, [venue, user, userReady, router])
 
   const rangeStart = useMemo(() => {
     const map: Record<DateRange, moment.Moment> = {

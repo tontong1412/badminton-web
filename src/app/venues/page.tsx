@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import {
   Box,
   Container,
@@ -14,7 +14,7 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { Venue } from '@/type'
-import venueService from '../services/venues'
+import { useVenues } from '../libs/data'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/Layout'
@@ -30,27 +30,8 @@ const ACCENTS = [
 
 export default function VenuesPage() {
   const { t } = useTranslation()
-  const [venues, setVenues] = useState<Venue[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const loadVenues = async () => {
-      try {
-        setLoading(true)
-        const data = await venueService.getAll()
-        setVenues(data)
-        setError(null)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load venues'
-        setError(message)
-        console.error('Error loading venues:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadVenues()
-  }, [])
+  const { venues, isLoading: loading, isError } = useVenues()
+  const error = isError ? 'Failed to load venues' : null
 
   if (loading) {
     return (

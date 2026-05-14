@@ -29,6 +29,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import { Autocomplete } from '@mui/material'
 import { HolidaySchedule, PlayerWithAccount, User, Venue } from '@/type'
 import venueService from '../../../../services/venues'
+import { useVenue } from '../../../../libs/data'
 import playerService from '../../../../services/players'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
@@ -51,7 +52,7 @@ export default function VenueSettingsPage() {
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
   const userReady = useSelector((state: RootState) => state.app.userReady)
 
-  const [venue, setVenue] = useState<Venue | null>(null)
+  const [venue, setVenueState] = useState<Venue | null>(null)
   const [initLoading, setInitLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -117,59 +118,52 @@ export default function VenueSettingsPage() {
   const [holidaySaving, setHolidaySaving] = useState(false)
   const [holidayError, setHolidayError] = useState<string | null>(null)
 
+  const { venue: swrVenue, isLoading: swrLoading, mutate: mutateVenue } = useVenue(venueID)
+
   useEffect(() => {
-    const init = async() => {
-      try {
-        const v = await venueService.getById(venueID)
-        const userID = (user as unknown as { id: string } | null)?.id
-        const isOwner = v.ownerUserID === userID
-        const isManager = v.managerUserIDs.includes(userID ?? '')
-        if (!userReady) return
-        if (!userID || (!isOwner && !isManager)) {
-          router.replace('/admin')
-          return
-        }
-
-        setVenue(v)
-        setNameTH(v.name.th)
-        setNameEN(v.name.en)
-        setAddress(v.address)
-        setCoverImage(v.coverImage ?? '')
-        setLogo(v.logo ?? '')
-        setManagerUserIDs(v.managerUserIDs ?? [])
-
-        // Weekly schedule
-        const days: DayScheduleState[] = Array.from({ length: 7 }, (_, i) => {
-          const entry = v.weeklySchedule?.[String(i)]
-          return entry
-            ? { isOpen: true, open: entry.open, close: entry.close }
-            : { isOpen: false, open: '08:00', close: '22:00' }
-        })
-        setWeekDays(days)
-        setSlotDuration((v.slotDurationMinutes as 30 | 60) ?? 30)
-
-        setGapEnabled(v.gapPolicy?.enabled ?? true)
-        setGapMinutes((v.gapPolicy?.minimumGapMinutes as 30 | 60) ?? 60)
-
-        setBankName(v.payment?.bankName ?? '')
-        setAccountNumber(v.payment?.accountNumber ?? '')
-        setAccountName(v.payment?.accountName ?? '')
-        setPromptPayID(v.payment?.promptPayID ?? '')
-
-        setSlipokBranchId(v.slipok?.branchId ?? '')
-        setSlipokHasApiKey(v.slipok?.hasApiKey ?? false)
-        setSlipokEnabled(v.slipok?.enabled ?? false)
-
-        setHolidays(v.holidays ?? [])
-      } catch (e) {
-        setError('Failed to load venue settings')
-        console.error(e)
-      } finally {
-        setInitLoading(false)
-      }
+    if (!swrVenue) return
+    const v = swrVenue
+    const userID = (user as unknown as { id: string } | null)?.id
+    const isOwner = v.ownerUserID === userID
+    const isManager = v.managerUserIDs.includes(userID ?? '')
+    if (!userReady) return
+    if (!userID || (!isOwner && !isManager)) {
+      router.replace('/admin')
+      return
     }
-    init()
-  }, [venueID, user, userReady, router])
+    setVenueState(v)
+    setNameTH(v.name.th)
+    setNameEN(v.name.en)
+    setAddress(v.address)
+    setCoverImage(v.coverImage ?? '')
+    setLogo(v.logo ?? '')
+    setManagerUserIDs(v.managerUserIDs ?? '')
+    const days: DayScheduleState[] = Array.from({ length: 7 }, (_, i) => {
+      const entry = v.weeklySchedule?.[String(i)]
+      return entry
+        ? { isOpen: true, open: entry.open, close: entry.close }
+        : { isOpen: false, open: '08:00', close: '22:00' }
+    })
+    setWeekDays(days)
+    setSlotDuration((v.slotDurationMinutes as 30 | 60) ?? 30)
+    setGapEnabled(v.gapPolicy?.enabled ?? true)
+    setGapMinutes((v.gapPolicy?.minimumGapMinutes as 30 | 60) ?? 60)
+    setBankName(v.payment?.bankName ?? '')
+    setAccountNumber(v.payment?.accountNumber ?? '')
+    setAccountName(v.payment?.accountName ?? '')
+    setPromptPayID(v.payment?.promptPayID ?? '')
+    setSlipokBranchId(v.slipok?.branchId ?? '')
+    setSlipokHasApiKey(v.slipok?.hasApiKey ?? false)
+    setSlipokEnabled(v.slipok?.enabled ?? false)
+    setHolidays(v.holidays ?? [])
+    setInitLoading(false)
+  // Only run when SWR data first arrives; userReady/user/router guard on changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swrVenue, userReady])
+
+  useEffect(() => {
+    if (swrLoading && !swrVenue) setInitLoading(true)
+  }, [swrLoading, swrVenue])
 
   // Load players with accounts for manager search
   useEffect(() => {
@@ -212,7 +206,7 @@ export default function VenueSettingsPage() {
         name: { th: nameTH, en: nameEN },
         address,
       })
-      setVenue(updated)
+      setVenueState(updated)
       setGeneralSuccess(true)
       setTimeout(() => setGeneralSuccess(false), 3000)
     } catch (e) {
@@ -238,7 +232,7 @@ export default function VenueSettingsPage() {
     try {
       const base64 = await readFileAsBase64(file)
       const updated = await venueService.uploadImage(venueID, 'coverImage', base64)
-      setVenue(updated)
+      setVenueState(updated)
       setCoverImage(updated.coverImage ?? '')
       setCoverSuccess(true)
       setTimeout(() => setCoverSuccess(false), 3000)
@@ -257,7 +251,7 @@ export default function VenueSettingsPage() {
     try {
       const base64 = await readFileAsBase64(file)
       const updated = await venueService.uploadImage(venueID, 'logo', base64)
-      setVenue(updated)
+      setVenueState(updated)
       setLogo(updated.logo ?? '')
       setLogoSuccess(true)
       setTimeout(() => setLogoSuccess(false), 3000)
@@ -301,7 +295,7 @@ export default function VenueSettingsPage() {
       const updated = await venueService.setSchedule(venueID, {
         gapPolicy: { enabled: gapEnabled, minimumGapMinutes: gapMinutes },
       })
-      setVenue(updated)
+      setVenueState(updated)
       setGapSuccess(true)
       setTimeout(() => setGapSuccess(false), 3000)
     } catch (e) {
@@ -320,7 +314,7 @@ export default function VenueSettingsPage() {
       const updated = await venueService.update(venueID, {
         payment: { bankName, accountNumber, accountName, promptPayID },
       } as Partial<Venue>)
-      setVenue(updated)
+      setVenueState(updated)
       setPaymentSuccess(true)
       setTimeout(() => setPaymentSuccess(false), 3000)
     } catch (e) {
@@ -374,7 +368,7 @@ export default function VenueSettingsPage() {
       if (slipokApiKey) slipokPayload.apiKey = slipokApiKey
       if (isAdmin) slipokPayload.enabled = slipokEnabled
       const updated = await venueService.update(venueID, { slipok: slipokPayload } as Partial<Venue>)
-      setVenue(updated)
+      setVenueState(updated)
       setSlipokHasApiKey(updated.slipok?.hasApiKey ?? false)
       setSlipokEnabled(updated.slipok?.enabled ?? false)
       setSlipokApiKey('')
