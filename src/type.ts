@@ -396,6 +396,10 @@ export interface Venue {
     minimumGapMinutes: number;
   };
   payment?: VenuePayment;
+  slipok?: {
+    branchId?: string;
+    hasApiKey?: boolean;
+  };
   coverImage?: string;
   logo?: string;
 }

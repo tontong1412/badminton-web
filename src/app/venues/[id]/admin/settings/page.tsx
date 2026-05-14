@@ -99,6 +99,14 @@ export default function VenueSettingsPage() {
   const [paymentSaving, setPaymentSaving] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
+  // SlipOK state
+  const [slipokBranchId, setSlipokBranchId] = useState('')
+  const [slipokApiKey, setSlipokApiKey] = useState('')
+  const [slipokHasApiKey, setSlipokHasApiKey] = useState(false)
+  const [slipokSaving, setSlipokSaving] = useState(false)
+  const [slipokSuccess, setSlipokSuccess] = useState(false)
+  const [slipokError, setSlipokError] = useState<string | null>(null)
+
   // Holidays state
   const [holidays, setHolidays] = useState<HolidaySchedule[]>([])
   const [newHolidayDate, setNewHolidayDate] = useState('')
@@ -146,6 +154,9 @@ export default function VenueSettingsPage() {
         setAccountNumber(v.payment?.accountNumber ?? '')
         setAccountName(v.payment?.accountName ?? '')
         setPromptPayID(v.payment?.promptPayID ?? '')
+
+        setSlipokBranchId(v.slipok?.branchId ?? '')
+        setSlipokHasApiKey(v.slipok?.hasApiKey ?? false)
 
         setHolidays(v.holidays ?? [])
       } catch (e) {
@@ -347,6 +358,28 @@ export default function VenueSettingsPage() {
     } catch (e) {
       setHolidayError('Failed to remove holiday')
       console.error(e)
+    }
+  }
+
+  const handleSaveSlipok = async() => {
+    setSlipokSaving(true)
+    setSlipokSuccess(false)
+    setSlipokError(null)
+    try {
+      const slipokPayload: { branchId?: string; apiKey?: string } = {}
+      if (slipokBranchId) slipokPayload.branchId = slipokBranchId
+      if (slipokApiKey) slipokPayload.apiKey = slipokApiKey
+      const updated = await venueService.update(venueID, { slipok: slipokPayload } as Partial<Venue>)
+      setVenue(updated)
+      setSlipokHasApiKey(updated.slipok?.hasApiKey ?? false)
+      setSlipokApiKey('')
+      setSlipokSuccess(true)
+      setTimeout(() => setSlipokSuccess(false), 3000)
+    } catch (e) {
+      setSlipokError('Failed to save SlipOK settings')
+      console.error(e)
+    } finally {
+      setSlipokSaving(false)
     }
   }
 
@@ -624,6 +657,46 @@ export default function VenueSettingsPage() {
               {paymentSaving ? <CircularProgress size={18} /> : 'Save'}
             </Button>
             {paymentSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
+          </Box>
+        </Paper>
+
+        {/* ── SlipOK Integration ───────────────────────────────────────── */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>SlipOK Integration</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure SlipOK credentials to enable automatic slip verification for this venue.
+          </Typography>
+
+          {slipokError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSlipokError(null)}>{slipokError}</Alert>}
+
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+            <TextField
+              size="small"
+              label="Branch ID"
+              value={slipokBranchId}
+              onChange={(e) => setSlipokBranchId(e.target.value)}
+              sx={{ flex: 1, minWidth: 180 }}
+            />
+            <TextField
+              size="small"
+              label="API Key"
+              type="password"
+              value={slipokApiKey}
+              onChange={(e) => setSlipokApiKey(e.target.value)}
+              placeholder={slipokHasApiKey ? '••••••••  (leave blank to keep existing)' : 'Enter API key'}
+              sx={{ flex: 1, minWidth: 220 }}
+            />
+          </Box>
+          {slipokHasApiKey && !slipokApiKey && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              An API key is already saved. Enter a new one to replace it.
+            </Typography>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button variant="contained" size="small" onClick={handleSaveSlipok} disabled={slipokSaving}>
+              {slipokSaving ? <CircularProgress size={18} /> : 'Save'}
+            </Button>
+            {slipokSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
           </Box>
         </Paper>
 
