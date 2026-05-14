@@ -151,7 +151,7 @@ export default function VenuePaymentsPage() {
         bookerName: String(first.guestName || first.userID || 'Unknown'),
         bookerContact: first.guestPhone || first.guestEmail || '',
       }
-    }).sort((a, b) =>
+    }).filter((g) => Boolean(g.slip)).sort((a, b) =>
       moment(b.slipTimestamp || b.date).valueOf() - moment(a.slipTimestamp || a.date).valueOf()
     )
   }, [bookings])
@@ -227,55 +227,108 @@ export default function VenuePaymentsPage() {
             {tab === 'pending' ? 'No bookings awaiting payment approval.' : 'No approved bookings yet.'}
           </Alert>
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableRow>
-                  <TableCell>Court</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Time</TableCell>
-                  <TableCell>Booker</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Slip Uploaded</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {groupedBundles.map((group) => (
-                  <TableRow key={group.bundleID} hover>
-                    <TableCell>
-                      {group.bookings.map((b) => courtDetails[b.courtID]?.name || '...').join(', ')}
-                    </TableCell>
-                    <TableCell>{moment(group.date).format('DD/MM/YYYY')}</TableCell>
-                    <TableCell>{group.startTime} – {group.endTime}</TableCell>
-                    <TableCell>
+          <>
+            {/* ── Desktop table ── */}
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' } }}>
+              <Table>
+                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow>
+                    <TableCell>Court</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Booker</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Slip Uploaded</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {groupedBundles.map((group) => (
+                    <TableRow key={group.bundleID} hover>
+                      <TableCell>
+                        {group.bookings.map((b) => courtDetails[b.courtID]?.name || '...').join(', ')}
+                      </TableCell>
+                      <TableCell>{moment(group.date).format('DD/MM/YYYY')}</TableCell>
+                      <TableCell>{group.startTime} – {group.endTime}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{group.bookerName}</Typography>
+                        {group.bookerContact && (
+                          <Typography variant="caption" color="text.secondary">{group.bookerContact}</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>{group.totalPrice.toFixed(2)} {group.currency}</TableCell>
+                      <TableCell>
+                        {group.slipTimestamp ? moment(group.slipTimestamp).format('DD/MM/YYYY HH:mm') : '-'}
+                      </TableCell>
+                      <TableCell align="right">
+                        {group.slip && (
+                          <Button
+                            size="small"
+                            variant={tab === 'pending' ? 'contained' : 'outlined'}
+                            color={tab === 'pending' ? 'success' : 'primary'}
+                            onClick={() => { setSelectedBundle(group); setSlipDialogOpen(true) }}
+                          >
+                            {tab === 'pending' ? 'Review Slip' : 'View Slip'}
+                          </Button>
+                        )}
+                        {tab === 'paid' && <Chip size="small" label="Approved" color="success" sx={{ ml: 1 }} />}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* ── Mobile cards ── */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+              {groupedBundles.map((group) => (
+                <Paper key={group.bundleID} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {group.bookings.map((b) => courtDetails[b.courtID]?.name || '...').join(', ')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {moment(group.date).format('DD MMM YYYY')} · {group.startTime}–{group.endTime}
+                      </Typography>
+                    </Box>
+                    {tab === 'paid' && <Chip size="small" label="Approved" color="success" />}
+                  </Box>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                    <Box>
                       <Typography variant="body2">{group.bookerName}</Typography>
                       {group.bookerContact && (
                         <Typography variant="caption" color="text.secondary">{group.bookerContact}</Typography>
                       )}
-                    </TableCell>
-                    <TableCell>{group.totalPrice.toFixed(2)} {group.currency}</TableCell>
-                    <TableCell>
-                      {group.slipTimestamp ? moment(group.slipTimestamp).format('DD/MM/YYYY HH:mm') : '-'}
-                    </TableCell>
-                    <TableCell align="right">
-                      {group.slip && (
-                        <Button
-                          size="small"
-                          variant={tab === 'pending' ? 'contained' : 'outlined'}
-                          color={tab === 'pending' ? 'success' : 'primary'}
-                          onClick={() => { setSelectedBundle(group); setSlipDialogOpen(true) }}
-                        >
-                          {tab === 'pending' ? 'Review Slip' : 'View Slip'}
-                        </Button>
-                      )}
-                      {tab === 'paid' && <Chip size="small" label="Approved" color="success" sx={{ ml: 1 }} />}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    </Box>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {group.totalPrice.toFixed(2)} {group.currency}
+                    </Typography>
+                  </Box>
+
+                  {group.slipTimestamp && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      Slip uploaded {moment(group.slipTimestamp).format('DD/MM/YYYY HH:mm')}
+                    </Typography>
+                  )}
+
+                  {group.slip && (
+                    <Button
+                      size="small"
+                      fullWidth
+                      variant={tab === 'pending' ? 'contained' : 'outlined'}
+                      color={tab === 'pending' ? 'success' : 'primary'}
+                      sx={{ mt: 1.5 }}
+                      onClick={() => { setSelectedBundle(group); setSlipDialogOpen(true) }}
+                    >
+                      {tab === 'pending' ? 'Review Slip' : 'View Slip'}
+                    </Button>
+                  )}
+                </Paper>
+              ))}
+            </Box>
+          </>
         )}
 
         {/* Slip review dialog */}
