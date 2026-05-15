@@ -2,6 +2,7 @@ import globals from 'globals'
 import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginReact from 'eslint-plugin-react'
+import pluginReactHooks from 'eslint-plugin-react-hooks'
 import stylisticJs from '@stylistic/eslint-plugin-js'
 import pluginNext from '@next/eslint-plugin-next'
 
@@ -16,7 +17,8 @@ export default [
   {
     plugins: {
       '@stylistic/js': stylisticJs,
-      '@next/next': pluginNext
+      '@next/next': pluginNext,
+      'react-hooks': pluginReactHooks,
     },
     settings: {
       react: {
@@ -51,7 +53,9 @@ export default [
       'space-before-function-paren': ['error', 'never'],
       'space-in-parens': ['error', 'never'],
       'space-infix-ops': ['error', { 'int32Hint': false }],
-      'comma-spacing': ['error', { 'before': false, 'after': true }]
+      'comma-spacing': ['error', { 'before': false, 'after': true }],
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   }
 ]
