@@ -122,23 +122,25 @@ export default function MyBookingsPage() {
       })
 
       const first = sortedItems[0]
-      const totalPrice = sortedItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
-      const allConfirmed = sortedItems.every((item) => item.status === 'confirmed')
-      const anyCancelled = sortedItems.some((item) => item.status === 'cancelled')
-      const allPaid = sortedItems.every((item) => item.paymentStatus === 'paid')
-      const anyUnpaid = sortedItems.some((item) => item.paymentStatus === 'unpaid')
+      const nonCancelledItems = sortedItems.filter((item) => item.status !== 'cancelled')
+      const firstNonCancelled = nonCancelledItems[0] ?? first
+      const totalPrice = nonCancelledItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
+      const allCancelled = sortedItems.every((item) => item.status === 'cancelled')
+      const allConfirmed = nonCancelledItems.length > 0 && nonCancelledItems.every((item) => item.status === 'confirmed')
+      const allPaid = nonCancelledItems.every((item) => item.paymentStatus === 'paid')
+      const anyUnpaid = nonCancelledItems.some((item) => item.paymentStatus === 'unpaid')
 
       return {
         groupKey,
         bundleID: first.bookingBundleID,
         bookingRef: first.bookingRef,
         bookings: sortedItems,
-        date: first.date,
-        startTime: first.startTime,
-        endTime: first.endTime,
+        date: firstNonCancelled.date,
+        startTime: firstNonCancelled.startTime,
+        endTime: firstNonCancelled.endTime,
         currency: first.currency,
         totalPrice,
-        status: allConfirmed ? 'confirmed' : (anyCancelled ? 'cancelled' : 'pending'),
+        status: allCancelled ? 'cancelled' : (allConfirmed ? 'confirmed' : 'pending'),
         paymentStatus: allPaid ? 'paid' : (anyUnpaid ? 'unpaid' : 'pending'),
       }
     })
@@ -153,7 +155,8 @@ export default function MyBookingsPage() {
   const activeBookings = useMemo(
     () => groupedBookings.filter((g) => {
       if (g.status === 'cancelled') return false
-      const lastBooking = g.bookings[g.bookings.length - 1]
+      const nonCancelledBookings = g.bookings.filter((b) => b.status !== 'cancelled')
+      const lastBooking = nonCancelledBookings[nonCancelledBookings.length - 1] ?? g.bookings[g.bookings.length - 1]
       return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())
     }),
     [groupedBookings],
@@ -161,7 +164,8 @@ export default function MyBookingsPage() {
   const pastBookings = useMemo(
     () => groupedBookings.filter((g) => {
       if (g.status === 'cancelled') return false
-      const lastBooking = g.bookings[g.bookings.length - 1]
+      const nonCancelledBookings = g.bookings.filter((b) => b.status !== 'cancelled')
+      const lastBooking = nonCancelledBookings[nonCancelledBookings.length - 1] ?? g.bookings[g.bookings.length - 1]
       return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())
     }),
     [groupedBookings],
@@ -370,15 +374,17 @@ export default function MyBookingsPage() {
                         const dateStr = moment(booking.date).format('DD MMM YYYY')
                         const prevDateStr = idx > 0 ? moment(group.bookings[idx - 1].date).format('DD MMM YYYY') : null
                         const showDate = dateStr !== prevDateStr
+                        const isCancelledSlot = booking.status === 'cancelled'
                         return (
-                          <Box key={booking.id} sx={{ mb: 0.5 }}>
+                          <Box key={booking.id} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
                             {showDate && (
-                              <Typography variant="body2" fontWeight={600}>{dateStr}</Typography>
+                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{dateStr}</Typography>
                             )}
-                            <Box sx={{ display: 'flex', gap: 1, pl: showDate ? 0 : 0 }}>
-                              <Typography variant="body2" color="text.secondary">{booking.startTime} – {booking.endTime}</Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
                               <Typography variant="body2" color="text.secondary">·</Typography>
-                              <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                              {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                             </Box>
                           </Box>
                         )
@@ -416,7 +422,7 @@ export default function MyBookingsPage() {
                             size="small"
                             color="error"
                             variant="outlined"
-                            onClick={() => handleCancelClick(group.bookings.map((b) => b.id))}
+                            onClick={() => handleCancelClick(group.bookings.filter((b) => b.status !== 'cancelled').map((b) => b.id))}
                           >
                             {t('booking.cancel')}
                           </Button>
@@ -473,26 +479,36 @@ export default function MyBookingsPage() {
                           {group.bookings.map((booking, idx) => {
                             const dateStr = moment(booking.date).format('DD/MM/YYYY')
                             const prevDateStr = idx > 0 ? moment(group.bookings[idx - 1].date).format('DD/MM/YYYY') : null
+                            const isCancelledSlot = booking.status === 'cancelled'
                             return (
-                              <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
+                              <Typography key={booking.id} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
                                 {dateStr !== prevDateStr ? dateStr : ''}
                               </Typography>
                             )
                           })}
                         </TableCell>
                         <TableCell>
-                          {group.bookings.map((booking) => (
-                            <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
-                              {courtDetails[booking.courtID]?.name || '—'}
-                            </Typography>
-                          ))}
+                          {group.bookings.map((booking) => {
+                            const isCancelledSlot = booking.status === 'cancelled'
+                            return (
+                              <Typography key={booking.id} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                {courtDetails[booking.courtID]?.name || '—'}
+                              </Typography>
+                            )
+                          })}
                         </TableCell>
                         <TableCell>
-                          {group.bookings.map((booking) => (
-                            <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
-                              {booking.startTime} – {booking.endTime}
-                            </Typography>
-                          ))}
+                          {group.bookings.map((booking) => {
+                            const isCancelledSlot = booking.status === 'cancelled'
+                            return (
+                              <Box key={booking.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                                <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                  {booking.startTime} – {booking.endTime}
+                                </Typography>
+                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                              </Box>
+                            )
+                          })}
                         </TableCell>
                         <TableCell>
                           {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
@@ -526,7 +542,7 @@ export default function MyBookingsPage() {
                                   size="small"
                                   color="error"
                                   variant="outlined"
-                                  onClick={() => handleCancelClick(group.bookings.map((booking) => booking.id))}
+                                  onClick={() => handleCancelClick(group.bookings.filter((booking) => booking.status !== 'cancelled').map((booking) => booking.id))}
                                 >
                                   {t('booking.cancel')}
                                 </Button>
