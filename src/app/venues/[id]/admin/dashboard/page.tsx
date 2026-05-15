@@ -17,7 +17,7 @@ import {
   ToggleButton,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Booking, BookingStatus, Court, PaymentStatus, User, Venue } from '@/type'
+import { BookingStatus, PaymentStatus, User } from '@/type'
 import { useVenue, useCourts, useVenueBookings } from '../../../../libs/data'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'

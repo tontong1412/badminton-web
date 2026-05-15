@@ -27,7 +27,6 @@ import {
   Chip,
 } from '@mui/material'
 import { Court, Venue } from '@/type'
-import BookingAvailability from './BookingAvailability'
 import Transition from './ModalTransition'
 import LoginModal from './LoginModal'
 import { useTranslation } from 'react-i18next'
@@ -99,14 +98,6 @@ export default function CourtBookingModal({
   const [recurringConflicts, setRecurringConflicts] = useState<{ date: string; reason: string }[]>([])
 
   const isItemsPreselected = Boolean(bookingItems && bookingItems.length > 0)
-  const isSlotPreselected = Boolean(preselectedSlot?.date && preselectedSlot?.startTime && preselectedSlot?.endTime)
-  const isPreselected = isItemsPreselected || isSlotPreselected
-
-  const handleSlotSelected = (date: string, start: string, end: string) => {
-    setSelectedDate(date)
-    setStartTime(start)
-    setEndTime(end)
-  }
 
   /** Mirrors backend calculateTotalPriceWithRules — segments the window and applies rules. */
   const getPriceForRange = (court: (typeof courts)[0], start: string, end: string): number => {
@@ -284,7 +275,6 @@ export default function CourtBookingModal({
 
     try {
       setLoading(true)
-      const bookerType: 'user' | 'guest' = currentUser?.id ? 'user' : 'guest'
 
       const effectiveItems = isItemsPreselected && bookingItems
         ? bookingItems
@@ -387,388 +377,388 @@ export default function CourtBookingModal({
 
   return (
     <>
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      TransitionComponent={Transition}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogTitle>{t('booking.bookCourt')}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ py: 2 }}>
-          <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        TransitionComponent={Transition}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('booking.bookCourt')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
 
-          {activeStep === 0 && (
-            <Box>
-              {currentUser && (
-                <Box sx={{ mb: 2 }}>
-                  <ToggleButtonGroup
-                    value={bookingType}
-                    exclusive
-                    onChange={(_, v) => {
-                      if (!v) return
-                      if (v === 'recurring') {
-                        const src = isItemsPreselected && bookingItems?.[0]
-                        const t1 = src ? src.startTime : startTime
-                        const t2 = src ? src.endTime : endTime
-                        const d = src ? src.date : selectedDate
-                        if (t1) setRecurringStartTime(t1)
-                        if (t2) setRecurringEndTime(t2)
-                        if (d) {
-                          setRecurringDays([moment(d).day()])
-                          setRangeStart(d)
-                          setRangeEnd(moment(d).add(1, 'month').format('YYYY-MM-DD'))
-                        }
-                      }
-                      setBookingType(v)
-                    }}
-                    size="small"
-                  >
-                    <ToggleButton value="single">One-time</ToggleButton>
-                    <ToggleButton value="recurring">Recurring</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              )}
-
-              {currentUser ? (
-                <Box sx={{ mb: 2, p: 2, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#80644f' }}>
-                    Booking as
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Name:</strong> {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.player.officialName.th || '—'}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Email:</strong> {currentUser.email}
-                  </Typography>
-                  {currentUser.player.contact?.tel ? (
-                    <Typography variant="body2">
-                      <strong>Phone:</strong> {currentUser.player.contact.tel}
-                    </Typography>
-                  ) : (
-                    <TextField
-                      size="small"
-                      fullWidth
-                      label="Phone number"
-                      value={userPhone}
-                      onChange={(e) => setUserPhone(e.target.value)}
-                      sx={{ mt: 1.5 }}
-                      required
-                      helperText="Required so the venue can contact you"
-                    />
-                  )}
-                </Box>
-              ) : (
-                <>
-                  <Box sx={{ mb: 2, p: 1.5, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 160 }}>
-                      Have an account? Book faster without filling this in.
-                    </Typography>
-                    <Button size="small" variant="outlined" onClick={() => setLoginModalOpen(true)} sx={{ borderColor: '#80644f', color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      Sign In
-                    </Button>
-                    <Button size="small" href="/register" sx={{ color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      Sign Up
-                    </Button>
-                  </Box>
-                  <Divider sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary">or continue as guest</Typography></Divider>
-                  <TextField
-                    size='small'
-                    fullWidth
-                    label={t('booking.name')}
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    sx={{ mb: 2 }}
-                    required
-                  />
-                  <TextField
-                    size='small'
-                    fullWidth
-                    label={t('booking.phone')}
-                    value={guestPhone}
-                    onChange={(e) => setGuestPhone(e.target.value)}
-                    sx={{ mb: 2 }}
-                    required
-                  />
-                  <TextField
-                    size='small'
-                    fullWidth
-                    label={t('booking.email')}
-                    type="email"
-                    value={guestEmail}
-                    onChange={(e) => setGuestEmail(e.target.value)}
-                    sx={{ mb: 2 }}
-                    required
-                  />
-                </>
-              )}
-
-              {bookingType === 'recurring' && currentUser && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-                  {courts.length > 1 && (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Court</InputLabel>
-                      <Select value={recurringCourtID} label="Court" onChange={(e) => setRecurringCourtID(e.target.value)}>
-                        {courts.map((c) => (
-                          <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Start Time</InputLabel>
-                      <Select value={recurringStartTime} label="Start Time" onChange={(e) => setRecurringStartTime(e.target.value)}>
-                        {Array.from({ length: 48 }, (_, i) => {
-                          const h = Math.floor(i / 2).toString().padStart(2, '0')
-                          const m = i % 2 === 0 ? '00' : '30'
-                          const val = `${h}:${m}`
-                          return <MenuItem key={val} value={val}>{val}</MenuItem>
-                        })}
-                      </Select>
-                    </FormControl>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>End Time</InputLabel>
-                      <Select value={recurringEndTime} label="End Time" onChange={(e) => setRecurringEndTime(e.target.value)}>
-                        {Array.from({ length: 48 }, (_, i) => {
-                          const h = Math.floor(i / 2).toString().padStart(2, '0')
-                          const m = i % 2 === 0 ? '00' : '30'
-                          const val = `${h}:${m}`
-                          return <MenuItem key={val} value={val}>{val}</MenuItem>
-                        })}
-                      </Select>
-                    </FormControl>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Repeat</Typography>
+            {activeStep === 0 && (
+              <Box>
+                {currentUser && (
+                  <Box sx={{ mb: 2 }}>
                     <ToggleButtonGroup
-                      value={recurringPattern}
+                      value={bookingType}
                       exclusive
-                      onChange={(_, v) => { if (v) setRecurringPattern(v) }}
+                      onChange={(_, v) => {
+                        if (!v) return
+                        if (v === 'recurring') {
+                          const src = isItemsPreselected && bookingItems?.[0]
+                          const t1 = src ? src.startTime : startTime
+                          const t2 = src ? src.endTime : endTime
+                          const d = src ? src.date : selectedDate
+                          if (t1) setRecurringStartTime(t1)
+                          if (t2) setRecurringEndTime(t2)
+                          if (d) {
+                            setRecurringDays([moment(d).day()])
+                            setRangeStart(d)
+                            setRangeEnd(moment(d).add(1, 'month').format('YYYY-MM-DD'))
+                          }
+                        }
+                        setBookingType(v)
+                      }}
                       size="small"
                     >
-                      <ToggleButton value="weekly">Weekly</ToggleButton>
-                      <ToggleButton value="daily">Every Day</ToggleButton>
+                      <ToggleButton value="single">One-time</ToggleButton>
+                      <ToggleButton value="recurring">Recurring</ToggleButton>
                     </ToggleButtonGroup>
                   </Box>
+                )}
 
-                  {recurringPattern === 'weekly' && (
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Days</Typography>
-                      <ToggleButtonGroup
-                        value={recurringDays}
-                        onChange={(_, v: number[]) => { if (v.length > 0) setRecurringDays(v) }}
+                {currentUser ? (
+                  <Box sx={{ mb: 2, p: 2, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#80644f' }}>
+                      Booking as
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Name:</strong> {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.player.officialName.th || '—'}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Email:</strong> {currentUser.email}
+                    </Typography>
+                    {currentUser.player.contact?.tel ? (
+                      <Typography variant="body2">
+                        <strong>Phone:</strong> {currentUser.player.contact.tel}
+                      </Typography>
+                    ) : (
+                      <TextField
                         size="small"
-                        sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                        fullWidth
+                        label="Phone number"
+                        value={userPhone}
+                        onChange={(e) => setUserPhone(e.target.value)}
+                        sx={{ mt: 1.5 }}
+                        required
+                        helperText="Required so the venue can contact you"
+                      />
+                    )}
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ mb: 2, p: 1.5, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 160 }}>
+                        Have an account? Book faster without filling this in.
+                      </Typography>
+                      <Button size="small" variant="outlined" onClick={() => setLoginModalOpen(true)} sx={{ borderColor: '#80644f', color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        Sign In
+                      </Button>
+                      <Button size="small" href="/register" sx={{ color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        Sign Up
+                      </Button>
+                    </Box>
+                    <Divider sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary">or continue as guest</Typography></Divider>
+                    <TextField
+                      size='small'
+                      fullWidth
+                      label={t('booking.name')}
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <TextField
+                      size='small'
+                      fullWidth
+                      label={t('booking.phone')}
+                      value={guestPhone}
+                      onChange={(e) => setGuestPhone(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <TextField
+                      size='small'
+                      fullWidth
+                      label={t('booking.email')}
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                  </>
+                )}
+
+                {bookingType === 'recurring' && currentUser && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                    {courts.length > 1 && (
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Court</InputLabel>
+                        <Select value={recurringCourtID} label="Court" onChange={(e) => setRecurringCourtID(e.target.value)}>
+                          {courts.map((c) => (
+                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Start Time</InputLabel>
+                        <Select value={recurringStartTime} label="Start Time" onChange={(e) => setRecurringStartTime(e.target.value)}>
+                          {Array.from({ length: 48 }, (_, i) => {
+                            const h = Math.floor(i / 2).toString().padStart(2, '0')
+                            const m = i % 2 === 0 ? '00' : '30'
+                            const val = `${h}:${m}`
+                            return <MenuItem key={val} value={val}>{val}</MenuItem>
+                          })}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>End Time</InputLabel>
+                        <Select value={recurringEndTime} label="End Time" onChange={(e) => setRecurringEndTime(e.target.value)}>
+                          {Array.from({ length: 48 }, (_, i) => {
+                            const h = Math.floor(i / 2).toString().padStart(2, '0')
+                            const m = i % 2 === 0 ? '00' : '30'
+                            const val = `${h}:${m}`
+                            return <MenuItem key={val} value={val}>{val}</MenuItem>
+                          })}
+                        </Select>
+                      </FormControl>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Repeat</Typography>
+                      <ToggleButtonGroup
+                        value={recurringPattern}
+                        exclusive
+                        onChange={(_, v) => { if (v) setRecurringPattern(v) }}
+                        size="small"
                       >
-                        {DAY_LABELS.map((label, i) => (
-                          <ToggleButton key={i} value={i} sx={{ minWidth: 44 }}>{label}</ToggleButton>
-                        ))}
+                        <ToggleButton value="weekly">Weekly</ToggleButton>
+                        <ToggleButton value="daily">Every Day</ToggleButton>
                       </ToggleButtonGroup>
                     </Box>
-                  )}
 
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <TextField
-                      label="From"
-                      type="date"
-                      size="small"
-                      fullWidth
-                      value={rangeStart}
-                      onChange={(e) => setRangeStart(e.target.value)}
-                      inputProps={{ min: moment().format('YYYY-MM-DD') }}
-                      InputLabelProps={{ shrink: true }}
-                    />
-                    <TextField
-                      label="To"
-                      type="date"
-                      size="small"
-                      fullWidth
-                      value={rangeEnd}
-                      onChange={(e) => setRangeEnd(e.target.value)}
-                      inputProps={{
-                        min: rangeStart,
-                        ...(maxRangeMonths !== null ? { max: moment(rangeStart).add(maxRangeMonths, 'months').format('YYYY-MM-DD') } : {}),
-                      }}
-                      InputLabelProps={{ shrink: true }}
-                      helperText={!isAdmin ? 'Max 2 months' : undefined}
-                    />
-                  </Box>
+                    {recurringPattern === 'weekly' && (
+                      <Box>
+                        <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Days</Typography>
+                        <ToggleButtonGroup
+                          value={recurringDays}
+                          onChange={(_, v: number[]) => { if (v.length > 0) setRecurringDays(v) }}
+                          size="small"
+                          sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                        >
+                          {DAY_LABELS.map((label, i) => (
+                            <ToggleButton key={i} value={i} sx={{ minWidth: 44 }}>{label}</ToggleButton>
+                          ))}
+                        </ToggleButtonGroup>
+                      </Box>
+                    )}
 
-                  {recurringDatesPreview.length > 0 && (
-                    <Box sx={{ bgcolor: '#faf7f5', borderRadius: 1, p: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {recurringDatesPreview.length} session{recurringDatesPreview.length !== 1 ? 's' : ''} · first {Math.min(5, recurringDatesPreview.length)}:{' '}
-                        {recurringDatesPreview.slice(0, 5).map((d) => moment(d).format('D MMM')).join(', ')}
-                        {recurringDatesPreview.length > 5 ? ` +${recurringDatesPreview.length - 5} more` : ''}
-                      </Typography>
-                      {recurringCourt && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                          Est. total: {recurringTotalPrice.toFixed(2)} {recurringCourt.currency} · {recurringPricePerSession.toFixed(2)} {recurringCourt.currency}/session
-                        </Typography>
-                      )}
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <TextField
+                        label="From"
+                        type="date"
+                        size="small"
+                        fullWidth
+                        value={rangeStart}
+                        onChange={(e) => setRangeStart(e.target.value)}
+                        inputProps={{ min: moment().format('YYYY-MM-DD') }}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                      <TextField
+                        label="To"
+                        type="date"
+                        size="small"
+                        fullWidth
+                        value={rangeEnd}
+                        onChange={(e) => setRangeEnd(e.target.value)}
+                        inputProps={{
+                          min: rangeStart,
+                          ...(maxRangeMonths !== null ? { max: moment(rangeStart).add(maxRangeMonths, 'months').format('YYYY-MM-DD') } : {}),
+                        }}
+                        InputLabelProps={{ shrink: true }}
+                        helperText={!isAdmin ? 'Max 2 months' : undefined}
+                      />
                     </Box>
-                  )}
-                </Box>
-              )}
 
-              <TextField
-                fullWidth
-                label={t('booking.note')}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                multiline
-                rows={3}
-              />
-            </Box>
-          )}
-
-          {activeStep === 1 && (
-            <Box>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                {bookingType === 'recurring' ? 'Recurring Booking Summary' : t('booking.bookingSummary')}
-              </Typography>
-
-              {bookingType === 'recurring' ? (
-                <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Court:</strong> {recurringCourt?.name ?? recurringCourtID}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Time:</strong> {recurringStartTime} – {recurringEndTime}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Repeat:</strong>{' '}
-                    {recurringPattern === 'weekly'
-                      ? `Weekly on ${recurringDays.map((d) => DAY_LABELS[d]).join(', ')}`
-                      : 'Every day'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Date range:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Sessions:</strong> {recurringDatesPreview.length}
                     {recurringDatesPreview.length > 0 && (
+                      <Box sx={{ bgcolor: '#faf7f5', borderRadius: 1, p: 1.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {recurringDatesPreview.length} session{recurringDatesPreview.length !== 1 ? 's' : ''} · first {Math.min(5, recurringDatesPreview.length)}:{' '}
+                          {recurringDatesPreview.slice(0, 5).map((d) => moment(d).format('D MMM')).join(', ')}
+                          {recurringDatesPreview.length > 5 ? ` +${recurringDatesPreview.length - 5} more` : ''}
+                        </Typography>
+                        {recurringCourt && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            Est. total: {recurringTotalPrice.toFixed(2)} {recurringCourt.currency} · {recurringPricePerSession.toFixed(2)} {recurringCourt.currency}/session
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                <TextField
+                  fullWidth
+                  label={t('booking.note')}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  multiline
+                  rows={3}
+                />
+              </Box>
+            )}
+
+            {activeStep === 1 && (
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {bookingType === 'recurring' ? 'Recurring Booking Summary' : t('booking.bookingSummary')}
+                </Typography>
+
+                {bookingType === 'recurring' ? (
+                  <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Court:</strong> {recurringCourt?.name ?? recurringCourtID}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Time:</strong> {recurringStartTime} – {recurringEndTime}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Repeat:</strong>{' '}
+                      {recurringPattern === 'weekly'
+                        ? `Weekly on ${recurringDays.map((d) => DAY_LABELS[d]).join(', ')}`
+                        : 'Every day'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Date range:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Sessions:</strong> {recurringDatesPreview.length}
+                      {recurringDatesPreview.length > 0 && (
+                        <>
+                          {' '}· first {Math.min(3, recurringDatesPreview.length)}: {recurringDatesPreview.slice(0, 3).map((d) => moment(d).format('D MMM')).join(', ')}
+                          {recurringDatesPreview.length > 3 ? ` +${recurringDatesPreview.length - 3} more` : ''}
+                        </>
+                      )}
+                    </Typography>
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                      <strong>Est. Total:</strong> {recurringTotalPrice.toFixed(2)} {recurringCourt?.currency || 'THB'}
+                    </Typography>
+                    {recurringConflicts.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
+                        {recurringConflicts.map((c) => (
+                          <Chip
+                            key={c.date}
+                            label={`${moment(c.date).format('D MMM')} – ${c.reason}`}
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                ) : (
+                  <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
+                    </Typography>
+                    {isItemsPreselected && bookingItems ? (
+                      bookingItems.map((item) => {
+                        const court = courts.find((c) => c.id === item.courtID)
+                        const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
+                        const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
+                        return (
+                          <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                            <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
+                            <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('DD/MM/YYYY')}</Typography>
+                            <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
+                            <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
+                          </Box>
+                        )
+                      })
+                    ) : (
                       <>
-                        {' '}· first {Math.min(3, recurringDatesPreview.length)}: {recurringDatesPreview.slice(0, 3).map((d) => moment(d).format('D MMM')).join(', ')}
-                        {recurringDatesPreview.length > 3 ? ` +${recurringDatesPreview.length - 3} more` : ''}
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
+                        </Typography>
                       </>
                     )}
-                  </Typography>
-                  <Typography variant="h6" sx={{ mt: 2 }}>
-                    <strong>Est. Total:</strong> {recurringTotalPrice.toFixed(2)} {recurringCourt?.currency || 'THB'}
-                  </Typography>
-                  {recurringConflicts.length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
-                      {recurringConflicts.map((c) => (
-                        <Chip
-                          key={c.date}
-                          label={`${moment(c.date).format('D MMM')} – ${c.reason}`}
-                          size="small"
-                          color="error"
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
-                  </Typography>
-                  {isItemsPreselected && bookingItems ? (
-                    bookingItems.map((item) => {
-                      const court = courts.find((c) => c.id === item.courtID)
-                      const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
-                      const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
-                      return (
-                        <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                          <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
-                          <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('DD/MM/YYYY')}</Typography>
-                          <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
-                          <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
-                        </Box>
-                      )
-                    })
-                  ) : (
-                    <>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
-                      </Typography>
-                    </>
-                  )}
-                  <Typography variant="h6" sx={{ mt: 2 }}>
-                    <strong>{t('booking.total')}:</strong> {calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}
-                  </Typography>
-                </Box>
-              )}
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                      <strong>{t('booking.total')}:</strong> {calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}
+                    </Typography>
+                  </Box>
+                )}
 
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={agreeTerms}
-                    onChange={(e) => setAgreeTerms(e.target.checked)}
-                  />
-                }
-                label={t('booking.agreeTerms')}
-              />
-            </Box>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={agreeTerms}
+                      onChange={(e) => setAgreeTerms(e.target.checked)}
+                    />
+                  }
+                  label={t('booking.agreeTerms')}
+                />
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleClose}>{t('booking.cancel')}</Button>
+          {activeStep > 0 && (
+            <Button onClick={handleBack}>{t('booking.back')}</Button>
           )}
-        </Box>
-      </DialogContent>
+          {activeStep < steps.length - 1 && (
+            <Button onClick={handleNext} variant="contained" color="primary">
+              {t('booking.next')}
+            </Button>
+          )}
+          {activeStep === steps.length - 1 && (
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              color="primary"
+              disabled={loading || !agreeTerms || (bookingType === 'recurring' && recurringDatesPreview.length === 0)}
+            >
+              {loading ? <CircularProgress size={24} /> : bookingType === 'recurring' ? `Book (${recurringDatesPreview.length} session${recurringDatesPreview.length !== 1 ? 's' : ''})` : t('booking.confirmBooking')}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
 
-      <DialogActions>
-        <Button onClick={handleClose}>{t('booking.cancel')}</Button>
-        {activeStep > 0 && (
-          <Button onClick={handleBack}>{t('booking.back')}</Button>
-        )}
-        {activeStep < steps.length - 1 && (
-          <Button onClick={handleNext} variant="contained" color="primary">
-            {t('booking.next')}
-          </Button>
-        )}
-        {activeStep === steps.length - 1 && (
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            color="primary"
-            disabled={loading || !agreeTerms || (bookingType === 'recurring' && recurringDatesPreview.length === 0)}
-          >
-            {loading ? <CircularProgress size={24} /> : bookingType === 'recurring' ? `Book (${recurringDatesPreview.length} session${recurringDatesPreview.length !== 1 ? 's' : ''})` : t('booking.confirmBooking')}
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
-
-    <LoginModal visible={loginModalOpen} setVisible={setLoginModalOpen} />
+      <LoginModal visible={loginModalOpen} setVisible={setLoginModalOpen} />
     </>
   )
 }

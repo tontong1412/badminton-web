@@ -34,7 +34,6 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import { BookingAvailability, Court, CourtPricingRule, Venue } from '@/type'
 import courtsService from '../../services/courts'
 import { useVenue, useCourts } from '../../libs/data'
-import CourtSelection from '../../components/CourtSelection'
 import CourtBookingModal from '../../components/CourtBookingModal'
 import CourtAvailabilityTable from '../../components/CourtAvailabilityTable'
 import Layout from '../../components/Layout'

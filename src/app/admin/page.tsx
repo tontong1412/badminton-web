@@ -14,7 +14,7 @@ import {
 } from '@mui/material'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import PaymentIcon from '@mui/icons-material/Payment'
-import { Venue, User } from '@/type'
+import { User } from '@/type'
 import { useVenues } from '../libs/data'
 import { useSelector } from 'react-redux'
 import { RootState } from '../libs/redux/store'

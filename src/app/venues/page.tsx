@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import {
   Box,
   Container,
@@ -13,7 +12,6 @@ import {
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import { Venue } from '@/type'
 import { useVenues } from '../libs/data'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'

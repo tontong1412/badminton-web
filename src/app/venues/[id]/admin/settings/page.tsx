@@ -133,7 +133,7 @@ export default function VenueSettingsPage() {
   const [holidaySaving, setHolidaySaving] = useState(false)
   const [holidayError, setHolidayError] = useState<string | null>(null)
 
-  const { venue: swrVenue, isLoading: swrLoading, mutate: mutateVenue } = useVenue(venueID)
+  const { venue: swrVenue, isLoading: swrLoading } = useVenue(venueID)
 
   useEffect(() => {
     if (!swrVenue) return
@@ -174,7 +174,6 @@ export default function VenueSettingsPage() {
     setFacilities(v.facilities ?? [])
     setInitLoading(false)
   // Only run when SWR data first arrives; userReady/user/router guard on changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [swrVenue, userReady])
 
   useEffect(() => {
@@ -833,11 +832,11 @@ export default function VenueSettingsPage() {
               renderInput={(params) => (
                 <TextField {...params} size="small" label="Search player" sx={{ minWidth: 260 }} />
               )}
-              renderOption={({ key, ...props }, p) => {
+              renderOption={(props, p) => {
                 const displayName = p.displayName?.en || p.displayName?.th
                 const officialName = p.officialName.en || p.officialName.th || p.officialName.pronunciation
                 return (
-                  <Box component="li" key={p.userID} {...props} sx={{ flexDirection: 'column', alignItems: 'flex-start !important' }}>
+                  <Box component="li" {...props} key={p.userID} sx={{ flexDirection: 'column', alignItems: 'flex-start !important' }}>
                     <Typography variant="body2" fontWeight={600}>{displayName || officialName}</Typography>
                     {displayName && (
                       <Typography variant="caption" color="text.secondary">{officialName}</Typography>

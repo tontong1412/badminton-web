@@ -95,7 +95,6 @@ export default function MyBookingsPage() {
   const [payingBundleID, setPayingBundleID] = useState<string | null>(null)
   const [payDialogOpen, setPayDialogOpen] = useState(false)
   const [payTargetBundleID, setPayTargetBundleID] = useState<string | null>(null)
-  const [payTargetBookingIds, setPayTargetBookingIds] = useState<string[]>([])
   const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
   const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
   const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
@@ -237,7 +236,6 @@ export default function MyBookingsPage() {
     const court = firstCourtID ? courtDetails[firstCourtID] : undefined
     const venue = court ? venueDetails[court.venueID] : undefined
     setPayTargetBundleID(bundleID)
-    setPayTargetBookingIds(bookingIds)
     setPayTargetBookings(bundleBookings)
     setPayTargetCurrency(currency)
     setPayTargetVenue(venue ?? null)
