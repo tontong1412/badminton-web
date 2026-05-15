@@ -356,10 +356,10 @@ export default function CourtBookingModal({
 
   useEffect(() => {
     if (!open) return
-    const seedDate = preselectedSlot?.date ?? (isItemsPreselected && bookingItems?.[0]?.date) ?? ''
-    const seedStart = preselectedSlot?.startTime ?? (isItemsPreselected && bookingItems?.[0]?.startTime) ?? ''
-    const seedEnd = preselectedSlot?.endTime ?? (isItemsPreselected && bookingItems?.[0]?.endTime) ?? ''
-    const seedCourtID = (isItemsPreselected && bookingItems?.[0]?.courtID) ?? courts[0]?.id ?? ''
+    const seedDate: string = preselectedSlot?.date || (isItemsPreselected ? bookingItems?.[0]?.date : '') || ''
+    const seedStart: string = preselectedSlot?.startTime || (isItemsPreselected ? bookingItems?.[0]?.startTime : '') || ''
+    const seedEnd: string = preselectedSlot?.endTime || (isItemsPreselected ? bookingItems?.[0]?.endTime : '') || ''
+    const seedCourtID: string = (isItemsPreselected ? bookingItems?.[0]?.courtID : '') || courts[0]?.id || ''
     if (preselectedSlot) {
       setSelectedDate(seedDate)
       setStartTime(seedStart)
@@ -373,6 +373,7 @@ export default function CourtBookingModal({
       setRangeEnd(moment(seedDate).add(1, 'month').format('YYYY-MM-DD'))
     }
     if (seedCourtID) setRecurringCourtID(seedCourtID)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, preselectedSlot, bookingItems])
 
   return (
