@@ -21,11 +21,14 @@ import {
   Divider,
   IconButton,
   Chip,
+  InputAdornment,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { Autocomplete } from '@mui/material'
 import { HolidaySchedule, PlayerWithAccount, User, Venue } from '@/type'
 import venueService from '../../../../services/venues'
@@ -113,6 +116,8 @@ export default function VenueSettingsPage() {
   const [slipokSaving, setSlipokSaving] = useState(false)
   const [slipokSuccess, setSlipokSuccess] = useState(false)
   const [slipokError, setSlipokError] = useState<string | null>(null)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [slipokToggling, setSlipokToggling] = useState(false)
 
   // Holidays state
   const [holidays, setHolidays] = useState<HolidaySchedule[]>([])
@@ -373,11 +378,9 @@ export default function VenueSettingsPage() {
     setSlipokSuccess(false)
     setSlipokError(null)
     try {
-      const isAdmin = user?.role === 'admin'
-      const slipokPayload: { branchId?: string; apiKey?: string; enabled?: boolean } = {}
+      const slipokPayload: { branchId?: string; apiKey?: string } = {}
       if (slipokBranchId) slipokPayload.branchId = slipokBranchId
       if (slipokApiKey) slipokPayload.apiKey = slipokApiKey
-      if (isAdmin) slipokPayload.enabled = slipokEnabled
       const updated = await venueService.update(venueID, { slipok: slipokPayload } as Partial<Venue>)
       setVenueState(updated)
       setSlipokHasApiKey(updated.slipok?.hasApiKey ?? false)
@@ -390,6 +393,21 @@ export default function VenueSettingsPage() {
       console.error(e)
     } finally {
       setSlipokSaving(false)
+    }
+  }
+
+  const handleToggleSlipok = async(enabled: boolean) => {
+    setSlipokToggling(true)
+    setSlipokError(null)
+    try {
+      const updated = await venueService.update(venueID, { slipok: { enabled } } as Partial<Venue>)
+      setVenueState(updated)
+      setSlipokEnabled(updated.slipok?.enabled ?? enabled)
+    } catch (e) {
+      setSlipokError('Failed to update SlipOK status')
+      console.error(e)
+    } finally {
+      setSlipokToggling(false)
     }
   }
 
@@ -702,11 +720,12 @@ export default function VenueSettingsPage() {
                 control={
                   <Switch
                     checked={slipokEnabled}
-                    onChange={(e) => setSlipokEnabled(e.target.checked)}
+                    onChange={(e) => handleToggleSlipok(e.target.checked)}
                     color="primary"
+                    disabled={slipokToggling}
                   />
                 }
-                label="Enable SlipOK verification"
+                label={slipokToggling ? (slipokEnabled ? 'Disabling…' : 'Enabling…') : 'Enable SlipOK verification'}
               />
               <Typography variant="caption" color="text.secondary" display="block">
                 Only system admins can enable or disable SlipOK verification.
@@ -725,11 +744,22 @@ export default function VenueSettingsPage() {
             <TextField
               size="small"
               label="API Key"
-              type="password"
+              type={showApiKey ? 'text' : 'password'}
               value={slipokApiKey}
               onChange={(e) => setSlipokApiKey(e.target.value)}
               placeholder={slipokHasApiKey ? '••••••••  (leave blank to keep existing)' : 'Enter API key'}
               sx={{ flex: 1, minWidth: 220 }}
+              onCopy={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              InputProps={{
+                endAdornment: slipokApiKey ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowApiKey((v) => !v)} edge="end" tabIndex={-1}>
+                      {showApiKey ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }}
             />
           </Box>
           {slipokHasApiKey && !slipokApiKey && (
