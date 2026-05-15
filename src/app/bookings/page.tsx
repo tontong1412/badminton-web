@@ -650,23 +650,47 @@ export default function MyBookingsPage() {
                   <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {payTargetVenue.payment.bankName}</Typography>
                   <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
                   <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
-                  {payTargetVenue.payment.promptPayID && (
-                    <>
-                      <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
-                      <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                        <QRCode
-                          value={generatePayload(payTargetVenue.payment.promptPayID, {
-                            amount: payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0),
-                          })}
-                          size={180}
-                          style={{ height: 'auto', maxWidth: '100%', width: 180 }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          Scan to pay {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
-                        </Typography>
-                      </Box>
-                    </>
-                  )}
+                  {payTargetVenue.payment.promptPayID && (() => {
+                    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
+                    return (
+                      <>
+                        <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
+                        {/* PromptPay QR Frame */}
+                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                          <Box sx={{
+                            width: 240,
+                            borderRadius: 3,
+                            overflow: 'hidden',
+                            border: '1.5px solid #e0e0e0',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                          }}>
+                            {/* Header image */}
+                            <Box
+                              component="img"
+                              src="/thai-qr-payment.webp"
+                              alt="Thai QR Payment"
+                              sx={{ width: '100%', display: 'block' }}
+                            />
+
+                            {/* QR Code area */}
+                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                              <QRCode
+                                value={generatePayload(payTargetVenue.payment.promptPayID, { amount: promptPayTotal })}
+                                size={168}
+                                style={{ display: 'block' }}
+                              />
+                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
+                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
+                                สแกนเพื่อชำระเงิน
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </>
+                    )
+                  })()}
                   {payTargetVenue.payment.qrCodeUrl && (
                     <img
                       src={payTargetVenue.payment.qrCodeUrl}
