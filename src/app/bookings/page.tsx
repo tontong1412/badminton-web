@@ -40,6 +40,8 @@ import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 import Layout from '../components/Layout'
 import axios from 'axios'
+import QRCode from 'react-qr-code'
+import generatePayload from 'promptpay-qr'
 
 const EXPIRY_MINUTES = 10
 
@@ -649,7 +651,21 @@ export default function MyBookingsPage() {
                   <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
                   <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
                   {payTargetVenue.payment.promptPayID && (
-                    <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
+                    <>
+                      <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
+                      <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                        <QRCode
+                          value={generatePayload(payTargetVenue.payment.promptPayID, {
+                            amount: payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0),
+                          })}
+                          size={180}
+                          style={{ height: 'auto', maxWidth: '100%', width: 180 }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          Scan to pay {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
+                        </Typography>
+                      </Box>
+                    </>
                   )}
                   {payTargetVenue.payment.qrCodeUrl && (
                     <img
