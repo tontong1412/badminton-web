@@ -654,7 +654,6 @@ export default function MyBookingsPage() {
                     const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
                     return (
                       <>
-                        <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {payTargetVenue.payment.promptPayID}</Typography>
                         {/* PromptPay QR Frame */}
                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
                           <Box sx={{
