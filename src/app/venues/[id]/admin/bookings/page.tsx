@@ -194,7 +194,7 @@ export default function VenuePaymentsPage() {
           <Tab label="Settings" value="settings" />
         </Tabs>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         <Tabs
           value={tab}
