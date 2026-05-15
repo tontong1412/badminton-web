@@ -18,6 +18,13 @@ import {
   FormControlLabel,
   Checkbox,
   Divider,
+  ToggleButton,
+  ToggleButtonGroup,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Chip,
 } from '@mui/material'
 import { Court, Venue } from '@/type'
 import BookingAvailability from './BookingAvailability'
@@ -28,6 +35,8 @@ import bookingsService from '../services/bookings'
 import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingSlice'
 import moment from 'moment'
+import axios from 'axios'
+import { SERVICE_ENDPOINT } from '../constants'
 
 interface BookingItemInput {
   courtID: string;
@@ -78,6 +87,16 @@ export default function CourtBookingModal({
   const [error, setErrorState] = useState<string | null>(null)
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+
+  const [bookingType, setBookingType] = useState<'single' | 'recurring'>('single')
+  const [recurringCourtID, setRecurringCourtID] = useState('')
+  const [recurringStartTime, setRecurringStartTime] = useState('08:00')
+  const [recurringEndTime, setRecurringEndTime] = useState('10:00')
+  const [recurringPattern, setRecurringPattern] = useState<'daily' | 'weekly'>('weekly')
+  const [recurringDays, setRecurringDays] = useState<number[]>([1])
+  const [rangeStart, setRangeStart] = useState(moment().format('YYYY-MM-DD'))
+  const [rangeEnd, setRangeEnd] = useState(moment().add(1, 'month').format('YYYY-MM-DD'))
+  const [recurringConflicts, setRecurringConflicts] = useState<{ date: string; reason: string }[]>([])
 
   const isItemsPreselected = Boolean(bookingItems && bookingItems.length > 0)
   const isSlotPreselected = Boolean(preselectedSlot?.date && preselectedSlot?.startTime && preselectedSlot?.endTime)
@@ -144,6 +163,27 @@ export default function CourtBookingModal({
     return courts.reduce((sum, court) => sum + getPriceForRange(court, startTime, endTime), 0)
   }
 
+  const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const isAdmin = currentUser?.role === 'admin'
+  const maxRangeMonths = isAdmin ? null : 2
+
+  const calcRecurringDates = (): string[] => {
+    const dates: string[] = []
+    const start = moment(rangeStart)
+    const end = moment(rangeEnd)
+    for (let d = start.clone(); d.isSameOrBefore(end, 'day'); d.add(1, 'day')) {
+      if (recurringPattern === 'daily' || (recurringPattern === 'weekly' && recurringDays.includes(d.day()))) {
+        dates.push(d.format('YYYY-MM-DD'))
+      }
+    }
+    return dates
+  }
+
+  const recurringCourt = courts.find((c) => c.id === recurringCourtID)
+  const recurringPricePerSession = recurringCourt ? getPriceForRange(recurringCourt, recurringStartTime, recurringEndTime) : 0
+  const recurringDatesPreview = calcRecurringDates()
+  const recurringTotalPrice = recurringPricePerSession * recurringDatesPreview.length
+
   const handleNext = () => {
     if (activeStep === 0) {
       if (currentUser) {
@@ -156,8 +196,27 @@ export default function CourtBookingModal({
         setErrorState(t('booking.fillRequiredFields'))
         return
       }
+      if (bookingType === 'recurring') {
+        if (!recurringCourtID) { setErrorState('Please select a court.'); return }
+        if (moment(recurringStartTime, 'HH:mm').isSameOrAfter(moment(recurringEndTime, 'HH:mm'))) {
+          setErrorState('End time must be after start time.'); return
+        }
+        if (moment(rangeStart).isAfter(moment(rangeEnd))) {
+          setErrorState('Range end must be after range start.'); return
+        }
+        if (maxRangeMonths !== null && moment(rangeEnd).isAfter(moment(rangeStart).add(maxRangeMonths, 'months'))) {
+          setErrorState(`Recurring booking cannot span more than ${maxRangeMonths} months.`); return
+        }
+        if (recurringPattern === 'weekly' && recurringDays.length === 0) {
+          setErrorState('Select at least one day of the week.'); return
+        }
+        if (calcRecurringDates().length === 0) {
+          setErrorState('No dates generated for this range and pattern.'); return
+        }
+      }
     }
     setErrorState(null)
+    setRecurringConflicts([])
     setActiveStep(activeStep + 1)
   }
 
@@ -169,6 +228,49 @@ export default function CourtBookingModal({
   const handleSubmit = async() => {
     if (!agreeTerms) {
       setErrorState(t('booking.mustAgreeTerms'))
+      return
+    }
+
+    if (bookingType === 'recurring') {
+      try {
+        setLoading(true)
+        setRecurringConflicts([])
+        await axios.post(
+          `${SERVICE_ENDPOINT}/bookings/recurring`,
+          {
+            courtID: recurringCourtID,
+            startTime: recurringStartTime,
+            endTime: recurringEndTime,
+            pattern: recurringPattern,
+            rangeStart,
+            rangeEnd,
+            daysOfWeek: recurringPattern === 'weekly' ? recurringDays : undefined,
+            note: note || undefined,
+          },
+          { withCredentials: true },
+        )
+        setErrorState(null)
+        setActiveStep(0)
+        setAgreeTerms(false)
+        setNote('')
+        setBookingType('single')
+        setRecurringConflicts([])
+        onBookingComplete(false)
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          const data = err.response?.data as { message?: string; conflicts?: { date: string; reason: string }[] }
+          if (err.response?.status === 409 && data?.conflicts) {
+            setRecurringConflicts(data.conflicts)
+            setErrorState(`${data.conflicts.length} date(s) could not be booked due to conflicts.`)
+          } else {
+            setErrorState(data?.message ?? 'Failed to create recurring booking.')
+          }
+        } else {
+          setErrorState('Failed to create recurring booking.')
+        }
+      } finally {
+        setLoading(false)
+      }
       return
     }
 
@@ -250,16 +352,38 @@ export default function CourtBookingModal({
     setNote('')
     setAgreeTerms(false)
     setErrorState(null)
+    setBookingType('single')
+    setRecurringCourtID(courts[0]?.id ?? '')
+    setRecurringStartTime('08:00')
+    setRecurringEndTime('10:00')
+    setRecurringPattern('weekly')
+    setRecurringDays([1])
+    setRangeStart(moment().format('YYYY-MM-DD'))
+    setRangeEnd(moment().add(1, 'month').format('YYYY-MM-DD'))
+    setRecurringConflicts([])
     onClose()
   }
 
   useEffect(() => {
-    if (open && preselectedSlot) {
-      setSelectedDate(preselectedSlot.date)
-      setStartTime(preselectedSlot.startTime)
-      setEndTime(preselectedSlot.endTime)
+    if (!open) return
+    const seedDate = preselectedSlot?.date ?? (isItemsPreselected && bookingItems?.[0]?.date) ?? ''
+    const seedStart = preselectedSlot?.startTime ?? (isItemsPreselected && bookingItems?.[0]?.startTime) ?? ''
+    const seedEnd = preselectedSlot?.endTime ?? (isItemsPreselected && bookingItems?.[0]?.endTime) ?? ''
+    const seedCourtID = (isItemsPreselected && bookingItems?.[0]?.courtID) ?? courts[0]?.id ?? ''
+    if (preselectedSlot) {
+      setSelectedDate(seedDate)
+      setStartTime(seedStart)
+      setEndTime(seedEnd)
     }
-  }, [open, preselectedSlot])
+    if (seedStart) setRecurringStartTime(seedStart)
+    if (seedEnd) setRecurringEndTime(seedEnd)
+    if (seedDate) {
+      setRecurringDays([moment(seedDate).day()])
+      setRangeStart(seedDate)
+      setRangeEnd(moment(seedDate).add(1, 'month').format('YYYY-MM-DD'))
+    }
+    if (seedCourtID) setRecurringCourtID(seedCourtID)
+  }, [open, preselectedSlot, bookingItems])
 
   return (
     <>
@@ -289,6 +413,36 @@ export default function CourtBookingModal({
 
           {activeStep === 0 && (
             <Box>
+              {currentUser && (
+                <Box sx={{ mb: 2 }}>
+                  <ToggleButtonGroup
+                    value={bookingType}
+                    exclusive
+                    onChange={(_, v) => {
+                      if (!v) return
+                      if (v === 'recurring') {
+                        const src = isItemsPreselected && bookingItems?.[0]
+                        const t1 = src ? src.startTime : startTime
+                        const t2 = src ? src.endTime : endTime
+                        const d = src ? src.date : selectedDate
+                        if (t1) setRecurringStartTime(t1)
+                        if (t2) setRecurringEndTime(t2)
+                        if (d) {
+                          setRecurringDays([moment(d).day()])
+                          setRangeStart(d)
+                          setRangeEnd(moment(d).add(1, 'month').format('YYYY-MM-DD'))
+                        }
+                      }
+                      setBookingType(v)
+                    }}
+                    size="small"
+                  >
+                    <ToggleButton value="single">One-time</ToggleButton>
+                    <ToggleButton value="recurring">Recurring</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+              )}
+
               {currentUser ? (
                 <Box sx={{ mb: 2, p: 2, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#80644f' }}>
@@ -362,6 +516,117 @@ export default function CourtBookingModal({
                 </>
               )}
 
+              {bookingType === 'recurring' && currentUser && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                  {courts.length > 1 && (
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Court</InputLabel>
+                      <Select value={recurringCourtID} label="Court" onChange={(e) => setRecurringCourtID(e.target.value)}>
+                        {courts.map((c) => (
+                          <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Start Time</InputLabel>
+                      <Select value={recurringStartTime} label="Start Time" onChange={(e) => setRecurringStartTime(e.target.value)}>
+                        {Array.from({ length: 48 }, (_, i) => {
+                          const h = Math.floor(i / 2).toString().padStart(2, '0')
+                          const m = i % 2 === 0 ? '00' : '30'
+                          const val = `${h}:${m}`
+                          return <MenuItem key={val} value={val}>{val}</MenuItem>
+                        })}
+                      </Select>
+                    </FormControl>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>End Time</InputLabel>
+                      <Select value={recurringEndTime} label="End Time" onChange={(e) => setRecurringEndTime(e.target.value)}>
+                        {Array.from({ length: 48 }, (_, i) => {
+                          const h = Math.floor(i / 2).toString().padStart(2, '0')
+                          const m = i % 2 === 0 ? '00' : '30'
+                          const val = `${h}:${m}`
+                          return <MenuItem key={val} value={val}>{val}</MenuItem>
+                        })}
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Repeat</Typography>
+                    <ToggleButtonGroup
+                      value={recurringPattern}
+                      exclusive
+                      onChange={(_, v) => { if (v) setRecurringPattern(v) }}
+                      size="small"
+                    >
+                      <ToggleButton value="weekly">Weekly</ToggleButton>
+                      <ToggleButton value="daily">Every Day</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
+
+                  {recurringPattern === 'weekly' && (
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Days</Typography>
+                      <ToggleButtonGroup
+                        value={recurringDays}
+                        onChange={(_, v: number[]) => { if (v.length > 0) setRecurringDays(v) }}
+                        size="small"
+                        sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                      >
+                        {DAY_LABELS.map((label, i) => (
+                          <ToggleButton key={i} value={i} sx={{ minWidth: 44 }}>{label}</ToggleButton>
+                        ))}
+                      </ToggleButtonGroup>
+                    </Box>
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                      label="From"
+                      type="date"
+                      size="small"
+                      fullWidth
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(e.target.value)}
+                      inputProps={{ min: moment().format('YYYY-MM-DD') }}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                      label="To"
+                      type="date"
+                      size="small"
+                      fullWidth
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(e.target.value)}
+                      inputProps={{
+                        min: rangeStart,
+                        ...(maxRangeMonths !== null ? { max: moment(rangeStart).add(maxRangeMonths, 'months').format('YYYY-MM-DD') } : {}),
+                      }}
+                      InputLabelProps={{ shrink: true }}
+                      helperText={!isAdmin ? 'Max 2 months' : undefined}
+                    />
+                  </Box>
+
+                  {recurringDatesPreview.length > 0 && (
+                    <Box sx={{ bgcolor: '#faf7f5', borderRadius: 1, p: 1.5 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {recurringDatesPreview.length} session{recurringDatesPreview.length !== 1 ? 's' : ''} · first {Math.min(5, recurringDatesPreview.length)}:{' '}
+                        {recurringDatesPreview.slice(0, 5).map((d) => moment(d).format('D MMM')).join(', ')}
+                        {recurringDatesPreview.length > 5 ? ` +${recurringDatesPreview.length - 5} more` : ''}
+                      </Typography>
+                      {recurringCourt && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          Est. total: {recurringTotalPrice.toFixed(2)} {recurringCourt.currency} · {recurringPricePerSession.toFixed(2)} {recurringCourt.currency}/session
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              )}
+
               <TextField
                 fullWidth
                 label={t('booking.note')}
@@ -376,47 +641,95 @@ export default function CourtBookingModal({
           {activeStep === 1 && (
             <Box>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                {t('booking.bookingSummary')}
+                {bookingType === 'recurring' ? 'Recurring Booking Summary' : t('booking.bookingSummary')}
               </Typography>
 
-              <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
-                </Typography>
-                {isItemsPreselected && bookingItems ? (
-                  bookingItems.map((item) => {
-                    const court = courts.find((c) => c.id === item.courtID)
-                    const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
-                    const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
-                    return (
-                      <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                        <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
-                        <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('DD/MM/YYYY')}</Typography>
-                        <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
-                        <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
-                      </Box>
-                    )
-                  })
-                ) : (
-                  <>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
-                    </Typography>
-                  </>
-                )}
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  <strong>{t('booking.total')}:</strong> {calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}
-                </Typography>
-              </Box>
+              {bookingType === 'recurring' ? (
+                <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Court:</strong> {recurringCourt?.name ?? recurringCourtID}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Time:</strong> {recurringStartTime} – {recurringEndTime}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Repeat:</strong>{' '}
+                    {recurringPattern === 'weekly'
+                      ? `Weekly on ${recurringDays.map((d) => DAY_LABELS[d]).join(', ')}`
+                      : 'Every day'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Date range:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Sessions:</strong> {recurringDatesPreview.length}
+                    {recurringDatesPreview.length > 0 && (
+                      <>
+                        {' '}· first {Math.min(3, recurringDatesPreview.length)}: {recurringDatesPreview.slice(0, 3).map((d) => moment(d).format('D MMM')).join(', ')}
+                        {recurringDatesPreview.length > 3 ? ` +${recurringDatesPreview.length - 3} more` : ''}
+                      </>
+                    )}
+                  </Typography>
+                  <Typography variant="h6" sx={{ mt: 2 }}>
+                    <strong>Est. Total:</strong> {recurringTotalPrice.toFixed(2)} {recurringCourt?.currency || 'THB'}
+                  </Typography>
+                  {recurringConflicts.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
+                      {recurringConflicts.map((c) => (
+                        <Chip
+                          key={c.date}
+                          label={`${moment(c.date).format('D MMM')} – ${c.reason}`}
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
+                  </Typography>
+                  {isItemsPreselected && bookingItems ? (
+                    bookingItems.map((item) => {
+                      const court = courts.find((c) => c.id === item.courtID)
+                      const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
+                      const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
+                      return (
+                        <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                          <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
+                          <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('DD/MM/YYYY')}</Typography>
+                          <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
+                          <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
+                        </Box>
+                      )
+                    })
+                  ) : (
+                    <>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
+                      </Typography>
+                    </>
+                  )}
+                  <Typography variant="h6" sx={{ mt: 2 }}>
+                    <strong>{t('booking.total')}:</strong> {calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}
+                  </Typography>
+                </Box>
+              )}
 
               <FormControlLabel
                 control={
@@ -447,9 +760,9 @@ export default function CourtBookingModal({
             onClick={handleSubmit}
             variant="contained"
             color="primary"
-            disabled={loading || !agreeTerms}
+            disabled={loading || !agreeTerms || (bookingType === 'recurring' && recurringDatesPreview.length === 0)}
           >
-            {loading ? <CircularProgress size={24} /> : t('booking.confirmBooking')}
+            {loading ? <CircularProgress size={24} /> : bookingType === 'recurring' ? `Book (${recurringDatesPreview.length} session${recurringDatesPreview.length !== 1 ? 's' : ''})` : t('booking.confirmBooking')}
           </Button>
         )}
       </DialogActions>

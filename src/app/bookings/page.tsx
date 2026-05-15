@@ -366,15 +366,23 @@ export default function MyBookingsPage() {
                           </Typography>
                         )}
                       </Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {moment(group.date).format('DD MMM YYYY')}
-                      </Typography>
-                      {group.bookings.map((booking) => (
-                        <Box key={booking.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.25 }}>
-                          <Typography variant="body2">{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                          <Typography variant="body2" color="text.secondary">{booking.startTime} – {booking.endTime}</Typography>
-                        </Box>
-                      ))}
+                      {group.bookings.map((booking, idx) => {
+                        const dateStr = moment(booking.date).format('DD MMM YYYY')
+                        const prevDateStr = idx > 0 ? moment(group.bookings[idx - 1].date).format('DD MMM YYYY') : null
+                        const showDate = dateStr !== prevDateStr
+                        return (
+                          <Box key={booking.id} sx={{ mb: 0.5 }}>
+                            {showDate && (
+                              <Typography variant="body2" fontWeight={600}>{dateStr}</Typography>
+                            )}
+                            <Box sx={{ display: 'flex', gap: 1, pl: showDate ? 0 : 0 }}>
+                              <Typography variant="body2" color="text.secondary">{booking.startTime} – {booking.endTime}</Typography>
+                              <Typography variant="body2" color="text.secondary">·</Typography>
+                              <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                            </Box>
+                          </Box>
+                        )
+                      })}
                       <Divider sx={{ my: 1 }} />
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                         <Typography variant="body2" fontWeight={600}>
@@ -462,7 +470,15 @@ export default function MyBookingsPage() {
                           {venue ? (venue.name.en || venue.name.th) : '—'}
                         </TableCell>
                         <TableCell>
-                          {moment(group.date).format('DD/MM/YYYY')}
+                          {group.bookings.map((booking, idx) => {
+                            const dateStr = moment(booking.date).format('DD/MM/YYYY')
+                            const prevDateStr = idx > 0 ? moment(group.bookings[idx - 1].date).format('DD/MM/YYYY') : null
+                            return (
+                              <Typography key={booking.id} variant="body2" sx={{ mb: 0.25 }}>
+                                {dateStr !== prevDateStr ? dateStr : ''}
+                              </Typography>
+                            )
+                          })}
                         </TableCell>
                         <TableCell>
                           {group.bookings.map((booking) => (

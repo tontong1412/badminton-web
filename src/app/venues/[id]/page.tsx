@@ -711,6 +711,8 @@ export default function VenueCourtsPage() {
                 </Box>
               </Box>
             )}
+
+
           </Box> {/* end controls card */}
 
           {/* ── GUIDED MODE ─────────────────────────────────────────────────── */}
