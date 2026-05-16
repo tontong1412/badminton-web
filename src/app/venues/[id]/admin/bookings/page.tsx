@@ -362,7 +362,7 @@ export default function VenuePaymentsPage() {
                   </Box>
                   <Typography variant="body2" sx={{ mt: 1 }}>
                     <strong>Booker:</strong> {selectedBundle.bookerName}
-                    {selectedBundle.bookerContact && ` · ${selectedBundle.bookerContact}`}
+                    {selectedBundle.bookerPhone && ` · ${selectedBundle.bookerPhone}`}
                   </Typography>
                 </Box>
                 {selectedBundle.slip ? (
