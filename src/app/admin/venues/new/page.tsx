@@ -94,7 +94,7 @@ export default function NewVenuePage() {
     setSchedule((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -152,215 +152,215 @@ export default function NewVenuePage() {
           </Box>
         ) : (
           <>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <Tooltip title="Back to Admin">
-            <IconButton onClick={() => router.back()} size="small">
-              <ArrowBackIcon />
-            </IconButton>
-          </Tooltip>
-          <Typography variant="h5" fontWeight={700}>
-            Create New Venue
-          </Typography>
-        </Box>
-
-        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-
-        <form onSubmit={handleSubmit}>
-          {/* ── Basic Info ─────────────────────────────────────── */}
-          <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              Basic Information
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-              <TextField
-                label="Name (Thai)"
-                value={nameTh}
-                onChange={(e) => setNameTh(e.target.value)}
-                required
-                sx={{ flex: '1 1 220px' }}
-                size="small"
-              />
-              <TextField
-                label="Name (English)"
-                value={nameEn}
-                onChange={(e) => setNameEn(e.target.value)}
-                required
-                sx={{ flex: '1 1 220px' }}
-                size="small"
-              />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              <Tooltip title="Back to Admin">
+                <IconButton onClick={() => router.back()} size="small">
+                  <ArrowBackIcon />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="h5" fontWeight={700}>
+                Create New Venue
+              </Typography>
             </Box>
-            <TextField
-              label="Address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              required
-              fullWidth
-              size="small"
-              sx={{ mb: 2 }}
-            />
-            <Autocomplete<PlayerWithAccount>
-              options={players}
-              value={selectedPlayer}
-              onChange={(_e, val) => setSelectedPlayer(val)}
-              getOptionLabel={(p) =>
-                `${p.officialName?.en || p.officialName?.th || ''} (${p.club || ''})`
-              }
-              isOptionEqualToValue={(a, b) => a.userID === b.userID}
-              renderOption={(props, p) => (
-                <li {...props} key={p.id}>
-                  {p.officialName?.en || p.officialName?.th || p.id} {p.club ? `(${p.club})` : ''}
-                </li>
-              )}
-              renderInput={(params) => (
+
+            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+            <form onSubmit={handleSubmit}>
+              {/* ── Basic Info ─────────────────────────────────────── */}
+              <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  Basic Information
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                  <TextField
+                    label="Name (Thai)"
+                    value={nameTh}
+                    onChange={(e) => setNameTh(e.target.value)}
+                    required
+                    sx={{ flex: '1 1 220px' }}
+                    size="small"
+                  />
+                  <TextField
+                    label="Name (English)"
+                    value={nameEn}
+                    onChange={(e) => setNameEn(e.target.value)}
+                    required
+                    sx={{ flex: '1 1 220px' }}
+                    size="small"
+                  />
+                </Box>
                 <TextField
-                  {...params}
-                  label="Owner"
-                  size="small"
+                  label="Address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
                   required
-                  helperText="Players who have a registered account"
+                  fullWidth
+                  size="small"
+                  sx={{ mb: 2 }}
                 />
-              )}
-            />
-          </Paper>
-
-          {/* ── Location ───────────────────────────────────────── */}
-          <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              Location (optional)
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <TextField
-                label="Longitude"
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                sx={{ flex: '1 1 200px' }}
-                size="small"
-                placeholder="e.g. 98.962016"
-              />
-              <TextField
-                label="Latitude"
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                sx={{ flex: '1 1 200px' }}
-                size="small"
-                placeholder="e.g. 18.841274"
-              />
-            </Box>
-          </Paper>
-
-          {/* ── Weekly Schedule ────────────────────────────────── */}
-          <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              Weekly Schedule
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              {DAYS.map((day) => {
-                const d = schedule[day.key]
-                return (
-                  <Box key={day.key} sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={d.enabled}
-                          onChange={(e) => updateDay(day.key, 'enabled', e.target.checked)}
-                          size="small"
-                        />
-                      }
-                      label={<Typography sx={{ width: 90, fontWeight: d.enabled ? 600 : 400 }}>{day.label}</Typography>}
-                      sx={{ m: 0, minWidth: 140 }}
+                <Autocomplete<PlayerWithAccount>
+                  options={players}
+                  value={selectedPlayer}
+                  onChange={(_e, val) => setSelectedPlayer(val)}
+                  getOptionLabel={(p) =>
+                    `${p.officialName?.en || p.officialName?.th || ''} (${p.club || ''})`
+                  }
+                  isOptionEqualToValue={(a, b) => a.userID === b.userID}
+                  renderOption={(props, p) => (
+                    <li {...props} key={p.id}>
+                      {p.officialName?.en || p.officialName?.th || p.id} {p.club ? `(${p.club})` : ''}
+                    </li>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Owner"
+                      size="small"
+                      required
+                      helperText="Players who have a registered account"
                     />
-                    {d.enabled && (
-                      <>
-                        <TextField
-                          label="Open"
-                          type="time"
-                          value={d.open}
-                          onChange={(e) => updateDay(day.key, 'open', e.target.value)}
-                          size="small"
-                          sx={{ width: 130 }}
-                          slotProps={{ inputLabel: { shrink: true } }}
-                        />
-                        <TextField
-                          label="Close"
-                          type="time"
-                          value={d.close}
-                          onChange={(e) => updateDay(day.key, 'close', e.target.value)}
-                          size="small"
-                          sx={{ width: 130 }}
-                          slotProps={{ inputLabel: { shrink: true } }}
-                        />
-                      </>
-                    )}
-                    {!d.enabled && (
-                      <Typography variant="body2" color="text.secondary">Closed</Typography>
-                    )}
-                  </Box>
-                )
-              })}
-            </Box>
-          </Paper>
-
-          {/* ── Booking Settings ───────────────────────────────── */}
-          <Paper variant="outlined" sx={{ p: 3, mb: 4 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              Booking Settings
-            </Typography>
-
-            <TextField
-              select
-              label="Slot Duration"
-              value={slotDuration}
-              onChange={(e) => setSlotDuration(Number(e.target.value) as 30 | 60)}
-              size="small"
-              sx={{ minWidth: 180, mb: 2 }}
-              helperText="Minimum booking unit"
-            >
-              <MenuItem value={30}>30 minutes</MenuItem>
-              <MenuItem value={60}>60 minutes</MenuItem>
-            </TextField>
-
-            <Divider sx={{ my: 2 }} />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={gapEnabled}
-                  onChange={(e) => setGapEnabled(e.target.checked)}
+                  )}
                 />
-              }
-              label="Enable gap between bookings"
-              sx={{ mb: 1, display: 'flex' }}
-            />
+              </Paper>
 
-            {gapEnabled && (
-              <TextField
-                select
-                label="Minimum Gap"
-                value={gapMinutes}
-                onChange={(e) => setGapMinutes(Number(e.target.value) as 30 | 60)}
-                size="small"
-                sx={{ minWidth: 180 }}
-              >
-                <MenuItem value={30}>30 minutes</MenuItem>
-                <MenuItem value={60}>60 minutes</MenuItem>
-              </TextField>
-            )}
-          </Paper>
+              {/* ── Location ───────────────────────────────────────── */}
+              <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  Location (optional)
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <TextField
+                    label="Longitude"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                    sx={{ flex: '1 1 200px' }}
+                    size="small"
+                    placeholder="e.g. 98.962016"
+                  />
+                  <TextField
+                    label="Latitude"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                    sx={{ flex: '1 1 200px' }}
+                    size="small"
+                    placeholder="e.g. 18.841274"
+                  />
+                </Box>
+              </Paper>
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="outlined" onClick={() => router.back()} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={submitting}
-              startIcon={submitting ? <CircularProgress size={16} /> : undefined}
-            >
-              {submitting ? 'Creating…' : 'Create Venue'}
-            </Button>
-          </Box>
-        </form>
+              {/* ── Weekly Schedule ────────────────────────────────── */}
+              <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  Weekly Schedule
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {DAYS.map((day) => {
+                    const d = schedule[day.key]
+                    return (
+                      <Box key={day.key} sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={d.enabled}
+                              onChange={(e) => updateDay(day.key, 'enabled', e.target.checked)}
+                              size="small"
+                            />
+                          }
+                          label={<Typography sx={{ width: 90, fontWeight: d.enabled ? 600 : 400 }}>{day.label}</Typography>}
+                          sx={{ m: 0, minWidth: 140 }}
+                        />
+                        {d.enabled && (
+                          <>
+                            <TextField
+                              label="Open"
+                              type="time"
+                              value={d.open}
+                              onChange={(e) => updateDay(day.key, 'open', e.target.value)}
+                              size="small"
+                              sx={{ width: 130 }}
+                              slotProps={{ inputLabel: { shrink: true } }}
+                            />
+                            <TextField
+                              label="Close"
+                              type="time"
+                              value={d.close}
+                              onChange={(e) => updateDay(day.key, 'close', e.target.value)}
+                              size="small"
+                              sx={{ width: 130 }}
+                              slotProps={{ inputLabel: { shrink: true } }}
+                            />
+                          </>
+                        )}
+                        {!d.enabled && (
+                          <Typography variant="body2" color="text.secondary">Closed</Typography>
+                        )}
+                      </Box>
+                    )
+                  })}
+                </Box>
+              </Paper>
+
+              {/* ── Booking Settings ───────────────────────────────── */}
+              <Paper variant="outlined" sx={{ p: 3, mb: 4 }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  Booking Settings
+                </Typography>
+
+                <TextField
+                  select
+                  label="Slot Duration"
+                  value={slotDuration}
+                  onChange={(e) => setSlotDuration(Number(e.target.value) as 30 | 60)}
+                  size="small"
+                  sx={{ minWidth: 180, mb: 2 }}
+                  helperText="Minimum booking unit"
+                >
+                  <MenuItem value={30}>30 minutes</MenuItem>
+                  <MenuItem value={60}>60 minutes</MenuItem>
+                </TextField>
+
+                <Divider sx={{ my: 2 }} />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={gapEnabled}
+                      onChange={(e) => setGapEnabled(e.target.checked)}
+                    />
+                  }
+                  label="Enable gap between bookings"
+                  sx={{ mb: 1, display: 'flex' }}
+                />
+
+                {gapEnabled && (
+                  <TextField
+                    select
+                    label="Minimum Gap"
+                    value={gapMinutes}
+                    onChange={(e) => setGapMinutes(Number(e.target.value) as 30 | 60)}
+                    size="small"
+                    sx={{ minWidth: 180 }}
+                  >
+                    <MenuItem value={30}>30 minutes</MenuItem>
+                    <MenuItem value={60}>60 minutes</MenuItem>
+                  </TextField>
+                )}
+              </Paper>
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button variant="outlined" onClick={() => router.back()} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={submitting}
+                  startIcon={submitting ? <CircularProgress size={16} /> : undefined}
+                >
+                  {submitting ? 'Creating…' : 'Create Venue'}
+                </Button>
+              </Box>
+            </form>
           </>
         )}
       </Container>
