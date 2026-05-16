@@ -60,6 +60,20 @@ const removeManager = (id: string, userID: string): Promise<Venue> => {
   return axios.delete(`${baseUrl}/${id}/managers/${userID}`, { withCredentials: true }).then((r) => r.data as Venue)
 }
 
+export interface CreateVenuePayload {
+  name: { th: string; en: string };
+  address: string;
+  ownerUserID: string;
+  location?: { type: 'Point'; coordinates: [number, number] };
+  weeklySchedule?: Record<string, { open: string; close: string } | null>;
+  gapPolicy?: { enabled: boolean; minimumGapMinutes: 30 | 60 };
+  slotDurationMinutes?: 30 | 60;
+}
+
+const create = (payload: CreateVenuePayload): Promise<Venue> => {
+  return axios.post(baseUrl, payload, { withCredentials: true }).then((r) => r.data as Venue)
+}
+
 export default {
   getAll,
   getById,
@@ -72,4 +86,5 @@ export default {
   uploadImage,
   addManager,
   removeManager,
+  create,
 }

@@ -1,8 +1,26 @@
-import { Court, BookingAvailability } from '@/type'
+import { Court, BookingAvailability, CourtPricingRule } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 
 const baseUrl = `${SERVICE_ENDPOINT}/courts`
+
+export interface CreateCourtPayload {
+  venueID: string
+  name: string
+  description?: string
+  pricePerHour: number
+  currency: string
+  status?: 'active' | 'inactive'
+}
+
+export interface UpdateCourtPayload {
+  name?: string
+  description?: string
+  pricePerHour?: number
+  currency?: string
+  status?: 'active' | 'inactive'
+  pricingRules?: CourtPricingRule[]
+}
 
 const getAll = (): Promise<Court[]> => {
   const request = axios.get(baseUrl)
@@ -24,8 +42,16 @@ const getAvailability = (id: string, date: string, durationMinutes: number): Pro
   return request.then((response) => response.data as BookingAvailability)
 }
 
+const create = (payload: CreateCourtPayload): Promise<Court> =>
+  axios.post(baseUrl, payload, { withCredentials: true }).then((r) => r.data as Court)
+
+const update = (id: string, payload: UpdateCourtPayload): Promise<Court> =>
+  axios.put(`${baseUrl}/${id}`, payload, { withCredentials: true }).then((r) => r.data as Court)
+
 export default {
   getAll,
   getById,
   getAvailability,
+  create,
+  update,
 }

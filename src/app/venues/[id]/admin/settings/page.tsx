@@ -30,10 +30,11 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { Autocomplete } from '@mui/material'
-import { HolidaySchedule, PlayerWithAccount, User, Venue } from '@/type'
+import { HolidaySchedule, PlayerWithAccount, User, Venue, Court, CourtPricingRule } from '@/type'
 import venueService from '../../../../services/venues'
 import { useVenue } from '../../../../libs/data'
 import playerService from '../../../../services/players'
+import courtService from '../../../../services/courts'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
@@ -128,6 +129,22 @@ export default function VenueSettingsPage() {
   const [facilities, setFacilities] = useState<string[]>([])
   const [facilitiesSaving, setFacilitiesSaving] = useState(false)
   const [facilitiesSuccess, setFacilitiesSuccess] = useState(false)
+
+  // Courts state
+  const [courts, setCourts] = useState<Court[]>([])
+  const [courtsLoading, setCourtsLoading] = useState(false)
+  const [courtError, setCourtError] = useState<string | null>(null)
+  const [courtSuccess, setCourtSuccess] = useState<string | null>(null)
+  // Form for add/edit
+  const [editingCourt, setEditingCourt] = useState<Court | null>(null) // null = add mode
+  const [courtFormOpen, setCourtFormOpen] = useState(false)
+  const [courtName, setCourtName] = useState('')
+  const [courtDesc, setCourtDesc] = useState('')
+  const [courtPrice, setCourtPrice] = useState('')
+  const [courtCurrency, setCourtCurrency] = useState('THB')
+  const [courtStatus, setCourtStatus] = useState<'active' | 'inactive'>('active')
+  const [courtPricingRules, setCourtPricingRules] = useState<CourtPricingRule[]>([])
+  const [courtSaving, setCourtSaving] = useState(false)
   const [newHolidayOpen, setNewHolidayOpen] = useState('08:00')
   const [newHolidayClose, setNewHolidayClose] = useState('22:00')
   const [holidaySaving, setHolidaySaving] = useState(false)
@@ -138,11 +155,12 @@ export default function VenueSettingsPage() {
   useEffect(() => {
     if (!swrVenue) return
     const v = swrVenue
+    const isSystemAdmin = (user as { role?: string })?.role === 'admin'
     const userID = (user as unknown as { id: string } | null)?.id
     const isOwner = v.ownerUserID === userID
     const isManager = v.managerUserIDs.includes(userID ?? '')
     if (!userReady) return
-    if (!userID || (!isOwner && !isManager)) {
+    if (!userID || (!isSystemAdmin && !isOwner && !isManager)) {
       router.replace('/admin')
       return
     }
@@ -175,6 +193,16 @@ export default function VenueSettingsPage() {
     setInitLoading(false)
   // Only run when SWR data first arrives; userReady/user/router guard on changes
   }, [swrVenue, userReady])
+
+  // Load courts for this venue
+  useEffect(() => {
+    if (!venueID) return
+    setCourtsLoading(true)
+    courtService.getAll()
+      .then((all) => setCourts(all.filter((c) => c.venueID === venueID)))
+      .catch(() => setCourts([]))
+      .finally(() => setCourtsLoading(false))
+  }, [venueID])
 
   useEffect(() => {
     if (swrLoading && !swrVenue) setInitLoading(true)
@@ -426,6 +454,82 @@ export default function VenueSettingsPage() {
       setFacilitiesSaving(false)
     }
   }
+
+  const openCourtForm = (court?: Court) => {
+    if (court) {
+      setEditingCourt(court)
+      setCourtName(court.name)
+      setCourtDesc(court.description ?? '')
+      setCourtPrice(String(court.pricePerHour))
+      setCourtCurrency(court.currency)
+      setCourtStatus(court.status)
+      setCourtPricingRules(court.pricingRules ?? [])
+    } else {
+      setEditingCourt(null)
+      setCourtName('')
+      setCourtDesc('')
+      setCourtPrice('')
+      setCourtCurrency('THB')
+      setCourtStatus('active')
+      setCourtPricingRules([])
+    }
+    setCourtError(null)
+    setCourtSuccess(null)
+    setCourtFormOpen(true)
+  }
+
+  const handleSaveCourt = async() => {
+    if (!courtName.trim() || !courtPrice) {
+      setCourtError('Name and price are required.')
+      return
+    }
+    const price = parseFloat(courtPrice)
+    if (isNaN(price) || price < 0) {
+      setCourtError('Price must be a valid number.')
+      return
+    }
+    setCourtSaving(true)
+    setCourtError(null)
+    try {
+      if (editingCourt) {
+        const updated = await courtService.update(editingCourt.id, {
+          name: courtName.trim(),
+          description: courtDesc.trim() || undefined,
+          pricePerHour: price,
+          currency: courtCurrency,
+          status: courtStatus,
+          pricingRules: courtPricingRules,
+        })
+        setCourts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+      } else {
+        const created = await courtService.create({
+          venueID,
+          name: courtName.trim(),
+          description: courtDesc.trim() || undefined,
+          pricePerHour: price,
+          currency: courtCurrency,
+          status: courtStatus,
+        })
+        setCourts((prev) => [...prev, created])
+      }
+      setCourtSuccess(editingCourt ? 'Court updated.' : 'Court created.')
+      setCourtFormOpen(false)
+    } catch (e) {
+      setCourtError('Failed to save court.')
+      console.error(e)
+    } finally {
+      setCourtSaving(false)
+    }
+  }
+
+  const addPricingRule = () =>
+    setCourtPricingRules((prev) => [...prev, { startTime: '09:00', endTime: '17:00', pricePerHour: 0 }])
+
+  const updatePricingRule = (i: number, field: keyof CourtPricingRule, value: string | number) =>
+    setCourtPricingRules((prev) => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
+
+  const removePricingRule = (i: number) =>
+    setCourtPricingRules((prev) => prev.filter((_, idx) => idx !== i))
 
   const updateDay = (index: number, partial: Partial<DayScheduleState>) => {
     setWeekDays((prev) => prev.map((d, i) => (i === index ? { ...d, ...partial } : d)))
@@ -973,6 +1077,81 @@ export default function VenueSettingsPage() {
             {facilitiesSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
           </Box>
         </Paper>
+        {/* ── Courts ─────────────────────────────────────────── */}
+        <Paper sx={{ p: 3, mt: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" fontWeight={700}>Courts</Typography>
+            <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => openCourtForm()} sx={{ bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' } }}>
+              Add Court
+            </Button>
+          </Box>
+
+          {courtSuccess && <Alert severity="success" sx={{ mb: 2 }}>{courtSuccess}</Alert>}
+
+          {courtsLoading ? (
+            <CircularProgress size={24} />
+          ) : courts.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">No courts yet. Add one above.</Typography>
+          ) : (
+            courts.map((court) => (
+              <Box key={court.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Box>
+                  <Typography fontWeight={600}>{court.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {court.pricePerHour} {court.currency}/hr · {court.status}
+                    {court.pricingRules && court.pricingRules.length > 0 && ` · ${court.pricingRules.length} pricing rule(s)`}
+                  </Typography>
+                </Box>
+                <Button size="small" onClick={() => openCourtForm(court)}>Edit</Button>
+              </Box>
+            ))
+          )}
+
+          {/* Court form dialog */}
+          {courtFormOpen && (
+            <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                {editingCourt ? `Edit: ${editingCourt.name}` : 'New Court'}
+              </Typography>
+              {courtError && <Alert severity="error" sx={{ mb: 2 }}>{courtError}</Alert>}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                <TextField label="Name" value={courtName} onChange={(e) => setCourtName(e.target.value)} size="small" required sx={{ flex: '1 1 180px' }} />
+                <TextField label="Description" value={courtDesc} onChange={(e) => setCourtDesc(e.target.value)} size="small" sx={{ flex: '2 1 260px' }} />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                <TextField label="Base Price / hr" value={courtPrice} onChange={(e) => setCourtPrice(e.target.value)} size="small" type="number" required sx={{ flex: '1 1 140px' }} />
+                <TextField label="Currency" value={courtCurrency} onChange={(e) => setCourtCurrency(e.target.value)} size="small" sx={{ flex: '1 1 100px' }} />
+                <FormControl size="small" sx={{ flex: '1 1 140px' }}>
+                  <InputLabel>Status</InputLabel>
+                  <Select label="Status" value={courtStatus} onChange={(e) => setCourtStatus(e.target.value as 'active' | 'inactive')}>
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Pricing rules */}
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Time-based Pricing Rules (optional)</Typography>
+              {courtPricingRules.map((rule, i) => (
+                <Box key={i} sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <TextField label="Start" type="time" value={rule.startTime} onChange={(e) => updatePricingRule(i, 'startTime', e.target.value)} size="small" sx={{ width: 120 }} slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="End" type="time" value={rule.endTime} onChange={(e) => updatePricingRule(i, 'endTime', e.target.value)} size="small" sx={{ width: 120 }} slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Price/hr" type="number" value={rule.pricePerHour} onChange={(e) => updatePricingRule(i, 'pricePerHour', parseFloat(e.target.value))} size="small" sx={{ width: 110 }} />
+                  <IconButton size="small" onClick={() => removePricingRule(i)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                </Box>
+              ))}
+              <Button size="small" startIcon={<AddIcon />} onClick={addPricingRule} sx={{ mb: 2 }}>Add Rule</Button>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button variant="outlined" size="small" onClick={() => setCourtFormOpen(false)} disabled={courtSaving}>Cancel</Button>
+                <Button variant="contained" size="small" onClick={handleSaveCourt} disabled={courtSaving} sx={{ bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' } }}>
+                  {courtSaving ? <CircularProgress size={16} /> : 'Save'}
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </Paper>
+
       </Container>
     </Layout>
   )

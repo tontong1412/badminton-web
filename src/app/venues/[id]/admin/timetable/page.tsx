@@ -152,13 +152,12 @@ export default function VenueTimetablePage() {
   // Auth / access guard
   useEffect(() => {
     if (!userReady || !venue) return
+    const isSystemAdmin = (user as { role?: string })?.role === 'admin'
     const userID = (user as unknown as { id: string } | null)?.id
     const isOwner = venue.ownerUserID === userID
     const isManager = venue.managerUserIDs.includes(userID ?? '')
-    if (!userID || (!isOwner && !isManager)) router.replace('/admin')
+    if (!userID || (!isSystemAdmin && !isOwner && !isManager)) router.replace('/admin')
   }, [venue, user, userReady, router])
-
-  // Single-cell booking state
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
   const [bookDurationMinutes, setBookDurationMinutes] = useState(60)
   const [bookError, setBookError] = useState<string | null>(null)

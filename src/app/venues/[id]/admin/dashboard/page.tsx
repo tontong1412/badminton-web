@@ -71,10 +71,11 @@ export default function VenueDashboardPage() {
   useEffect(() => {
     if (!userReady) return
     if (!venue) return
+    const isSystemAdmin = (user as { role?: string })?.role === 'admin'
     const userID = (user as unknown as { id: string } | null)?.id
     const isOwner = venue.ownerUserID === userID
     const isManager = venue.managerUserIDs.includes(userID ?? '')
-    if (!userID || (!isOwner && !isManager)) router.replace('/admin')
+    if (!userID || (!isSystemAdmin && !isOwner && !isManager)) router.replace('/admin')
   }, [venue, user, userReady, router])
 
   const rangeStart = useMemo(() => {
