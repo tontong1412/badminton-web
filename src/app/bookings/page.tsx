@@ -38,6 +38,7 @@ import { useAppDispatch } from '../libs/redux/store'
 import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
+import { Download } from '@mui/icons-material'
 import Layout from '../components/Layout'
 import axios from 'axios'
 import QRCode from 'react-qr-code'
@@ -97,6 +98,72 @@ export default function MyBookingsPage() {
   const [payTargetBundleID, setPayTargetBundleID] = useState<string | null>(null)
   const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
   const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
+  const qrFrameRef = useRef<HTMLDivElement>(null)
+
+  const handleSaveQR = () => {
+    if (!qrFrameRef.current || !payTargetVenue) return
+    const svg = qrFrameRef.current.querySelector('svg')
+    if (!svg) return
+
+    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
+    const frameWidth = 320
+    const svgSize = 224
+    const textAreaHeight = 72
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    const headerImg = new window.Image()
+    const qrImg = new window.Image()
+    let loaded = 0
+
+    const draw = () => {
+      loaded++
+      if (loaded < 2) return
+
+      const scaledHeaderH = Math.round(frameWidth * headerImg.naturalHeight / headerImg.naturalWidth)
+      const canvasH = scaledHeaderH + svgSize + textAreaHeight + 24
+
+      const canvas = document.createElement('canvas')
+      canvas.width = frameWidth
+      canvas.height = canvasH
+      const ctx = canvas.getContext('2d')!
+
+      // White bg
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, frameWidth, canvasH)
+
+      // Header image
+      ctx.drawImage(headerImg, 0, 0, frameWidth, scaledHeaderH)
+
+      // QR code
+      const qrX = (frameWidth - svgSize) / 2
+      ctx.drawImage(qrImg, qrX, scaledHeaderH + 12, svgSize, svgSize)
+
+      // Amount
+      ctx.fillStyle = '#1a237e'
+      ctx.font = 'bold 22px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(`${promptPayTotal.toFixed(2)} ${payTargetCurrency}`, frameWidth / 2, scaledHeaderH + svgSize + 44)
+
+      // Scan label
+      ctx.fillStyle = '#666666'
+      ctx.font = '13px sans-serif'
+      ctx.fillText('สแกนเพื่อชำระเงิน', frameWidth / 2, scaledHeaderH + svgSize + 66)
+
+      URL.revokeObjectURL(svgUrl)
+      const link = document.createElement('a')
+      link.download = 'payment-qr.png'
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    }
+
+    headerImg.onload = draw
+    qrImg.onload = draw
+    headerImg.src = '/thai-qr-payment.webp'
+    qrImg.src = svgUrl
+  }
   const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
   const [slipFile, setSlipFile] = useState<File | null>(null)
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
@@ -653,8 +720,8 @@ export default function MyBookingsPage() {
                     return (
                       <>
                         {/* PromptPay QR Frame */}
-                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                          <Box sx={{
+                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                          <Box ref={qrFrameRef} sx={{
                             width: 240,
                             borderRadius: 3,
                             overflow: 'hidden',
@@ -684,6 +751,9 @@ export default function MyBookingsPage() {
                               </Typography>
                             </Box>
                           </Box>
+                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>
+                            บันทึก QR
+                          </Button>
                         </Box>
                       </>
                     )
