@@ -451,6 +451,8 @@ export interface Booking {
   resaleSourceListingID?: string;
   resaleOutcome: BookingResaleOutcome;
   note?: string;
+  couponCode?: string;
+  discountAmount?: number;
   bookerName?: string;
   bookerPhone?: string;
   createdAt?: string;
@@ -458,6 +460,20 @@ export interface Booking {
 }
 
 export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface Coupon {
+  id: string;
+  code: string;
+  venueID?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  maxDiscountAmount?: number;
+  maxUses?: number;
+  usedCount: number;
+  expiresAt?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
 
 export interface BookingAvailability {
   court: Court;

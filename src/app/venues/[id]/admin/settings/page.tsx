@@ -30,11 +30,12 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { Autocomplete } from '@mui/material'
-import { HolidaySchedule, PlayerWithAccount, User, Venue, Court, CourtPricingRule } from '@/type'
+import { HolidaySchedule, PlayerWithAccount, User, Venue, Court, CourtPricingRule, Coupon } from '@/type'
 import venueService from '../../../../services/venues'
 import { useVenue } from '../../../../libs/data'
 import playerService from '../../../../services/players'
 import courtService from '../../../../services/courts'
+import couponService, { CreateCouponPayload } from '../../../../services/coupons'
 import moment from 'moment'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../../components/Layout/index'
@@ -150,6 +151,18 @@ export default function VenueSettingsPage() {
   const [holidaySaving, setHolidaySaving] = useState(false)
   const [holidayError, setHolidayError] = useState<string | null>(null)
 
+  // Coupon state
+  const [coupons, setCoupons] = useState<Coupon[]>([])
+  const [couponsLoading, setCouponsLoading] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [newCouponCode, setNewCouponCode] = useState('')
+  const [newCouponType, setNewCouponType] = useState<'percentage' | 'fixed'>('percentage')
+  const [newCouponValue, setNewCouponValue] = useState('')
+  const [newCouponMaxAmount, setNewCouponMaxAmount] = useState('')
+  const [newCouponMaxUses, setNewCouponMaxUses] = useState('')
+  const [newCouponExpiry, setNewCouponExpiry] = useState('')
+  const [couponSaving, setCouponSaving] = useState(false)
+
   const { venue: swrVenue, isLoading: swrLoading } = useVenue(venueID)
 
   useEffect(() => {
@@ -204,6 +217,16 @@ export default function VenueSettingsPage() {
       .finally(() => setCourtsLoading(false))
   }, [venueID])
 
+  // Load coupons for this venue
+  useEffect(() => {
+    if (!venueID) return
+    setCouponsLoading(true)
+    couponService.listByVenue(venueID)
+      .then(setCoupons)
+      .catch(() => setCoupons([]))
+      .finally(() => setCouponsLoading(false))
+  }, [venueID])
+
   useEffect(() => {
     if (swrLoading && !swrVenue) setInitLoading(true)
   }, [swrLoading, swrVenue])
@@ -212,6 +235,51 @@ export default function VenueSettingsPage() {
   useEffect(() => {
     playerService.getWithAccount().then(setAllPlayers).catch(() => {/* non-critical */})
   }, [])
+
+  const handleCreateCoupon = async() => {
+    const value = parseFloat(newCouponValue)
+    if (!newCouponCode.trim() || isNaN(value) || value <= 0) {
+      setCouponError('Code and a valid discount value are required.')
+      return
+    }
+    if (newCouponType === 'percentage' && value > 100) {
+      setCouponError('Percentage discount cannot exceed 100.')
+      return
+    }
+    setCouponSaving(true)
+    setCouponError(null)
+    try {
+      const payload: CreateCouponPayload = {
+        code: newCouponCode.trim().toUpperCase(),
+        discountType: newCouponType,
+        discountValue: value,
+        ...(newCouponType === 'percentage' && newCouponMaxAmount ? { maxDiscountAmount: parseFloat(newCouponMaxAmount) } : {}),
+        ...(newCouponMaxUses ? { maxUses: parseInt(newCouponMaxUses) } : {}),
+        ...(newCouponExpiry ? { expiresAt: newCouponExpiry } : {}),
+      }
+      const created = await couponService.create(venueID, payload)
+      setCoupons((prev) => [created, ...prev])
+      setNewCouponCode('')
+      setNewCouponValue('')
+      setNewCouponMaxAmount('')
+      setNewCouponMaxUses('')
+      setNewCouponExpiry('')
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setCouponError(msg ?? 'Failed to create coupon.')
+    } finally {
+      setCouponSaving(false)
+    }
+  }
+
+  const handleDeleteCoupon = async(couponID: string) => {
+    try {
+      await couponService.remove(venueID, couponID)
+      setCoupons((prev) => prev.filter((c) => c.id !== couponID))
+    } catch {
+      setCouponError('Failed to delete coupon.')
+    }
+  }
 
   const handleAddManager = async() => {
     if (!selectedPlayer) return
@@ -1150,6 +1218,126 @@ export default function VenueSettingsPage() {
               </Box>
             </Box>
           )}
+        </Paper>
+
+        {/* ── Coupon Codes ─────────────────────────────────────────────── */}
+        <Paper sx={{ p: 3, mt: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>Discount Coupons</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Create coupon codes that customers can apply when booking courts at this venue.
+          </Typography>
+
+          {couponError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCouponError(null)}>{couponError}</Alert>}
+
+          {/* Existing coupons */}
+          {couponsLoading ? (
+            <CircularProgress size={24} sx={{ mb: 2 }} />
+          ) : coupons.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>No coupons yet.</Typography>
+          ) : (
+            <Box sx={{ mb: 3 }}>
+              {coupons.map((coupon) => (
+                <Box key={coupon.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '1px solid', borderColor: 'divider', flexWrap: 'wrap', gap: 1 }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip label={coupon.code} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontWeight: 700 }} />
+                      <Chip
+                        label={coupon.discountType === 'percentage'
+                          ? `${coupon.discountValue}% off${coupon.maxDiscountAmount ? ` (max ${coupon.maxDiscountAmount})` : ''}`
+                          : `${coupon.discountValue} THB off`}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
+                      {!coupon.isActive && <Chip label="Inactive" size="small" color="default" />}
+                      {coupon.expiresAt && moment(coupon.expiresAt).isBefore(moment()) && (
+                        <Chip label="Expired" size="small" color="error" variant="outlined" />
+                      )}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      Used {coupon.usedCount}{coupon.maxUses ? ` / ${coupon.maxUses}` : ''} time{coupon.usedCount !== 1 ? 's' : ''}
+                      {coupon.expiresAt ? ` · Expires ${moment(coupon.expiresAt).format('D MMM YYYY')}` : ''}
+                    </Typography>
+                  </Box>
+                  <IconButton size="small" color="error" onClick={() => handleDeleteCoupon(coupon.id)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Divider sx={{ mb: 2 }} />
+
+          {/* Create new coupon */}
+          <Typography variant="subtitle2" sx={{ mb: 1.5 }}>Create New Coupon</Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
+            <TextField
+              size="small"
+              label="Code"
+              value={newCouponCode}
+              onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
+              placeholder="e.g. WELCOME20"
+              inputProps={{ style: { textTransform: 'uppercase', fontFamily: 'monospace' } }}
+              sx={{ flex: '1 1 160px' }}
+            />
+            <FormControl size="small" sx={{ flex: '0 0 140px' }}>
+              <InputLabel>Type</InputLabel>
+              <Select value={newCouponType} label="Type" onChange={(e) => setNewCouponType(e.target.value as 'percentage' | 'fixed')}>
+                <MenuItem value="percentage">Percentage (%)</MenuItem>
+                <MenuItem value="fixed">Fixed amount</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              size="small"
+              label={newCouponType === 'percentage' ? 'Discount %' : 'Discount amount'}
+              value={newCouponValue}
+              onChange={(e) => setNewCouponValue(e.target.value)}
+              type="number"
+              inputProps={{ min: 1, max: newCouponType === 'percentage' ? 100 : undefined }}
+              sx={{ flex: '0 0 130px' }}
+            />
+            {newCouponType === 'percentage' && (
+              <TextField
+                size="small"
+                label="Max discount amount (optional)"
+                value={newCouponMaxAmount}
+                onChange={(e) => setNewCouponMaxAmount(e.target.value)}
+                type="number"
+                inputProps={{ min: 1 }}
+                helperText="Cap the discount at this amount"
+                sx={{ flex: '0 0 200px' }}
+              />
+            )}
+            <TextField
+              size="small"
+              label="Max uses (optional)"
+              value={newCouponMaxUses}
+              onChange={(e) => setNewCouponMaxUses(e.target.value)}
+              type="number"
+              inputProps={{ min: 1 }}
+              sx={{ flex: '0 0 150px' }}
+            />
+            <TextField
+              size="small"
+              label="Expiry date (optional)"
+              value={newCouponExpiry}
+              onChange={(e) => setNewCouponExpiry(e.target.value)}
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: moment().add(1, 'day').format('YYYY-MM-DD') }}
+              sx={{ flex: '0 0 170px' }}
+            />
+          </Box>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={couponSaving ? <CircularProgress size={14} color="inherit" /> : <AddIcon />}
+            onClick={handleCreateCoupon}
+            disabled={couponSaving || !newCouponCode.trim() || !newCouponValue}
+          >
+            {couponSaving ? 'Creating…' : 'Create Coupon'}
+          </Button>
         </Paper>
 
       </Container>

@@ -31,6 +31,7 @@ import Transition from './ModalTransition'
 import LoginModal from './LoginModal'
 import { useTranslation } from 'react-i18next'
 import bookingsService from '../services/bookings'
+import couponService, { ValidateCouponResponse } from '../services/coupons'
 import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingSlice'
 import moment from 'moment'
@@ -96,6 +97,11 @@ export default function CourtBookingModal({
   const [rangeStart, setRangeStart] = useState(moment().format('YYYY-MM-DD'))
   const [rangeEnd, setRangeEnd] = useState(moment().add(1, 'month').format('YYYY-MM-DD'))
   const [recurringConflicts, setRecurringConflicts] = useState<{ date: string; reason: string }[]>([])
+
+  const [couponCode, setCouponCode] = useState('')
+  const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
+  const [couponValidating, setCouponValidating] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
 
   const isItemsPreselected = Boolean(bookingItems && bookingItems.length > 0)
 
@@ -296,6 +302,7 @@ export default function CourtBookingModal({
           guestPhone: userPhone || currentUser.player.contact?.tel,
         }),
         ...(note && { note }),
+        ...(couponResult && { couponCode: couponResult.code }),
       })
 
       if ('bookings' in result) {
@@ -320,6 +327,9 @@ export default function CourtBookingModal({
       setUserPhone('')
       setNote('')
       setAgreeTerms(false)
+      setCouponCode('')
+      setCouponResult(null)
+      setCouponError(null)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Booking failed'
       setErrorState(message)
@@ -327,6 +337,27 @@ export default function CourtBookingModal({
       console.error('Booking error:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleApplyCoupon = async() => {
+    if (!couponCode.trim()) return
+    const venueID = venue.id
+    const totalPrice = bookingType === 'recurring' ? recurringTotalPrice : calculatePrice()
+    setCouponValidating(true)
+    setCouponError(null)
+    setCouponResult(null)
+    try {
+      const result = await couponService.validate({ code: couponCode.trim(), venueID, totalPrice })
+      setCouponResult(result)
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setCouponError((err.response?.data as { message?: string })?.message ?? 'Invalid coupon.')
+      } else {
+        setCouponError('Could not apply coupon.')
+      }
+    } finally {
+      setCouponValidating(false)
     }
   }
 
@@ -351,6 +382,9 @@ export default function CourtBookingModal({
     setRangeStart(moment().format('YYYY-MM-DD'))
     setRangeEnd(moment().add(1, 'month').format('YYYY-MM-DD'))
     setRecurringConflicts([])
+    setCouponCode('')
+    setCouponResult(null)
+    setCouponError(null)
     onClose()
   }
 
@@ -717,8 +751,77 @@ export default function CourtBookingModal({
                       </>
                     )}
                     <Typography variant="h6" sx={{ mt: 2 }}>
-                      <strong>{t('booking.total')}:</strong> {calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}
+                      <strong>{t('booking.total')}:</strong>{' '}
+                      {couponResult ? (
+                        <>
+                          <Box component="span" sx={{ textDecoration: 'line-through', color: 'text.secondary', fontSize: '0.9em', mr: 1 }}>
+                            {calculatePrice().toFixed(2)}
+                          </Box>
+                          <Box component="span" sx={{ color: 'success.main' }}>
+                            {couponResult.finalPrice.toFixed(2)} {courts[0]?.currency || 'THB'}
+                          </Box>
+                        </>
+                      ) : (
+                        <>{calculatePrice().toFixed(2)} {courts[0]?.currency || 'THB'}</>
+                      )}
                     </Typography>
+                  </Box>
+                )}
+
+                {/* Coupon code input (single bookings only) */}
+                {bookingType !== 'recurring' && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Discount Coupon</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <TextField
+                        size="small"
+                        fullWidth
+                        label="Coupon code"
+                        value={couponCode}
+                        onChange={(e) => {
+                          setCouponCode(e.target.value.toUpperCase())
+                          setCouponResult(null)
+                          setCouponError(null)
+                        }}
+                        placeholder="Enter code"
+                        inputProps={{ style: { textTransform: 'uppercase' } }}
+                        disabled={!!couponResult}
+                      />
+                      {couponResult ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="inherit"
+                          onClick={() => { setCouponResult(null); setCouponCode(''); setCouponError(null) }}
+                          sx={{ whiteSpace: 'nowrap' }}
+                        >
+                          Remove
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={handleApplyCoupon}
+                          disabled={!couponCode.trim() || couponValidating}
+                          sx={{ whiteSpace: 'nowrap' }}
+                        >
+                          {couponValidating ? <CircularProgress size={16} /> : 'Apply'}
+                        </Button>
+                      )}
+                    </Box>
+                    {couponError && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                        {couponError}
+                      </Typography>
+                    )}
+                    {couponResult && (
+                      <Typography variant="caption" color="success.main" sx={{ mt: 0.5, display: 'block' }}>
+                        {couponResult.discountType === 'percentage'
+                          ? `${couponResult.discountValue}% off`
+                          : `${couponResult.discountAmount.toFixed(2)} ${courts[0]?.currency || 'THB'} off`}
+                        {' '}— saving {couponResult.discountAmount.toFixed(2)} {courts[0]?.currency || 'THB'}
+                      </Typography>
+                    )}
                   </Box>
                 )}
 
