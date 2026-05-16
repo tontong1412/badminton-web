@@ -232,7 +232,7 @@ export default function VenueDashboardPage() {
           <Tab label="Settings" value="settings" />
         </Tabs>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {/* Date range selector */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
