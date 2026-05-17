@@ -11,6 +11,7 @@ export interface CreateCourtPayload {
   pricePerHour: number
   currency: string
   status?: 'active' | 'inactive'
+  courtType?: string
 }
 
 export interface UpdateCourtPayload {
@@ -20,6 +21,7 @@ export interface UpdateCourtPayload {
   currency?: string
   status?: 'active' | 'inactive'
   pricingRules?: CourtPricingRule[]
+  courtType?: string
 }
 
 const getAll = (): Promise<Court[]> => {

@@ -145,6 +145,7 @@ export default function VenueSettingsPage() {
   const [courtCurrency, setCourtCurrency] = useState('THB')
   const [courtStatus, setCourtStatus] = useState<'active' | 'inactive'>('active')
   const [courtPricingRules, setCourtPricingRules] = useState<CourtPricingRule[]>([])
+  const [courtType, setCourtType] = useState('regular')
   const [courtSaving, setCourtSaving] = useState(false)
   const [newHolidayOpen, setNewHolidayOpen] = useState('08:00')
   const [newHolidayClose, setNewHolidayClose] = useState('22:00')
@@ -532,6 +533,7 @@ export default function VenueSettingsPage() {
       setCourtCurrency(court.currency)
       setCourtStatus(court.status)
       setCourtPricingRules(court.pricingRules ?? [])
+      setCourtType(court.courtType ?? 'regular')
     } else {
       setEditingCourt(null)
       setCourtName('')
@@ -540,6 +542,7 @@ export default function VenueSettingsPage() {
       setCourtCurrency('THB')
       setCourtStatus('active')
       setCourtPricingRules([])
+      setCourtType('regular')
     }
     setCourtError(null)
     setCourtSuccess(null)
@@ -567,6 +570,7 @@ export default function VenueSettingsPage() {
           currency: courtCurrency,
           status: courtStatus,
           pricingRules: courtPricingRules,
+          courtType: courtType.trim() || 'regular',
         })
         setCourts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
       } else {
@@ -577,6 +581,7 @@ export default function VenueSettingsPage() {
           pricePerHour: price,
           currency: courtCurrency,
           status: courtStatus,
+          courtType: courtType.trim() || 'regular',
         })
         setCourts((prev) => [...prev, created])
       }
@@ -1167,6 +1172,7 @@ export default function VenueSettingsPage() {
                   <Typography fontWeight={600}>{court.name}</Typography>
                   <Typography variant="caption" color="text.secondary">
                     {court.pricePerHour} {court.currency}/hr · {court.status}
+                    {court.courtType && ` · ${court.courtType}`}
                     {court.pricingRules && court.pricingRules.length > 0 && ` · ${court.pricingRules.length} pricing rule(s)`}
                   </Typography>
                 </Box>
@@ -1196,6 +1202,15 @@ export default function VenueSettingsPage() {
                     <MenuItem value="inactive">Inactive</MenuItem>
                   </Select>
                 </FormControl>
+                <Autocomplete
+                  freeSolo
+                  size="small"
+                  sx={{ flex: '1 1 140px' }}
+                  options={['regular', ...new Set(courts.filter((c) => c.courtType && c.courtType !== 'regular').map((c) => c.courtType!))]}
+                  value={courtType}
+                  onInputChange={(_e, val) => setCourtType(val)}
+                  renderInput={(params) => <TextField {...params} label="Type" />}
+                />
               </Box>
 
               {/* Pricing rules */}

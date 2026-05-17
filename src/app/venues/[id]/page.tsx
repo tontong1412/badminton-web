@@ -61,8 +61,14 @@ export default function VenueCourtsPage() {
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState<string | null>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [courtTypeFilter, setCourtTypeFilter] = useState<string | null>(null)
 
   const slotDurationMinutes = venue?.slotDurationMinutes ?? 30
+  const courtTypes = [...new Set(courts.filter((c) => c.courtType).map((c) => c.courtType!))]
+  const filteredCourts = useMemo(
+    () => courtTypeFilter ? courts.filter((c) => c.courtType === courtTypeFilter) : courts,
+    [courts, courtTypeFilter]
+  )
 
   const addMinutes = (time: string, mins: number): string => {
     const [h, m] = time.split(':').map(Number)
@@ -216,7 +222,7 @@ export default function VenueCourtsPage() {
 
   useEffect(() => {
     const loadGuided = async() => {
-      if (!selectedDate || courts.length === 0) {
+      if (!selectedDate || filteredCourts.length === 0) {
         setGuidedSlots([])
         return
       }
@@ -227,7 +233,7 @@ export default function VenueCourtsPage() {
       setGuidedError(null)
 
       try {
-        const activeCourts = courts.filter((c) => c.status === 'active')
+        const activeCourts = filteredCourts.filter((c) => c.status === 'active')
         const fetched = await Promise.all(
           activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, requestedDurationMinutes))
         )
@@ -295,7 +301,7 @@ export default function VenueCourtsPage() {
     }
 
     loadGuided()
-  }, [selectedDate, courts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount])
+  }, [selectedDate, filteredCourts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount])
 
   const filteredGuidedSlots = useMemo(
     () => guidedSlots.filter((s) => s.courtCount >= requestedCourtCount),
@@ -360,7 +366,7 @@ export default function VenueCourtsPage() {
       if (!slot.isSplit) {
         // Standard slot: find courts available for the full duration
         const results = await Promise.all(
-          courts.map(async(court) => {
+          filteredCourts.map(async(court) => {
             if (court.status !== 'active') return { court, available: false }
             const avail = await courtsService.getAvailability(court.id, selectedDate, requestedDurationMinutes)
             const ok = avail.slots.some((s) => s.startTime === slot.startTime && s.endTime === slot.endTime && s.available)
@@ -369,12 +375,12 @@ export default function VenueCourtsPage() {
         )
         const available = results.filter((r) => r.available).map((r) => r.court)
         setGuidedAvailableCourts(available)
-        setGuidedSelectedCourts(suggestCourts(courts, available, requestedCourtCount))
+        setGuidedSelectedCourts(suggestCourts(filteredCourts, available, requestedCourtCount))
       } else {
         // Split slot: assign different courts per sub-slot
         const numSubSlots = slotDurationMinutes > 0 ? Math.round(requestedDurationMinutes / slotDurationMinutes) : 1
         const subStarts = Array.from({ length: numSubSlots }, (_, i) => addMinutes(slot.startTime, i * slotDurationMinutes))
-        const activeCourts = courts.filter((c) => c.status === 'active')
+        const activeCourts = filteredCourts.filter((c) => c.status === 'active')
         const stepFetched = await Promise.all(
           activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
         )
@@ -417,7 +423,7 @@ export default function VenueCourtsPage() {
   // ── Free mode effects & handlers ───────────────────────────────────────────
   useEffect(() => {
     const loadFree = async() => {
-      if (!selectedDate || courts.length === 0) {
+      if (!selectedDate || filteredCourts.length === 0) {
         setFreeAvailability([])
         return
       }
@@ -428,7 +434,7 @@ export default function VenueCourtsPage() {
       setSelectedCells(new Map())
 
       try {
-        const activeCourts = courts.filter((c) => c.status === 'active')
+        const activeCourts = filteredCourts.filter((c) => c.status === 'active')
         const fetched = await Promise.all(
           activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
         )
@@ -442,7 +448,7 @@ export default function VenueCourtsPage() {
     }
 
     loadFree()
-  }, [selectedDate, courts, slotDurationMinutes])
+  }, [selectedDate, filteredCourts, slotDurationMinutes])
 
   const handleCellClick = (startTime: string, court: Court) => {
     if (moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {
@@ -719,6 +725,27 @@ export default function VenueCourtsPage() {
                 </Box>
               )}
 
+              {/* Court type filter — desktop inline (between hours and toggle) */}
+              {courtTypes.length > 1 && (
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 0.75 }}>
+                  <Chip
+                    label="All"
+                    size="small"
+                    onClick={() => setCourtTypeFilter(null)}
+                    sx={courtTypeFilter === null ? { bgcolor: '#80644f', color: '#fff' } : {}}
+                  />
+                  {courtTypes.map((type) => (
+                    <Chip
+                      key={type}
+                      label={type.charAt(0).toUpperCase() + type.slice(1)}
+                      size="small"
+                      onClick={() => setCourtTypeFilter(type === courtTypeFilter ? null : type)}
+                      sx={courtTypeFilter === type ? { bgcolor: '#80644f', color: '#fff' } : {}}
+                    />
+                  ))}
+                </Box>
+              )}
+
               {/* Mode toggle — right-aligned, compact */}
               <ToggleButtonGroup
                 value={bookingMode}
@@ -787,6 +814,27 @@ export default function VenueCourtsPage() {
               </Box>
             )}
 
+            {/* Court type filter — mobile only */}
+            {courtTypes.length > 1 && (
+              <Box sx={{ mt: 2, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Type:</Typography>
+                <Chip
+                  label="All"
+                  size="small"
+                  onClick={() => setCourtTypeFilter(null)}
+                  sx={courtTypeFilter === null ? { bgcolor: '#80644f', color: '#fff' } : {}}
+                />
+                {courtTypes.map((type) => (
+                  <Chip
+                    key={type}
+                    label={type.charAt(0).toUpperCase() + type.slice(1)}
+                    size="small"
+                    onClick={() => setCourtTypeFilter(type === courtTypeFilter ? null : type)}
+                    sx={courtTypeFilter === type ? { bgcolor: '#80644f', color: '#fff' } : {}}
+                  />
+                ))}
+              </Box>
+            )}
 
           </Box> {/* end controls card */}
 
@@ -965,7 +1013,7 @@ export default function VenueCourtsPage() {
               )}
 
               <CourtAvailabilityTable
-                courts={courts.filter((c) => c.status === 'active')}
+                courts={filteredCourts.filter((c) => c.status === 'active')}
                 availabilityByCourt={freeAvailability}
                 selectedDate={selectedDate}
                 slotDurationMinutes={slotDurationMinutes}

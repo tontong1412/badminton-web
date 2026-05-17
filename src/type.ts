@@ -423,6 +423,7 @@ export interface Court {
   slotStartOffsetMinutes?: number;
   currency: string;
   status: 'active' | 'inactive';
+  courtType?: string;
 }
 
 export interface Booking {
