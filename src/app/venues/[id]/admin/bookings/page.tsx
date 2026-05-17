@@ -73,13 +73,13 @@ export default function VenuePaymentsPage() {
 
   // Auth / access guard
   useEffect(() => {
-    if (!userReady || !venue) return
+    if (!userReady || initLoading || !venue) return
     const isSystemAdmin = (user as { role?: string })?.role === 'admin'
     const userID = (user as unknown as { id: string } | null)?.id
     const isOwner = venue.ownerUserID === userID
     const isManager = venue.managerUserIDs.includes(userID ?? '')
     if (!userID || (!isSystemAdmin && !isOwner && !isManager)) router.replace('/admin')
-  }, [venue, user, userReady, router])
+  }, [venue, userReady, initLoading, router])
   useEffect(() => {
     if (bookings.length === 0) return
     const load = async() => {

@@ -542,7 +542,7 @@ export default function VenueCourtsPage() {
                   </Box>
                 </Box>
               </Box>
-              <Box sx={{ pt: 3 }}>
+              <Box sx={{ pt: 3, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', md: 'flex-start' } }}>
                 <Button
                   href="#booking"
                   variant="contained"
@@ -551,6 +551,16 @@ export default function VenueCourtsPage() {
                 >
                   Book a Court
                 </Button>
+                {currentUser && (venue.ownerUserID === currentUser.id || venue.managerUserIDs?.includes(currentUser.id)) && (
+                  <Button
+                    href={`/venues/${venueId}/admin/dashboard`}
+                    variant="outlined"
+                    size="large"
+                    sx={{ borderRadius: 5, borderColor: 'rgba(255,255,255,0.6)', color: '#fff', '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
+                  >
+                    Manage Venue
+                  </Button>
+                )}
               </Box>
             </Box>
           </Container>
