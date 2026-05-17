@@ -114,10 +114,20 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
       )
 
       URL.revokeObjectURL(svgUrl)
-      const link = document.createElement('a')
-      link.download = 'payment-qr.png'
-      link.href = canvas.toDataURL('image/png')
-      link.click()
+
+      const saveCanvas = async() => {
+        const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        const file = new File([blob], 'payment-qr.png', { type: 'image/png' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Payment QR' })
+        } else {
+          const link = document.createElement('a')
+          link.download = 'payment-qr.png'
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        }
+      }
+      saveCanvas()
     }
     img.src = svgUrl
   }

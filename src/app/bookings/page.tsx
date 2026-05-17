@@ -98,6 +98,7 @@ export default function MyBookingsPage() {
   const [payTargetBundleID, setPayTargetBundleID] = useState<string | null>(null)
   const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
   const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
+  const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
   const qrFrameRef = useRef<HTMLDivElement>(null)
 
   const handleSaveQR = () => {
@@ -153,10 +154,20 @@ export default function MyBookingsPage() {
       ctx.fillText('สแกนเพื่อชำระเงิน', frameWidth / 2, scaledHeaderH + svgSize + 66)
 
       URL.revokeObjectURL(svgUrl)
-      const link = document.createElement('a')
-      link.download = 'payment-qr.png'
-      link.href = canvas.toDataURL('image/png')
-      link.click()
+
+      const saveCanvas = async() => {
+        const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        const file = new File([blob], 'payment-qr.png', { type: 'image/png' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Payment QR' })
+        } else {
+          const link = document.createElement('a')
+          link.download = 'payment-qr.png'
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        }
+      }
+      saveCanvas()
     }
 
     headerImg.onload = draw
@@ -164,7 +175,6 @@ export default function MyBookingsPage() {
     headerImg.src = '/thai-qr-payment.webp'
     qrImg.src = svgUrl
   }
-  const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
   const [slipFile, setSlipFile] = useState<File | null>(null)
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
   const [slipNote, setSlipNote] = useState('')
