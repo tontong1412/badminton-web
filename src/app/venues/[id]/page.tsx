@@ -637,7 +637,7 @@ export default function VenueCourtsPage() {
       )}
 
       <Box id="booking" sx={{ bgcolor: '#fff', minHeight: '60vh' }}>
-        <Container maxWidth="lg" sx={{ pt: 3, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedCourts.length > 0 && guidedSelectedSlot) ? 10 : 4 }}>
+        <Container maxWidth="lg" sx={{ pt: 3, pb: (bookingMode === 'free' && freeSelectedCourts.length > 0) || (bookingMode === 'guided' && guidedSelectedSlot && (guidedSelectedCourts.length > 0 || guidedSplitAssignment !== null)) ? 12 : 4 }}>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
@@ -850,6 +850,15 @@ export default function VenueCourtsPage() {
                     <Box sx={{ mb: 2 }}>
                       <Alert severity="info" sx={{ mb: 1.5, fontSize: '0.8rem' }}>
                         Courts will change each hour. You&apos;ll be assigned a different court per time slot.
+                        {' '}Switch to{' '}
+                        <Box
+                          component="span"
+                          onClick={() => handleModeChange({} as React.SyntheticEvent, 'free')}
+                          sx={{ fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
+                        >
+                          Table view
+                        </Box>
+                        {' '}to see the full availability breakdown.
                       </Alert>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {guidedSplitAssignment.map(({ court, startTime, endTime }) => (
