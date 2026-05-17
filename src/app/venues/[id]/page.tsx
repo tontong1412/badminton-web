@@ -216,7 +216,8 @@ export default function VenueCourtsPage() {
 
       const isDateChange = prevDateRef.current !== selectedDate
       prevDateRef.current = selectedDate
-      if (isDateChange) setLoadingGuided(true)
+      setLoadingGuided(true)
+      setGuidedSlots([])
       setGuidedError(null)
 
       try {
@@ -259,13 +260,13 @@ export default function VenueCourtsPage() {
     [guidedSlots, requestedCourtCount]
   )
 
-  // Reset slot selection when court count changes (no API re-fetch)
+  // Reset slot selection when court count or duration changes (no API re-fetch for court count)
   useEffect(() => {
     setGuidedSelectedSlot(null)
     setGuidedSelectedCourts([])
     setGuidedAvailableCourts([])
     setShowCourtPicker(false)
-  }, [requestedCourtCount])
+  }, [requestedCourtCount, requestedDurationMinutes])
 
   /**
    * Given all courts and the available subset, suggest the best contiguous block
