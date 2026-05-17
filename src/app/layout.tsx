@@ -42,6 +42,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="color-scheme" content="light" />
+      </head>
       <body className={`${ibmPlexSansThai.className} ${nunito.className}`} >
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
