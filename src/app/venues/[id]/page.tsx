@@ -93,10 +93,11 @@ export default function VenueCourtsPage() {
   // ── Guided mode state ──────────────────────────────────────────────────────
   const [requestedCourtCount, setRequestedCourtCount] = useState(1)
   const [requestedHours, setRequestedHours] = useState(1)
-  const [guidedSlots, setGuidedSlots] = useState<{ startTime: string; endTime: string; courtCount: number }[]>([])
+  const [guidedSlots, setGuidedSlots] = useState<{ startTime: string; endTime: string; courtCount: number; isSplit: boolean }[]>([])
   const [guidedSelectedSlot, setGuidedSelectedSlot] = useState<{ startTime: string; endTime: string } | null>(null)
   const [guidedAvailableCourts, setGuidedAvailableCourts] = useState<Court[]>([])
   const [guidedSelectedCourts, setGuidedSelectedCourts] = useState<Court[]>([])
+  const [guidedSplitAssignment, setGuidedSplitAssignment] = useState<{ court: Court; startTime: string; endTime: string }[] | null>(null)
   const [loadingGuided, setLoadingGuided] = useState(false)
   const [searchingGuidedCourts, setSearchingGuidedCourts] = useState(false)
   const [guidedError, setGuidedError] = useState<string | null>(null)
@@ -152,10 +153,14 @@ export default function VenueCourtsPage() {
   }, 0)
   const freeCurrency = freeSelectedCourts[0]?.currency ?? ''
 
-  const guidedTotalPrice = guidedSelectedSlot
-    ? guidedSelectedCourts.reduce((sum, court) => sum + calcRangePrice(court, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime), 0)
-    : 0
-  const guidedCurrency = guidedSelectedCourts[0]?.currency ?? ''
+  const guidedTotalPrice = guidedSplitAssignment
+    ? guidedSplitAssignment.reduce((sum, { court, startTime, endTime }) => sum + calcRangePrice(court, startTime, endTime), 0)
+    : guidedSelectedSlot
+      ? guidedSelectedCourts.reduce((sum, court) => sum + calcRangePrice(court, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime), 0)
+      : 0
+  const guidedCurrency = guidedSplitAssignment
+    ? (guidedSplitAssignment[0]?.court.currency ?? '')
+    : (guidedSelectedCourts[0]?.currency ?? '')
 
   const fmtPrice = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(2)
 
@@ -188,6 +193,7 @@ export default function VenueCourtsPage() {
     setGuidedSelectedCourts([])
     setGuidedSelectedSlot(null)
     setGuidedAvailableCourts([])
+    setGuidedSplitAssignment(null)
     setSelectedCells(new Map())
     if (isGuest) {
       setAvailabilityKey((k) => k + 1)
@@ -202,6 +208,7 @@ export default function VenueCourtsPage() {
     setGuidedSelectedSlot(null)
     setGuidedAvailableCourts([])
     setGuidedSelectedCourts([])
+    setGuidedSplitAssignment(null)
     setGuidedSlots([])
   }, [selectedDate])
 
@@ -214,7 +221,6 @@ export default function VenueCourtsPage() {
         return
       }
 
-      const isDateChange = prevDateRef.current !== selectedDate
       prevDateRef.current = selectedDate
       setLoadingGuided(true)
       setGuidedSlots([])
@@ -226,22 +232,58 @@ export default function VenueCourtsPage() {
           activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, requestedDurationMinutes))
         )
 
-        const slotCount = new Map<string, { startTime: string; endTime: string; courtCount: number }>()
+        const slotMap = new Map<string, { startTime: string; endTime: string; courtCount: number; isSplit: boolean }>()
         fetched.forEach((avail) => {
           avail.slots.forEach((slot) => {
             if (!slot.available) return
             if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) return
             const key = `${slot.startTime}-${slot.endTime}`
-            const existing = slotCount.get(key)
+            const existing = slotMap.get(key)
             if (existing) {
               existing.courtCount += 1
             } else {
-              slotCount.set(key, { startTime: slot.startTime, endTime: slot.endTime, courtCount: 1 })
+              slotMap.set(key, { startTime: slot.startTime, endTime: slot.endTime, courtCount: 1, isSplit: false })
             }
           })
         })
+
+        // Detect split-court slots: windows where different courts cover each sub-slot
+        const numSubSlots = slotDurationMinutes > 0 ? Math.round(requestedDurationMinutes / slotDurationMinutes) : 1
+        if (numSubSlots > 1) {
+          const stepFetched = await Promise.all(
+            activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
+          )
+          // courtId -> Set<availableStepStarts>
+          const courtStepAvail = new Map<string, Set<string>>()
+          stepFetched.forEach((avail, idx) => {
+            const courtId = String(activeCourts[idx].id)
+            const available = new Set<string>()
+            avail.slots.forEach((s) => { if (s.available) available.add(s.startTime) })
+            courtStepAvail.set(courtId, available)
+          })
+          // Potential window starts from step-level slots
+          const allStepStarts = new Set<string>()
+          stepFetched.forEach((avail) => avail.slots.forEach((s) => allStepStarts.add(s.startTime)))
+          allStepStarts.forEach((windowStart) => {
+            if (moment(`${selectedDate} ${windowStart}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) return
+            const windowEnd = addMinutes(windowStart, requestedDurationMinutes)
+            const key = `${windowStart}-${windowEnd}`
+            if (slotMap.has(key)) return  // already a same-court slot
+            // Count available courts per sub-slot and take the minimum
+            const minCourts = Math.min(...Array.from({ length: numSubSlots }, (_, i) => {
+              const subStart = addMinutes(windowStart, i * slotDurationMinutes)
+              let count = 0
+              courtStepAvail.forEach((steps) => { if (steps.has(subStart)) count++ })
+              return count
+            }))
+            if (minCourts >= requestedCourtCount) {
+              slotMap.set(key, { startTime: windowStart, endTime: windowEnd, courtCount: minCourts, isSplit: true })
+            }
+          })
+        }
+
         setGuidedSlots(
-          Array.from(slotCount.values())
+          Array.from(slotMap.values())
             .sort((a, b) => a.startTime.localeCompare(b.startTime))
         )
       } catch (err) {
@@ -253,7 +295,7 @@ export default function VenueCourtsPage() {
     }
 
     loadGuided()
-  }, [selectedDate, courts, requestedDurationMinutes, availabilityKey])
+  }, [selectedDate, courts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount])
 
   const filteredGuidedSlots = useMemo(
     () => guidedSlots.filter((s) => s.courtCount >= requestedCourtCount),
@@ -265,6 +307,7 @@ export default function VenueCourtsPage() {
     setGuidedSelectedSlot(null)
     setGuidedSelectedCourts([])
     setGuidedAvailableCourts([])
+    setGuidedSplitAssignment(null)
     setShowCourtPicker(false)
   }, [requestedCourtCount, requestedDurationMinutes])
 
@@ -302,28 +345,59 @@ export default function VenueCourtsPage() {
     return bestIndices.map((i) => sorted[i])
   }
 
-  const handleSelectGuidedSlot = async(slot: { startTime: string; endTime: string }) => {
+  const handleSelectGuidedSlot = async(slot: { startTime: string; endTime: string; isSplit: boolean }) => {
     if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {
       setGuidedError(t('booking.pastTimeNotAllowed'))
       return
     }
-    setGuidedSelectedSlot(slot)
+    setGuidedSelectedSlot({ startTime: slot.startTime, endTime: slot.endTime })
+    setGuidedSplitAssignment(null)
     setShowCourtPicker(false)
     setSearchingGuidedCourts(true)
     setGuidedError(null)
 
     try {
-      const results = await Promise.all(
-        courts.map(async(court) => {
-          if (court.status !== 'active') return { court, available: false }
-          const avail = await courtsService.getAvailability(court.id, selectedDate, requestedDurationMinutes)
-          const ok = avail.slots.some((s) => s.startTime === slot.startTime && s.endTime === slot.endTime && s.available)
-          return { court, available: ok }
-        })
-      )
-      const available = results.filter((r) => r.available).map((r) => r.court)
-      setGuidedAvailableCourts(available)
-      setGuidedSelectedCourts(suggestCourts(courts, available, requestedCourtCount))
+      if (!slot.isSplit) {
+        // Standard slot: find courts available for the full duration
+        const results = await Promise.all(
+          courts.map(async(court) => {
+            if (court.status !== 'active') return { court, available: false }
+            const avail = await courtsService.getAvailability(court.id, selectedDate, requestedDurationMinutes)
+            const ok = avail.slots.some((s) => s.startTime === slot.startTime && s.endTime === slot.endTime && s.available)
+            return { court, available: ok }
+          })
+        )
+        const available = results.filter((r) => r.available).map((r) => r.court)
+        setGuidedAvailableCourts(available)
+        setGuidedSelectedCourts(suggestCourts(courts, available, requestedCourtCount))
+      } else {
+        // Split slot: assign different courts per sub-slot
+        const numSubSlots = slotDurationMinutes > 0 ? Math.round(requestedDurationMinutes / slotDurationMinutes) : 1
+        const subStarts = Array.from({ length: numSubSlots }, (_, i) => addMinutes(slot.startTime, i * slotDurationMinutes))
+        const activeCourts = courts.filter((c) => c.status === 'active')
+        const stepFetched = await Promise.all(
+          activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
+        )
+        const courtStepAvail = activeCourts.map((court, i) => ({
+          court,
+          availableSteps: new Set(stepFetched[i].slots.filter((s) => s.available).map((s) => s.startTime)),
+        }))
+        // Greedily assign courts per sub-slot, preferring to reuse the same court
+        const assignment: { court: Court; startTime: string; endTime: string }[] = []
+        let prevCourtIds = new Set<string>()
+        for (const subStart of subStarts) {
+          const subEnd = addMinutes(subStart, slotDurationMinutes)
+          const available = courtStepAvail.filter(({ availableSteps }) => availableSteps.has(subStart))
+          const preferred = available.filter(({ court }) => prevCourtIds.has(String(court.id)))
+          const ordered = [...preferred, ...available.filter(({ court }) => !prevCourtIds.has(String(court.id)))]
+          const selected = ordered.slice(0, requestedCourtCount)
+          selected.forEach(({ court }) => assignment.push({ court, startTime: subStart, endTime: subEnd }))
+          prevCourtIds = new Set(selected.map(({ court }) => String(court.id)))
+        }
+        setGuidedSplitAssignment(assignment)
+        setGuidedAvailableCourts([])
+        setGuidedSelectedCourts([])
+      }
     } catch (err) {
       setGuidedError(err instanceof Error ? err.message : 'Failed to check availability')
     } finally {
@@ -395,6 +469,7 @@ export default function VenueCourtsPage() {
     setGuidedSelectedSlot(null)
     setGuidedAvailableCourts([])
     setGuidedSelectedCourts([])
+    setGuidedSplitAssignment(null)
     setGuidedError(null)
     setSelectedCells(new Map())
     setFreeError(null)
@@ -740,7 +815,7 @@ export default function VenueCourtsPage() {
                     return (
                       <Box
                         key={`${slot.startTime}-${slot.endTime}`}
-                        onClick={() => handleSelectGuidedSlot({ startTime: slot.startTime, endTime: slot.endTime })}
+                        onClick={() => handleSelectGuidedSlot(slot)}
                         sx={{
                           px: 2, py: 1,
                           borderRadius: 2,
@@ -755,7 +830,7 @@ export default function VenueCourtsPage() {
                           {slot.startTime} – {slot.endTime}
                         </Typography>
                         <Typography sx={{ fontSize: '0.65rem', color: isSelected ? 'rgba(255,255,255,0.75)' : '#9c795f', mt: 0.25 }}>
-                          {slot.courtCount} court{slot.courtCount !== 1 ? 's' : ''}
+                          {slot.courtCount} court{slot.courtCount !== 1 ? 's' : ''}{slot.isSplit ? ' · courts change' : ''}
                         </Typography>
                       </Box>
                     )
@@ -771,6 +846,24 @@ export default function VenueCourtsPage() {
                 <>
                   {searchingGuidedCourts ? (
                     <Box sx={{ py: 2 }}><CircularProgress size={24} /></Box>
+                  ) : guidedSplitAssignment !== null ? (
+                    <Box sx={{ mb: 2 }}>
+                      <Alert severity="info" sx={{ mb: 1.5, fontSize: '0.8rem' }}>
+                        Courts will change each hour. You&apos;ll be assigned a different court per time slot.
+                      </Alert>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {guidedSplitAssignment.map(({ court, startTime, endTime }) => (
+                          <Box
+                            key={`${court.id}-${startTime}`}
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, border: '1px solid #D4B8A0', borderRadius: 1.5, bgcolor: '#fafafa' }}
+                          >
+                            <Typography sx={{ fontSize: '0.78rem', color: '#9c795f', minWidth: 90 }}>{startTime} – {endTime}</Typography>
+                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, flex: 1, color: '#3D2200' }}>{court.name}</Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#9c795f' }}>{fmtPrice(calcRangePrice(court, startTime, endTime))} {court.currency}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
                   ) : (
                     <Box sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -822,18 +915,22 @@ export default function VenueCourtsPage() {
 
 
 
-              {guidedSelectedCourts.length === requestedCourtCount && guidedSelectedSlot && venue && (
+              {(guidedSplitAssignment !== null || guidedSelectedCourts.length === requestedCourtCount) && guidedSelectedSlot && venue && (
                 <CourtBookingModal
                   open={showBookingModal}
                   onClose={() => setShowBookingModal(false)}
-                  courts={guidedSelectedCourts}
+                  courts={guidedSplitAssignment
+                    ? [...new Map(guidedSplitAssignment.map(({ court }) => [String(court.id), court])).values()]
+                    : guidedSelectedCourts}
                   venue={venue}
-                  bookingItems={guidedSelectedCourts.map((court) => ({
-                    courtID: court.id,
-                    date: selectedDate,
-                    startTime: guidedSelectedSlot.startTime,
-                    endTime: guidedSelectedSlot.endTime,
-                  }))}
+                  bookingItems={guidedSplitAssignment
+                    ? guidedSplitAssignment.map(({ court, startTime, endTime }) => ({ courtID: court.id, date: selectedDate, startTime, endTime }))
+                    : guidedSelectedCourts.map((court) => ({
+                      courtID: court.id,
+                      date: selectedDate,
+                      startTime: guidedSelectedSlot.startTime,
+                      endTime: guidedSelectedSlot.endTime,
+                    }))}
                   onBookingComplete={handleBookingComplete}
                 />
               )}
@@ -877,7 +974,7 @@ export default function VenueCourtsPage() {
       </Box>
 
       {/* Floating summary bar — guided mode */}
-      {bookingMode === 'guided' && guidedSelectedSlot && guidedSelectedCourts.length > 0 && (
+      {bookingMode === 'guided' && guidedSelectedSlot && (guidedSelectedCourts.length > 0 || guidedSplitAssignment !== null) && (
         <Paper
           elevation={0}
           sx={{
@@ -901,14 +998,14 @@ export default function VenueCourtsPage() {
               variant="outlined"
               size="small"
               sx={{ borderColor: '#D4B8A0', color: '#695241', textTransform: 'none', fontWeight: 600, '&:hover': { borderColor: '#80644f' } }}
-              onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setShowCourtPicker(false) }}
+              onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setGuidedSplitAssignment(null); setShowCourtPicker(false) }}
             >
               {t('booking.clearSelection')}
             </Button>
             <Button
               variant="contained"
               size="medium"
-              disabled={guidedSelectedCourts.length !== requestedCourtCount}
+              disabled={!guidedSplitAssignment && guidedSelectedCourts.length !== requestedCourtCount}
               sx={{ bgcolor: '#80644f', textTransform: 'none', fontWeight: 700, px: 3, '&:hover': { bgcolor: '#695241' } }}
               onClick={() => setShowBookingModal(true)}
             >
@@ -973,22 +1070,35 @@ export default function VenueCourtsPage() {
         <Divider />
         {guidedSelectedSlot && (
           <List dense sx={{ overflowY: 'auto' }}>
-            {guidedSelectedCourts.map((court) => {
-              const price = calcRangePrice(court, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime)
-              return (
-                <ListItem key={court.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1.5, gap: 0.5 }}>
-                  <Typography variant="body2" fontWeight={600}>{court.name}</Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {guidedSelectedSlot.startTime} – {guidedSelectedSlot.endTime}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {fmtPrice(price)} {court.currency}
-                    </Typography>
-                  </Box>
-                </ListItem>
-              )
-            })}
+            {guidedSplitAssignment !== null
+              ? guidedSplitAssignment.map(({ court, startTime, endTime }) => {
+                const price = calcRangePrice(court, startTime, endTime)
+                return (
+                  <ListItem key={`${court.id}-${startTime}`} sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1.5, gap: 0.5 }}>
+                    <Typography variant="body2" fontWeight={600}>{court.name}</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Typography variant="body2" color="text.secondary">{startTime} – {endTime}</Typography>
+                      <Typography variant="body2" color="text.secondary">{fmtPrice(price)} {court.currency}</Typography>
+                    </Box>
+                  </ListItem>
+                )
+              })
+              : guidedSelectedCourts.map((court) => {
+                const price = calcRangePrice(court, guidedSelectedSlot.startTime, guidedSelectedSlot.endTime)
+                return (
+                  <ListItem key={court.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1.5, gap: 0.5 }}>
+                    <Typography variant="body2" fontWeight={600}>{court.name}</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {guidedSelectedSlot.startTime} – {guidedSelectedSlot.endTime}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {fmtPrice(price)} {court.currency}
+                      </Typography>
+                    </Box>
+                  </ListItem>
+                )
+              })}
           </List>
         )}
         <Divider />
@@ -996,13 +1106,13 @@ export default function VenueCourtsPage() {
           <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
             Total: {fmtPrice(guidedTotalPrice)} {guidedCurrency}
           </Typography>
-          <Button variant="outlined" onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setShowCourtPicker(false); setShowGuidedDrawer(false) }} color="error" size="small">
+          <Button variant="outlined" onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setGuidedSplitAssignment(null); setShowCourtPicker(false); setShowGuidedDrawer(false) }} color="error" size="small">
             {t('booking.clearSelection')}
           </Button>
           <Button
             variant="contained"
             color="primary"
-            disabled={guidedSelectedCourts.length !== requestedCourtCount}
+            disabled={!guidedSplitAssignment && guidedSelectedCourts.length !== requestedCourtCount}
             onClick={() => { setShowGuidedDrawer(false); setShowBookingModal(true) }}
           >
             {t('booking.proceedToBooking')}
