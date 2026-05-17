@@ -807,6 +807,17 @@ export default function VenueCourtsPage() {
                   <Typography variant="body2" sx={{ color: '#80644f', fontWeight: 600 }}>
                     {t('booking.noSlotsAvailable')}
                   </Typography>
+                  <Typography variant="body2" sx={{ color: '#80644f', mt: 0.5 }}>
+                    Please choose a different date or time, or switch to{' '}
+                    <Box
+                      component="span"
+                      onClick={() => handleModeChange({} as React.SyntheticEvent, 'free')}
+                      sx={{ fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                      Table view
+                    </Box>
+                    {' '}to see the full availability breakdown.
+                  </Typography>
                 </Box>
               ) : (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
