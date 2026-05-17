@@ -42,27 +42,16 @@ const appSlice = createSlice({
         // i18n is only available on client
         if (typeof window !== 'undefined') {
           i18n.changeLanguage(newLang)
-          // TODO: figure out how to set i18n language on server
-          // localStorage.setItem('i18nextLng', newLang)
+          localStorage.setItem('lang', newLang)
         }
       }
     },
     initializeLanguage: (state) => {
       // Only run on client
       if (typeof window !== 'undefined') {
-        // TODO: figure out how to set i18n language on server
-        // const savedLang = localStorage.getItem('i18nextLng')
-        // const browserLang = navigator.language.split('-')[0]
-
-        const detectedLang = DEFAULT_LANGUAGE // Default fallbac'
-
-        // if (savedLang && SUPPORTED_LANG.includes(savedLang)) {
-        //   detectedLang = savedLang
-        // } else if (browserLang && SUPPORTED_LANG.includes(browserLang)) {
-        //   detectedLang = browserLang
-        // }
-
-        state.language = detectedLang as Language
+        const savedLang = localStorage.getItem('lang')
+        const detectedLang = (savedLang && SUPPORTED_LANG.includes(savedLang) ? savedLang : DEFAULT_LANGUAGE) as Language
+        state.language = detectedLang
         i18n.changeLanguage(detectedLang)
       }
     }
