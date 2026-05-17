@@ -529,18 +529,19 @@ export default function VenueCourtsPage() {
               component="section"
               sx={{ p: 2, width: '100%', display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', md: 'flex-start' }, justifyContent: 'center' }}
             >
-              <div className="text-gray-200">
+              <Box
+                component="div"
+                className="text-gray-200"
+                sx={{ textAlign: { xs: 'center', md: 'left' } }}
+              >
                 <h1 className="text-2xl">{venue.name.en || venue.name.th}</h1>
                 <Box sx={{ pt: 1 }}>
-                  {venue.name.th && venue.name.en && (
-                    <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.9rem' }}>{venue.name.th}</Typography>
-                  )}
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
                     <PlaceOutlinedIcon sx={{ fontSize: 18 }} />
                     <Typography>{venue.address}</Typography>
                   </Box>
                 </Box>
-              </div>
+              </Box>
               <Box sx={{ pt: 3 }}>
                 <Button
                   href="#booking"
