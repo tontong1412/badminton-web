@@ -2,6 +2,8 @@ import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
 import { Booking, BookingAvailability, Court, Event, Match, Player, Tournament, Venue } from '@/type'
+import { useSelector } from 'react-redux'
+import { RootState } from './redux/store'
 
 const fetcher = (url: string, withCredentials: boolean) => axios.get(
   url,
@@ -268,11 +270,13 @@ export interface BookingsResponse {
 }
 
 export const useMyBookings = (): BookingsResponse => {
-  const { data, error, mutate } = useSWR(
-    `${SERVICE_ENDPOINT}/bookings`,
+  const user = useSelector((state: RootState) => state.app.user)
+  const key = user ? `${SERVICE_ENDPOINT}/bookings` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
     (url) => fetcher(url, true)
   )
-  return { bookings: data ?? [], isLoading: !error && !data, isError: error, mutate }
+  return { bookings: data ?? [], isLoading, isError: error, mutate }
 }
 
 export interface VenueBookingsParams {
