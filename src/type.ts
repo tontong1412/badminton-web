@@ -405,6 +405,10 @@ export interface Venue {
   coverImage?: string;
   logo?: string;
   facilities?: string[];
+  termsAndConditions?: {
+    th?: string;
+    en?: string;
+  };
 }
 
 export interface CourtPricingRule {

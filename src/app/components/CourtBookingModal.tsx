@@ -73,6 +73,7 @@ export default function CourtBookingModal({
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const currentUser = useAppSelector((state) => state.app.user)
+  const language = useAppSelector((state) => state.app.language)
 
   const [activeStep, setActiveStep] = useState(0)
   const [selectedDate, setSelectedDate] = useState<string>('')
@@ -825,6 +826,17 @@ export default function CourtBookingModal({
                   </Box>
                 )}
 
+                {venue.termsAndConditions && (venue.termsAndConditions.th || venue.termsAndConditions.en) && (
+                  <Box sx={{ mt: 2, mb: 1, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 160, overflowY: 'auto' }}>
+                    <Typography variant="caption" fontWeight={700} sx={{ display: 'block', mb: 0.5 }}>Terms &amp; Conditions</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {(language === 'th' ? venue.termsAndConditions.th : venue.termsAndConditions.en)
+                        || venue.termsAndConditions.th
+                        || venue.termsAndConditions.en}
+                    </Typography>
+                  </Box>
+                )}
+
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -832,7 +844,7 @@ export default function CourtBookingModal({
                       onChange={(e) => setAgreeTerms(e.target.checked)}
                     />
                   }
-                  label={t('booking.agreeTerms')}
+                  label={venue.termsAndConditions && (venue.termsAndConditions.th || venue.termsAndConditions.en) ? 'I have read and agree to the Terms & Conditions' : t('booking.agreeTerms')}
                 />
               </Box>
             )}

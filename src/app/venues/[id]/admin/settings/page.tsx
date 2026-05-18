@@ -131,6 +131,13 @@ export default function VenueSettingsPage() {
   const [facilitiesSaving, setFacilitiesSaving] = useState(false)
   const [facilitiesSuccess, setFacilitiesSuccess] = useState(false)
 
+  // Terms & Conditions state
+  const [termsTH, setTermsTH] = useState('')
+  const [termsEN, setTermsEN] = useState('')
+  const [termsSaving, setTermsSaving] = useState(false)
+  const [termsSuccess, setTermsSuccess] = useState(false)
+  const [termsError, setTermsError] = useState<string | null>(null)
+
   // Courts state
   const [courts, setCourts] = useState<Court[]>([])
   const [courtsLoading, setCourtsLoading] = useState(false)
@@ -204,6 +211,8 @@ export default function VenueSettingsPage() {
     setSlipokEnabled(v.slipok?.enabled ?? false)
     setHolidays(v.holidays ?? [])
     setFacilities(v.facilities ?? [])
+    setTermsTH(v.termsAndConditions?.th ?? '')
+    setTermsEN(v.termsAndConditions?.en ?? '')
     setInitLoading(false)
   // Only run when SWR data first arrives; userReady/user/router guard on changes
   }, [swrVenue, userReady])
@@ -521,6 +530,27 @@ export default function VenueSettingsPage() {
       console.error(e)
     } finally {
       setFacilitiesSaving(false)
+    }
+  }
+
+  const handleSaveTerms = async() => {
+    setTermsSaving(true)
+    setTermsSuccess(false)
+    setTermsError(null)
+    try {
+      const updated = await venueService.update(venueID, {
+        termsAndConditions: { th: termsTH.trim(), en: termsEN.trim() },
+      } as Partial<Venue>)
+      setVenueState(updated)
+      setTermsTH(updated.termsAndConditions?.th ?? '')
+      setTermsEN(updated.termsAndConditions?.en ?? '')
+      setTermsSuccess(true)
+      setTimeout(() => setTermsSuccess(false), 3000)
+    } catch (e) {
+      setTermsError('Failed to save terms')
+      console.error(e)
+    } finally {
+      setTermsSaving(false)
     }
   }
 
@@ -1150,6 +1180,44 @@ export default function VenueSettingsPage() {
             {facilitiesSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
           </Box>
         </Paper>
+
+        {/* ── Terms & Conditions ──────────────────────────────── */}
+        <Paper sx={{ p: 3, mt: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>Terms &amp; Conditions</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            These terms will be shown to customers before they confirm a booking at this venue.
+          </Typography>
+          {termsError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setTermsError(null)}>{termsError}</Alert>}
+          <TextField
+            multiline
+            minRows={5}
+            maxRows={20}
+            fullWidth
+            label="Thai (ภาษาไทย)"
+            placeholder="ระบุข้อกำหนดและเงื่อนไข…"
+            value={termsTH}
+            onChange={(e) => setTermsTH(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            multiline
+            minRows={5}
+            maxRows={20}
+            fullWidth
+            label="English"
+            placeholder="Enter your terms and conditions…"
+            value={termsEN}
+            onChange={(e) => setTermsEN(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Button variant="contained" size="small" onClick={handleSaveTerms} disabled={termsSaving} sx={{ bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' } }}>
+              {termsSaving ? <CircularProgress size={18} /> : 'Save'}
+            </Button>
+            {termsSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
+          </Box>
+        </Paper>
+
         {/* ── Courts ─────────────────────────────────────────── */}
         <Paper sx={{ p: 3, mt: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
