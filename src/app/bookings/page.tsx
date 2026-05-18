@@ -34,7 +34,7 @@ import bookingsService from '../services/bookings'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
 import { useMyBookings } from '../libs/data'
-import { useAppDispatch } from '../libs/redux/store'
+import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
@@ -43,6 +43,7 @@ import Layout from '../components/Layout'
 import axios from 'axios'
 import QRCode from 'react-qr-code'
 import generatePayload from 'promptpay-qr'
+import { useRouter } from 'next/navigation'
 
 const EXPIRY_MINUTES = 10
 
@@ -85,6 +86,13 @@ function BookingCountdown({ createdAt }: { createdAt: string }) {
 export default function MyBookingsPage() {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
+  const router = useRouter()
+  const user = useAppSelector((state) => state.app.user)
+  const userReady = useAppSelector((state) => state.app.userReady)
+
+  useEffect(() => {
+    if (userReady && !user) router.replace('/')
+  }, [userReady, user, router])
 
   const { bookings, isLoading: loading, mutate: mutateBookings } = useMyBookings()
   const [courtDetails, setCourtDetails] = useState<Record<string, Court>>({})
