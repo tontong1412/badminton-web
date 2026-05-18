@@ -70,7 +70,7 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
     }
   }
 
-  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+  const handleGoogleSuccess = async(credentialResponse: { credential?: string }) => {
     try {
       const { data: loginData } = await axios.post(
         `${SERVICE_ENDPOINT}/users/google-login`,

@@ -77,6 +77,7 @@ const  ResponsiveAppBar = () => {
       }
     }
     getUser()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleOpenNavMenu = (event: MouseEvent<HTMLElement>) => {

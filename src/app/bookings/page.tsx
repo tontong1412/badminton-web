@@ -289,6 +289,7 @@ export default function MyBookingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCancelClick = (bookingIds: string[]) => {
     setSelectedBookingIds(bookingIds)
     setCancelDialogOpen(true)
