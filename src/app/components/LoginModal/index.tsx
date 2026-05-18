@@ -9,6 +9,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
+  Typography,
 } from '@mui/material'
 import { useAppDispatch } from '@/app/libs/redux/store'
 import { login } from '@/app/libs/redux/slices/appSlice'
@@ -18,6 +20,7 @@ import Transition from '../ModalTransition'
 import { useTranslation } from 'react-i18next'
 import { SERVICE_ENDPOINT } from '@/app/constants'
 import Link from 'next/link'
+import { GoogleLogin } from '@react-oauth/google'
 
 interface LoginModalProps {
   visible: boolean;
@@ -63,6 +66,26 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
     }catch (error) {
       console.error('Login error:', error)
       setVisible(false)
+      alert(t('login.error'))
+    }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    try {
+      const { data: loginData } = await axios.post(
+        `${SERVICE_ENDPOINT}/users/google-login`,
+        { credential: credentialResponse.credential },
+        { withCredentials: true }
+      )
+      dispatch(login({
+        id: loginData.user.id,
+        email: loginData.user.email,
+        role: loginData.user.role,
+        player: loginData.player,
+      }))
+      setVisible(false)
+    } catch (error) {
+      console.error('Google login error:', error)
       alert(t('login.error'))
     }
   }
@@ -140,6 +163,18 @@ const LoginModal = ({ visible, setVisible }: LoginModalProps) => {
               </Link>
             </span>
           </div>
+
+          <Divider sx={{ my: 2 }}>
+            <Typography variant="caption" color="text.secondary">OR</Typography>
+          </Divider>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => alert(t('login.error'))}
+              useOneTap={false}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button variant='outlined' onClick={() => setVisible(false)}>

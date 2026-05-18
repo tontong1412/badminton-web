@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { initializeLanguage, logout } from './libs/redux/slices/appSlice'
 import axios from 'axios'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 
 import { TypedUseSelectorHook, useSelector as useReduxSelector } from 'react-redux'
 import { RootState, AppDispatch } from './libs/redux/store'
@@ -45,9 +46,11 @@ const AxiosAuthInterceptor = () => {
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <Provider store={store}>
-      <LanguageInitializer />
-      <AxiosAuthInterceptor />
-      {children}
-    </Provider>)
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''}>
+      <Provider store={store}>
+        <LanguageInitializer />
+        <AxiosAuthInterceptor />
+        {children}
+      </Provider>
+    </GoogleOAuthProvider>)
 }
