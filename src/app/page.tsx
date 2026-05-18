@@ -42,13 +42,11 @@ const Home = () => {
   const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
 
   const upcomingBookings = useMemo(() => {
-    const today = moment().format('YYYY-MM-DD')
     const now = moment()
-    return bookings
+    const filtered = bookings
       .filter((b) => {
         if (b.status === BookingStatus.Cancelled) return false
-        if (b.date < today) return false
-        if (b.date === today && moment(`${b.date} ${b.startTime}`, 'YYYY-MM-DD HH:mm').isBefore(now)) return false
+        if (moment(`${b.date} ${b.endTime}`, 'YYYY-MM-DD HH:mm').isBefore(now)) return false
         return true
       })
       .sort((a, b) => {
@@ -56,7 +54,15 @@ const Home = () => {
         const tb = `${b.date} ${b.startTime}`
         return ta < tb ? -1 : ta > tb ? 1 : 0
       })
-      .slice(0, 1)
+    // Deduplicate by bundle — keep only the first slot per bundle
+    const seenBundles = new Set<string>()
+    const deduped = filtered.filter((b) => {
+      const key = b.bookingBundleID || b.id
+      if (seenBundles.has(key)) return false
+      seenBundles.add(key)
+      return true
+    })
+    return deduped.slice(0, 1)
   }, [bookings])
 
   useEffect(() => {

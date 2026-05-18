@@ -493,17 +493,6 @@ export default function MyBookingsPage() {
                     </CardContent>
                     {(group.status === 'confirmed' || group.status === 'pending') && (
                       <CardActions sx={{ pt: 0, px: 2, pb: 1.5, gap: 1 }}>
-                        {group.status === 'confirmed' &&
-                          moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
-                          <Button
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                            onClick={() => handleCancelClick(group.bookings.filter((b) => b.status !== 'cancelled').map((b) => b.id))}
-                          >
-                            {t('booking.cancel')}
-                          </Button>
-                        )}
                         {group.paymentStatus === 'unpaid' && group.bundleID &&
                           (!group.bookings[0]?.createdAt || Date.now() < new Date(group.bookings[0].createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000) && (
                           <Button
@@ -613,17 +602,6 @@ export default function MyBookingsPage() {
                         <TableCell align="right">
                           {(group.status === 'confirmed' || group.status === 'pending') && (
                             <>
-                              {group.status === 'confirmed' &&
-                                moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment()) && (
-                                <Button
-                                  size="small"
-                                  color="error"
-                                  variant="outlined"
-                                  onClick={() => handleCancelClick(group.bookings.filter((booking) => booking.status !== 'cancelled').map((booking) => booking.id))}
-                                >
-                                  {t('booking.cancel')}
-                                </Button>
-                              )}
                               {group.paymentStatus === 'unpaid' && group.bundleID &&
                                 (!group.bookings[0]?.createdAt || Date.now() < new Date(group.bookings[0].createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000) && (
                                 <Button
