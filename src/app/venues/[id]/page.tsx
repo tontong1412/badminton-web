@@ -686,50 +686,6 @@ export default function VenueCourtsPage() {
             </Alert>
           )}
 
-          {/* ── Resale listings ────────────────────────────────────── */}
-          {resaleListings.length > 0 && (
-            <Box sx={{ mb: 3, p: 2, border: '1px solid #f0c060', borderRadius: 2, bgcolor: '#fffbeb' }}>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5, color: '#a06000' }}>
-                🏸 Resale Available — {moment(selectedDate).format('DD MMM YYYY')}
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {resaleListings.map((listing) => {
-                  const booking = typeof listing.bookingID === 'object' ? listing.bookingID as ResaleBookingSnapshot : null
-                  const court = booking ? courts.find((c) => c.id === booking.courtID) : null
-                  return (
-                    <Box
-                      key={listing.id}
-                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #e8d8a0' }}
-                    >
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>{court?.name ?? '—'}</Typography>
-                        <Typography variant="body2" color="text.secondary">{booking?.startTime} – {booking?.endTime}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Typography variant="body1" fontWeight={700} color="warning.dark">
-                          {listing.askingPrice} {listing.currency}
-                        </Typography>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="warning"
-                          onClick={() => {
-                            if (!currentUser) { setLoginModalOpen(true); return }
-                            setResaleBuyListing(listing)
-                            setResaleBuyError(null)
-                            setResaleBuyDialogOpen(true)
-                          }}
-                        >
-                          Book This Slot
-                        </Button>
-                      </Box>
-                    </Box>
-                  )
-                })}
-              </Box>
-            </Box>
-          )}
-
           {/* ── Controls card ─────────────────────────────────────── */}
           <Box
             sx={{
@@ -1115,6 +1071,50 @@ export default function VenueCourtsPage() {
                   bookingItems={freeBookingItems}
                   onBookingComplete={handleBookingComplete}
                 />
+              )}
+
+              {/* ── Resale listings ────────────────────────────────────── */}
+              {resaleListings.length > 0 && (
+                <Box sx={{ mt: 3, p: 2, border: '1px solid #f0c060', borderRadius: 2, bgcolor: '#fffbeb' }}>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5, color: '#a06000' }}>
+                    🏸 Resale Available — {moment(selectedDate).format('DD MMM YYYY')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {resaleListings.map((listing) => {
+                      const booking = typeof listing.bookingID === 'object' ? listing.bookingID as ResaleBookingSnapshot : null
+                      const court = booking ? courts.find((c) => c.id === booking.courtID) : null
+                      return (
+                        <Box
+                          key={listing.id}
+                          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #e8d8a0' }}
+                        >
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>{court?.name ?? '—'}</Typography>
+                            <Typography variant="body2" color="text.secondary">{booking?.startTime} – {booking?.endTime}</Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Typography variant="body1" fontWeight={700} color="warning.dark">
+                              {listing.askingPrice} {listing.currency}
+                            </Typography>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="warning"
+                              onClick={() => {
+                                if (!currentUser) { setLoginModalOpen(true); return }
+                                setResaleBuyListing(listing)
+                                setResaleBuyError(null)
+                                setResaleBuyDialogOpen(true)
+                              }}
+                            >
+                              Book This Slot
+                            </Button>
+                          </Box>
+                        </Box>
+                      )
+                    })}
+                  </Box>
+                </Box>
               )}
             </Box>
           )}
