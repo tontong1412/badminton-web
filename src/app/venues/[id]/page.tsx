@@ -31,9 +31,10 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
-import { BookingAvailability, Court, CourtPricingRule, Venue } from '@/type'
+import { BookingAvailability, Court, CourtPricingRule, ResaleBookingSnapshot, ResaleListing, Venue } from '@/type'
 import courtsService from '../../services/courts'
-import { useVenue, useCourts } from '../../libs/data'
+import resaleService from '../../services/resale'
+import { useVenue, useCourts, useResaleListings } from '../../libs/data'
 import CourtBookingModal from '../../components/CourtBookingModal'
 import CourtAvailabilityTable from '../../components/CourtAvailabilityTable'
 import Layout from '../../components/Layout'
@@ -177,6 +178,12 @@ export default function VenueCourtsPage() {
 
   const { venue: swrVenue, isLoading: venueLoading, isError: venueError } = useVenue(venueId)
   const { courts: allCourts, isLoading: courtsLoading, isError: courtsError } = useCourts()
+  const { listings: resaleListings, mutate: mutateResale } = useResaleListings(venueId, selectedDate)
+
+  const [resaleBuyDialogOpen, setResaleBuyDialogOpen] = useState(false)
+  const [resaleBuyListing, setResaleBuyListing] = useState<ResaleListing | null>(null)
+  const [resaleBuying, setResaleBuying] = useState(false)
+  const [resaleBuyError, setResaleBuyError] = useState<string | null>(null)
 
   // Sync SWR data into local state (other code reads these variables)
   useEffect(() => {
@@ -193,6 +200,24 @@ export default function VenueCourtsPage() {
   }, [venueError, courtsError])
 
   const router = useRouter()
+
+  const handleBuyResale = async() => {
+    if (!resaleBuyListing) return
+    try {
+      setResaleBuying(true)
+      setResaleBuyError(null)
+      await resaleService.buy(resaleBuyListing.id)
+      setResaleBuyDialogOpen(false)
+      setResaleBuyListing(null)
+      mutateResale()
+      router.push('/bookings')
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setResaleBuyError(msg ?? 'Failed to purchase listing')
+    } finally {
+      setResaleBuying(false)
+    }
+  }
 
   const handleBookingComplete = (isGuest: boolean) => {
     setShowBookingModal(false)
@@ -659,6 +684,50 @@ export default function VenueCourtsPage() {
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
+          )}
+
+          {/* ── Resale listings ────────────────────────────────────── */}
+          {resaleListings.length > 0 && (
+            <Box sx={{ mb: 3, p: 2, border: '1px solid #f0c060', borderRadius: 2, bgcolor: '#fffbeb' }}>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5, color: '#a06000' }}>
+                🏸 Resale Available — {moment(selectedDate).format('DD MMM YYYY')}
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {resaleListings.map((listing) => {
+                  const booking = typeof listing.bookingID === 'object' ? listing.bookingID as ResaleBookingSnapshot : null
+                  const court = booking ? courts.find((c) => c.id === booking.courtID) : null
+                  return (
+                    <Box
+                      key={listing.id}
+                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #e8d8a0' }}
+                    >
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>{court?.name ?? '—'}</Typography>
+                        <Typography variant="body2" color="text.secondary">{booking?.startTime} – {booking?.endTime}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="body1" fontWeight={700} color="warning.dark">
+                          {listing.askingPrice} {listing.currency}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="warning"
+                          onClick={() => {
+                            if (!currentUser) { setLoginModalOpen(true); return }
+                            setResaleBuyListing(listing)
+                            setResaleBuyError(null)
+                            setResaleBuyDialogOpen(true)
+                          }}
+                        >
+                          Book This Slot
+                        </Button>
+                      </Box>
+                    </Box>
+                  )
+                })}
+              </Box>
+            </Box>
           )}
 
           {/* ── Controls card ─────────────────────────────────────── */}
@@ -1311,6 +1380,33 @@ export default function VenueCourtsPage() {
       </Dialog>
 
       <LoginModal visible={loginModalOpen} setVisible={setLoginModalOpen} />
+
+      {/* ── Buy Resale Dialog ──────────────────────────────── */}
+      <Dialog open={resaleBuyDialogOpen} onClose={() => !resaleBuying && setResaleBuyDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Confirm Resale Purchase</DialogTitle>
+        <DialogContent>
+          {resaleBuyListing && (() => {
+            const booking = typeof resaleBuyListing.bookingID === 'object' ? resaleBuyListing.bookingID as ResaleBookingSnapshot : null
+            const court = booking ? courts.find((c) => c.id === booking.courtID) : null
+            return (
+              <Box>
+                <Typography variant="body2" fontWeight={600}>{court?.name ?? '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">{booking?.startTime} – {booking?.endTime}</Typography>
+                <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
+                  Price: {resaleBuyListing.askingPrice} {resaleBuyListing.currency}
+                </Typography>
+              </Box>
+            )
+          })()}
+          {resaleBuyError && <Alert severity="error" sx={{ mt: 2 }}>{resaleBuyError}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResaleBuyDialogOpen(false)} disabled={resaleBuying}>Cancel</Button>
+          <Button onClick={handleBuyResale} variant="contained" color="warning" disabled={resaleBuying}>
+            {resaleBuying ? <CircularProgress size={20} /> : 'Confirm Purchase'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Layout>
   )
 }

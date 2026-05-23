@@ -1,7 +1,7 @@
 import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
-import { Booking, BookingAvailability, Court, Event, Match, Player, Tournament, Venue } from '@/type'
+import { Booking, BookingAvailability, Court, Event, Match, Player, ResaleListing, Tournament, Venue } from '@/type'
 import { useSelector } from 'react-redux'
 import { RootState } from './redux/store'
 
@@ -283,6 +283,24 @@ export interface VenueBookingsParams {
   paymentStatus?: string
   date?: string
   venueID?: string
+}
+
+export interface ResaleListingsResponse {
+  listings: ResaleListing[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<ResaleListing[] | undefined>
+}
+
+export const useResaleListings = (venueID: string | null, date?: string): ResaleListingsResponse => {
+  const params = venueID ? new URLSearchParams({ venueID }) : null
+  if (params && date) {
+    params.set('dateFrom', date)
+    params.set('dateTo', date)
+  }
+  const key = params ? `${SERVICE_ENDPOINT}/resale?${params.toString()}` : null
+  const { data, error, isLoading, mutate } = useSWR(key, (url) => fetcher(url, false))
+  return { listings: data ?? [], isLoading, isError: error, mutate }
 }
 
 export const useVenueBookings = (params: VenueBookingsParams): BookingsResponse => {

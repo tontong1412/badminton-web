@@ -491,3 +491,30 @@ export interface BookingAvailability {
     reason?: string;
   }[];
 }
+
+export enum ResaleStatus {
+  Active = 'active',
+  Sold = 'sold',
+  Cancelled = 'cancelled',
+}
+
+export interface ResaleBookingSnapshot {
+  id: string;
+  courtID: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  currency: string;
+}
+
+export interface ResaleListing {
+  id: string;
+  bookingID: ResaleBookingSnapshot | string;
+  sellerID: string;
+  venueID: string;
+  askingPrice: number;
+  currency: string;
+  status: ResaleStatus;
+  createdAt?: string;
+}

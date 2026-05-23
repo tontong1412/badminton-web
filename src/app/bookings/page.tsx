@@ -29,8 +29,9 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { Booking, Court, Venue } from '@/type'
+import { Booking, BookingResaleOutcome, BookingStatus, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
+import resaleService from '../services/resale'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
 import { useMyBookings } from '../libs/data'
@@ -163,17 +164,11 @@ export default function MyBookingsPage() {
 
       URL.revokeObjectURL(svgUrl)
 
-      const saveCanvas = async() => {
-        const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'))
-        const file = new File([blob], 'payment-qr.png', { type: 'image/png' })
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Payment QR' })
-        } else {
-          const link = document.createElement('a')
-          link.download = 'payment-qr.png'
-          link.href = canvas.toDataURL('image/png')
-          link.click()
-        }
+      const saveCanvas = () => {
+        const link = document.createElement('a')
+        link.download = 'payment-qr.png'
+        link.href = canvas.toDataURL('image/png')
+        link.click()
       }
       saveCanvas()
     }
@@ -189,6 +184,11 @@ export default function MyBookingsPage() {
   const [paySubmitting, setPaySubmitting] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
+  const [resellDialogOpen, setResellDialogOpen] = useState(false)
+  const [resellBooking, setResellBooking] = useState<Booking | null>(null)
+  const [resellPrice, setResellPrice] = useState('')
+  const [resellSubmitting, setResellSubmitting] = useState(false)
+  const [resellError, setResellError] = useState<string | null>(null)
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -365,6 +365,42 @@ export default function MyBookingsPage() {
     }
   }
 
+  const isResellEligible = (booking: Booking) =>
+    booking.status === BookingStatus.Confirmed &&
+    booking.paymentStatus === PaymentStatus.Paid &&
+    (!booking.resaleOutcome || booking.resaleOutcome === BookingResaleOutcome.None) &&
+    moment(`${booking.date} ${booking.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())
+
+  const handleResellClick = (booking: Booking) => {
+    setResellBooking(booking)
+    setResellPrice(String(booking.totalPrice))
+    setResellError(null)
+    setResellDialogOpen(true)
+  }
+
+  const handleConfirmResell = async() => {
+    if (!resellBooking) return
+    const price = parseFloat(resellPrice)
+    if (isNaN(price) || price <= 0) { setResellError('Enter a valid price'); return }
+    try {
+      setResellSubmitting(true)
+      setResellError(null)
+      await resaleService.create(resellBooking.id, price)
+      mutateBookings()
+      setResellDialogOpen(false)
+      setResellBooking(null)
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const msg = (err.response?.data as { message?: string } | undefined)?.message
+        setResellError(msg ?? 'Failed to create resale listing')
+      } else {
+        setResellError(err instanceof Error ? err.message : 'Failed to create resale listing')
+      }
+    } finally {
+      setResellSubmitting(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
     case 'confirmed':
@@ -466,11 +502,19 @@ export default function MyBookingsPage() {
                             {showDate && (
                               <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{dateStr}</Typography>
                             )}
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                               <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
                               <Typography variant="body2" color="text.secondary">·</Typography>
                               <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
                               {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                              {booking.resaleOutcome === BookingResaleOutcome.Listed && (
+                                <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />
+                              )}
+                              {isResellEligible(booking) && (
+                                <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(booking)}>
+                                  Resell
+                                </Button>
+                              )}
                             </Box>
                           </Box>
                         )
@@ -576,11 +620,19 @@ export default function MyBookingsPage() {
                           {group.bookings.map((booking) => {
                             const isCancelledSlot = booking.status === 'cancelled'
                             return (
-                              <Box key={booking.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                              <Box key={booking.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
                                 <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
                                   {booking.startTime} – {booking.endTime}
                                 </Typography>
                                 {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                {booking.resaleOutcome === BookingResaleOutcome.Listed && (
+                                  <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />
+                                )}
+                                {isResellEligible(booking) && (
+                                  <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(booking)}>
+                                    Resell
+                                  </Button>
+                                )}
                               </Box>
                             )
                           })}
@@ -815,6 +867,37 @@ export default function MyBookingsPage() {
               disabled={!slipPreview || paySubmitting}
             >
               {paySubmitting ? <CircularProgress size={20} /> : t('booking.confirmBooking')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* ── Resell Dialog ──────────────────────────────────── */}
+        <Dialog open={resellDialogOpen} onClose={() => !resellSubmitting && setResellDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>List Slot for Resale</DialogTitle>
+          <DialogContent>
+            {resellBooking && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight={600}>{courtDetails[resellBooking.courtID]?.name ?? '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {moment(resellBooking.date).format('DD MMM YYYY')} · {resellBooking.startTime} – {resellBooking.endTime}
+                </Typography>
+              </Box>
+            )}
+            <TextField
+              label="Asking price"
+              type="number"
+              fullWidth
+              size="small"
+              value={resellPrice}
+              onChange={(e) => setResellPrice(e.target.value)}
+              inputProps={{ min: 0 }}
+            />
+            {resellError && <Alert severity="error" sx={{ mt: 2 }}>{resellError}</Alert>}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setResellDialogOpen(false)} disabled={resellSubmitting}>Cancel</Button>
+            <Button onClick={handleConfirmResell} variant="contained" color="warning" disabled={resellSubmitting}>
+              {resellSubmitting ? <CircularProgress size={20} /> : 'List for Resale'}
             </Button>
           </DialogActions>
         </Dialog>
