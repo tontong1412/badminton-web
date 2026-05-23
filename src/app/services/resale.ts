@@ -2,10 +2,10 @@ import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 
 const resaleService = {
-  create: (bookingID: string, askingPrice: number) =>
+  create: (bookingID: string, askingPrice: number, subStartTime?: string, subEndTime?: string) =>
     axios.post(
       `${SERVICE_ENDPOINT}/resale`,
-      { bookingID, askingPrice },
+      { bookingID, askingPrice, subStartTime, subEndTime },
       { withCredentials: true },
     ).then((r) => r.data),
 

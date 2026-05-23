@@ -1056,7 +1056,9 @@ export default function VenueCourtsPage() {
                         >
                           <Box>
                             <Typography variant="body2" fontWeight={600}>{court?.name ?? '—'}</Typography>
-                            <Typography variant="body2" color="text.secondary">{booking?.startTime} – {booking?.endTime}</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {listing.subStartTime ?? booking?.startTime} – {listing.subEndTime ?? booking?.endTime}
+                            </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Typography variant="body1" fontWeight={700} color="warning.dark">
@@ -1399,7 +1401,9 @@ export default function VenueCourtsPage() {
             return (
               <Box>
                 <Typography variant="body2" fontWeight={600}>{court?.name ?? '—'}</Typography>
-                <Typography variant="body2" color="text.secondary">{booking?.startTime} – {booking?.endTime}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {resaleBuyListing.subStartTime ?? booking?.startTime} – {resaleBuyListing.subEndTime ?? booking?.endTime}
+                </Typography>
                 <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
                   Price: {resaleBuyListing.askingPrice} {resaleBuyListing.currency}
                 </Typography>

@@ -111,8 +111,10 @@ export default function CourtAvailabilityTable({
   resaleListings?.forEach((listing) => {
     const booking = typeof listing.bookingID === 'object' ? listing.bookingID as ResaleBookingSnapshot : null
     if (!booking) return
+    // Use sub-range start if available, otherwise the full booking start
+    const matchKey = listing.subStartTime ?? booking.startTime
     if (!resaleMap.has(booking.courtID)) resaleMap.set(booking.courtID, new Map())
-    resaleMap.get(booking.courtID)!.set(booking.startTime, listing)
+    resaleMap.get(booking.courtID)!.set(matchKey, listing)
   })
 
   if (sortedSlots.length === 0) {

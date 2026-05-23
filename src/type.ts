@@ -452,7 +452,7 @@ export interface Booking {
   paymentStatus: PaymentStatus;
   slip?: string;
   slipTimestamp?: string;
-  resaleListingID?: string;
+  resaleListingID?: string | { id: string; subStartTime?: string; subEndTime?: string; status?: string };
   resaleSourceListingID?: string;
   resaleOutcome: BookingResaleOutcome;
   note?: string;
@@ -516,5 +516,7 @@ export interface ResaleListing {
   askingPrice: number;
   currency: string;
   status: ResaleStatus;
+  subStartTime?: string;
+  subEndTime?: string;
   createdAt?: string;
 }
