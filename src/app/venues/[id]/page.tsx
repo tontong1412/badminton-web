@@ -1038,40 +1038,6 @@ export default function VenueCourtsPage() {
                   onBookingComplete={handleBookingComplete}
                 />
               )}
-            </Box>
-          )}
-
-          {/* ── FREE MODE ───────────────────────────────────────────────────── */}
-          {bookingMode === 'free' && (
-            <Box>
-              {freeError && (
-                <Alert severity="error" sx={{ mb: 2 }}>{freeError}</Alert>
-              )}
-
-              <CourtAvailabilityTable
-                courts={filteredCourts.filter((c) => c.status === 'active')}
-                availabilityByCourt={freeAvailability}
-                selectedDate={selectedDate}
-                slotDurationMinutes={slotDurationMinutes}
-                selectedCells={selectedCells}
-                onCellClick={handleCellClick}
-                loading={loadingFree}
-              />
-
-              {freeSelectionValidation.error && (
-                <Alert severity="warning" sx={{ mt: 2 }}>{freeSelectionValidation.error}</Alert>
-              )}
-
-              {freeSelectionValidation.valid && venue && (
-                <CourtBookingModal
-                  open={showBookingModal}
-                  onClose={() => setShowBookingModal(false)}
-                  courts={freeSelectedCourts}
-                  venue={venue}
-                  bookingItems={freeBookingItems}
-                  onBookingComplete={handleBookingComplete}
-                />
-              )}
 
               {/* ── Resale listings ────────────────────────────────────── */}
               {resaleListings.length > 0 && (
@@ -1116,6 +1082,48 @@ export default function VenueCourtsPage() {
                   </Box>
                 </Box>
               )}
+            </Box>
+          )}
+
+          {/* ── FREE MODE ───────────────────────────────────────────────────── */}
+          {bookingMode === 'free' && (
+            <Box>
+              {freeError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{freeError}</Alert>
+              )}
+
+              <CourtAvailabilityTable
+                courts={filteredCourts.filter((c) => c.status === 'active')}
+                availabilityByCourt={freeAvailability}
+                selectedDate={selectedDate}
+                slotDurationMinutes={slotDurationMinutes}
+                selectedCells={selectedCells}
+                onCellClick={handleCellClick}
+                loading={loadingFree}
+                resaleListings={resaleListings}
+                onResaleClick={(listing) => {
+                  if (!currentUser) { setLoginModalOpen(true); return }
+                  setResaleBuyListing(listing)
+                  setResaleBuyError(null)
+                  setResaleBuyDialogOpen(true)
+                }}
+              />
+
+              {freeSelectionValidation.error && (
+                <Alert severity="warning" sx={{ mt: 2 }}>{freeSelectionValidation.error}</Alert>
+              )}
+
+              {freeSelectionValidation.valid && venue && (
+                <CourtBookingModal
+                  open={showBookingModal}
+                  onClose={() => setShowBookingModal(false)}
+                  courts={freeSelectedCourts}
+                  venue={venue}
+                  bookingItems={freeBookingItems}
+                  onBookingComplete={handleBookingComplete}
+                />
+              )}
+
             </Box>
           )}
         </Container>

@@ -8,7 +8,7 @@ import {
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
-import { BookingAvailability, Court, CourtPricingRule } from '@/type'
+import { BookingAvailability, Court, CourtPricingRule, ResaleListing, ResaleBookingSnapshot } from '@/type'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 
@@ -45,6 +45,8 @@ interface CourtAvailabilityTableProps {
   selectedCells: Map<string, Set<string>> // courtId -> Set<startTime>
   onCellClick: (startTime: string, court: Court) => void
   loading?: boolean
+  resaleListings?: ResaleListing[]
+  onResaleClick?: (listing: ResaleListing) => void
 }
 
 export default function CourtAvailabilityTable({
@@ -55,6 +57,8 @@ export default function CourtAvailabilityTable({
   selectedCells,
   onCellClick,
   loading,
+  resaleListings,
+  onResaleClick,
 }: CourtAvailabilityTableProps) {
   const { t } = useTranslation()
 
@@ -100,6 +104,15 @@ export default function CourtAvailabilityTable({
     })
     availabilityMap.set(avail.court.id, courtSlotMap)
     reasonMap.set(avail.court.id, courtReasonMap)
+  })
+
+  // Build resale lookup: courtId -> startTime -> ResaleListing
+  const resaleMap = new Map<string, Map<string, ResaleListing>>()
+  resaleListings?.forEach((listing) => {
+    const booking = typeof listing.bookingID === 'object' ? listing.bookingID as ResaleBookingSnapshot : null
+    if (!booking) return
+    if (!resaleMap.has(booking.courtID)) resaleMap.set(booking.courtID, new Map())
+    resaleMap.get(booking.courtID)!.set(booking.startTime, listing)
   })
 
   if (sortedSlots.length === 0) {
@@ -155,6 +168,7 @@ export default function CourtAvailabilityTable({
                     const isSelectedCell = selectedCells.get(court.id)?.has(slot.startTime) ?? false
                     const reason = reasonMap.get(court.id)?.get(slot.startTime)
                     const bookedTime = reason?.match(/(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1]
+                    const resaleListing = !available ? resaleMap.get(court.id)?.get(slot.startTime) : undefined
                     return (
                       <td key={court.id} style={{ textAlign: 'center', padding: '4px 8px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #e0e0e0', background: available ? undefined : '#fafafa' }}>
                         {available ? (
@@ -172,6 +186,18 @@ export default function CourtAvailabilityTable({
                             />
                             <span style={{ fontSize: 10, color: '#666', lineHeight: 1.2, marginTop: 2 }}>
                               {getSlotPrice(court, slot.startTime, slotDurationMinutes).toFixed(0)} {court.currency}
+                            </span>
+                          </div>
+                        ) : resaleListing ? (
+                          <div
+                            onClick={() => onResaleClick?.(resaleListing)}
+                            style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                          >
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#a06000', background: '#fffbeb', border: '1px solid #f0c060', borderRadius: 4, padding: '2px 5px', lineHeight: 1.4 }}>
+                              RESALE
+                            </span>
+                            <span style={{ fontSize: 10, color: '#a06000', lineHeight: 1.2, marginTop: 2 }}>
+                              {resaleListing.askingPrice} {resaleListing.currency}
                             </span>
                           </div>
                         ) : bookedTime ? null : (
