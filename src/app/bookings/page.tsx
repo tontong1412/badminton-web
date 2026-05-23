@@ -190,7 +190,7 @@ export default function MyBookingsPage() {
   const [resellSubmitting, setResellSubmitting] = useState(false)
   const [resellError, setResellError] = useState<string | null>(null)
   // per-slot config for multi-hour bookings: key = "startTime|endTime"
-  const [resellSlotConfig, setResellSlotConfig] = useState<Record<string, { selected: boolean; price: string }>>({}) 
+  const [resellSlotConfig, setResellSlotConfig] = useState<Record<string, { selected: boolean; price: string; bookingID?: string }>>({}) 
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -367,11 +367,16 @@ export default function MyBookingsPage() {
     }
   }
 
-  const isResellEligible = (booking: Booking) =>
-    booking.status === BookingStatus.Confirmed &&
-    booking.paymentStatus === PaymentStatus.Paid &&
-    (!booking.resaleOutcome || booking.resaleOutcome === BookingResaleOutcome.None) &&
-    moment(`${booking.date} ${booking.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())
+  const isResellEligible = (booking: Booking) => {
+    if (booking.status !== BookingStatus.Confirmed) return false
+    if (booking.paymentStatus !== PaymentStatus.Paid) return false
+    if (booking.resaleOutcome && booking.resaleOutcome !== BookingResaleOutcome.None) return false
+    if (!moment(`${booking.date} ${booking.startTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())) return false
+    // All hours already sold?
+    const soldRanges = booking.resaleSoldRanges ?? []
+    if (soldRanges.length > 0 && soldRanges.length * 60 >= booking.durationMinutes) return false
+    return true
+  }
 
   // Returns the sub-range that is listed for resale (if the listing was a partial hour slot)
   const getListedSubRange = (booking: Booking): { startTime: string; endTime: string } | null => {
@@ -412,26 +417,79 @@ export default function MyBookingsPage() {
     return slots
   }
 
-  const handleResellClick = (booking: Booking) => {
-    setResellBooking(booking)
-    setResellPrice(String(booking.totalPrice))
+  const hasResaleActivity = (b: Booking) =>
+    (b.resaleOutcome && b.resaleOutcome !== BookingResaleOutcome.None) ||
+    ((b.resaleSoldRanges?.length ?? 0) > 0)
+
+  interface DisplayRow {
+    key: string; courtID: string; date: string; startTime: string; endTime: string;
+    bookings: Booking[]; representative: Booking;
+  }
+
+  const getDisplayRows = (bookings: Booking[]): DisplayRow[] => {
+    const sorted = [...bookings].sort((a, b) => {
+      if (a.courtID !== b.courtID) return a.courtID.localeCompare(b.courtID)
+      const da = moment(a.date).valueOf(), db = moment(b.date).valueOf()
+      if (da !== db) return da - db
+      return moment(a.startTime, 'HH:mm').diff(moment(b.startTime, 'HH:mm'))
+    })
+    const rows: DisplayRow[] = []
+    for (const booking of sorted) {
+      const last = rows[rows.length - 1]
+      const canMerge = last !== undefined &&
+        last.courtID === booking.courtID &&
+        moment(last.date).isSame(moment(booking.date), 'day') &&
+        last.endTime === booking.startTime &&
+        last.representative.status === booking.status &&
+        !hasResaleActivity(last.bookings[last.bookings.length - 1]) &&
+        !hasResaleActivity(booking)
+      if (canMerge) {
+        last.endTime = booking.endTime
+        last.bookings.push(booking)
+      } else {
+        rows.push({ key: booking.id, courtID: booking.courtID, date: booking.date,
+          startTime: booking.startTime, endTime: booking.endTime,
+          bookings: [booking], representative: booking })
+      }
+    }
+    return rows
+  }
+
+  const handleResellClick = (bookingOrArray: Booking | Booking[]) => {
+    const bookingsArr = Array.isArray(bookingOrArray) ? bookingOrArray : [bookingOrArray]
+    const first = bookingsArr[0]
+    setResellBooking(first)
+    setResellPrice(String(first.totalPrice))
     setResellError(null)
-    // Build per-hour slots if booking > 60 min
-    const durationMins = moment(booking.endTime, 'HH:mm').diff(moment(booking.startTime, 'HH:mm'), 'minutes')
-    if (durationMins > 60) {
-      const config: Record<string, { selected: boolean; price: string }> = {}
-      const hourlyPrice = (booking.totalPrice / (durationMins / 60)).toFixed(2)
-      let cursor = moment(booking.startTime, 'HH:mm')
-      const end = moment(booking.endTime, 'HH:mm')
-      while (cursor.isBefore(end)) {
-        const slotEnd = moment(cursor).add(60, 'minutes')
-        const key = `${cursor.format('HH:mm')}|${slotEnd.format('HH:mm')}`
-        config[key] = { selected: false, price: hourlyPrice }
-        cursor = slotEnd
+    if (bookingsArr.length > 1) {
+      // Merged row: one checkbox per eligible 1-hour booking
+      const config: Record<string, { selected: boolean; price: string; bookingID?: string }> = {}
+      for (const b of bookingsArr) {
+        if (!isResellEligible(b)) continue
+        config[`${b.startTime}|${b.endTime}`] = { selected: false, price: String(b.totalPrice), bookingID: b.id }
       }
       setResellSlotConfig(config)
     } else {
-      setResellSlotConfig({})
+      const booking = first
+      const durationMins = moment(booking.endTime, 'HH:mm').diff(moment(booking.startTime, 'HH:mm'), 'minutes')
+      if (durationMins > 60) {
+        // Legacy: single multi-hour booking (old data)
+        const config: Record<string, { selected: boolean; price: string; bookingID?: string }> = {}
+        const hourlyPrice = (booking.totalPrice / (durationMins / 60)).toFixed(2)
+        const soldRanges = booking.resaleSoldRanges ?? []
+        let cursor = moment(booking.startTime, 'HH:mm')
+        const end = moment(booking.endTime, 'HH:mm')
+        while (cursor.isBefore(end)) {
+          const slotEnd = moment(cursor).add(60, 'minutes')
+          const key = `${cursor.format('HH:mm')}|${slotEnd.format('HH:mm')}`
+          const isSold = soldRanges.some(r => r.startTime === cursor.format('HH:mm'))
+          if (!isSold) config[key] = { selected: false, price: hourlyPrice }
+          cursor = slotEnd
+        }
+        setResellSlotConfig(config)
+      } else {
+        setResellSlotConfig({})
+      }
     }
     setResellDialogOpen(true)
   }
@@ -449,9 +507,13 @@ export default function MyBookingsPage() {
       try {
         setResellSubmitting(true)
         setResellError(null)
-        for (const [key, { price }] of selected) {
-          const [subStartTime, subEndTime] = key.split('|')
-          await resaleService.create(resellBooking.id, parseFloat(price), subStartTime, subEndTime)
+        for (const [key, { price, bookingID }] of selected) {
+          if (bookingID) {
+            await resaleService.create(bookingID, parseFloat(price))
+          } else {
+            const [subStartTime, subEndTime] = key.split('|')
+            await resaleService.create(resellBooking.id, parseFloat(price), subStartTime, subEndTime)
+          }
         }
         mutateBookings()
         setResellDialogOpen(false)
@@ -580,37 +642,68 @@ export default function MyBookingsPage() {
                           </Typography>
                         )}
                       </Box>
-                      {group.bookings.map((booking, idx) => {
-                        const dateStr = moment(booking.date).format('DD MMM YYYY')
-                        const prevDateStr = idx > 0 ? moment(group.bookings[idx - 1].date).format('DD MMM YYYY') : null
+                      {getDisplayRows(group.bookings).map((row, idx, arr) => {
+                        const dateStr = moment(row.date).format('DD MMM YYYY')
+                        const prevDateStr = idx > 0 ? moment(arr[idx - 1].date).format('DD MMM YYYY') : null
                         const showDate = dateStr !== prevDateStr
+                        const booking = row.representative
                         const isCancelledSlot = booking.status === 'cancelled'
+                        if (row.bookings.length > 1) {
+                          // Merged: consecutive hours, no resale activity
+                          const eligibleBookings = row.bookings.filter(isResellEligible)
+                          return (
+                            <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
+                              {showDate && <Typography variant="body2" fontWeight={600}>{dateStr}</Typography>}
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{row.startTime} – {row.endTime}</Typography>
+                                <Typography variant="body2" color="text.secondary">·</Typography>
+                                <Typography variant="body2" color="text.secondary">{courtDetails[row.courtID]?.name || '—'}</Typography>
+                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                {eligibleBookings.length > 0 && (
+                                  <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(eligibleBookings)}>
+                                    Resell
+                                  </Button>
+                                )}
+                              </Box>
+                            </Box>
+                          )
+                        }
                         const isListedForSale = booking.resaleOutcome === BookingResaleOutcome.Listed
                         const listedSubRange = getListedSubRange(booking)
-                        const showPerHour = isListedForSale && listedSubRange !== null && booking.durationMinutes > 60
+                        const soldRanges = booking.resaleSoldRanges ?? []
+                        const showPerHour = ((isListedForSale && listedSubRange !== null) || soldRanges.length > 0) && booking.durationMinutes > 60
                         return (
-                          <Box key={booking.id} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
+                          <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
                             {showDate && (
                               <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{dateStr}</Typography>
                             )}
                             {showPerHour ? (
-                              getHourSlots(booking.startTime, booking.endTime).map((slot) => {
-                                const isThisListed = slot.startTime === listedSubRange!.startTime
-                                return (
-                                  <Box key={slot.startTime} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || isThisListed ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
-                                    <Typography variant="body2" color="text.secondary">·</Typography>
-                                    <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                    {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                    {isThisListed && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                    {isThisListed && (
-                                      <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
-                                        Cancel Listing
-                                      </Button>
-                                    )}
-                                  </Box>
-                                )
-                              })
+                              <>
+                                {getHourSlots(booking.startTime, booking.endTime).map((slot) => {
+                                  const isSoldSlot = soldRanges.some(r => r.startTime === slot.startTime)
+                                  const isListedSlot = listedSubRange?.startTime === slot.startTime
+                                  return (
+                                    <Box key={slot.startTime} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || isSoldSlot || isListedSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
+                                      <Typography variant="body2" color="text.secondary">·</Typography>
+                                      <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                                      {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {isListedSlot && (
+                                        <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
+                                          Cancel Listing
+                                        </Button>
+                                      )}
+                                    </Box>
+                                  )
+                                })}
+                                {isResellEligible(booking) && (
+                                  <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1, mt: 0.5 }} onClick={() => handleResellClick(booking)}>
+                                    Resell
+                                  </Button>
+                                )}
+                              </>
                             ) : (
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || (isListedForSale && !listedSubRange) ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
@@ -708,72 +801,111 @@ export default function MyBookingsPage() {
                         <TableCell>
                           {venue ? (venue.name.en || venue.name.th) : '—'}
                         </TableCell>
-                        <TableCell>
-                          {group.bookings.map((booking, idx) => {
-                            const dateStr = moment(booking.date).format('DD/MM/YYYY')
-                            const prevDateStr = idx > 0 ? moment(group.bookings[idx - 1].date).format('DD/MM/YYYY') : null
-                            const isCancelledSlot = booking.status === 'cancelled'
-                            return (
-                              <Typography key={booking.id} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
-                                {dateStr !== prevDateStr ? dateStr : ''}
-                              </Typography>
-                            )
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          {group.bookings.map((booking) => {
-                            const isCancelledSlot = booking.status === 'cancelled'
-                            return (
-                              <Typography key={booking.id} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
-                                {courtDetails[booking.courtID]?.name || '—'}
-                              </Typography>
-                            )
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          {group.bookings.map((booking) => {
-                            const isCancelledSlot = booking.status === 'cancelled'
-                            const isListedForSale = booking.resaleOutcome === BookingResaleOutcome.Listed
-                            const listedSubRange = getListedSubRange(booking)
-                            const showPerHour = isListedForSale && listedSubRange !== null && booking.durationMinutes > 60
-                            return (
-                              <Box key={booking.id}>
-                                {showPerHour ? (
-                                  getHourSlots(booking.startTime, booking.endTime).map((slot) => {
-                                    const isThisListed = slot.startTime === listedSubRange!.startTime
+                        {(() => {
+                          const mergedRows = getDisplayRows(group.bookings)
+                          return (
+                            <>
+                              <TableCell>
+                                {mergedRows.map((row, idx) => {
+                                  const dateStr = moment(row.date).format('DD/MM/YYYY')
+                                  const prevDateStr = idx > 0 ? moment(mergedRows[idx - 1].date).format('DD/MM/YYYY') : null
+                                  const isCancelledSlot = row.representative.status === 'cancelled'
+                                  return (
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                      {dateStr !== prevDateStr ? dateStr : ''}
+                                    </Typography>
+                                  )
+                                })}
+                              </TableCell>
+                              <TableCell>
+                                {mergedRows.map((row) => {
+                                  const isCancelledSlot = row.representative.status === 'cancelled'
+                                  return (
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                      {courtDetails[row.courtID]?.name || '—'}
+                                    </Typography>
+                                  )
+                                })}
+                              </TableCell>
+                              <TableCell>
+                                {mergedRows.map((row) => {
+                                  const booking = row.representative
+                                  const isCancelledSlot = booking.status === 'cancelled'
+                                  if (row.bookings.length > 1) {
+                                    const eligibleBookings = row.bookings.filter(isResellEligible)
                                     return (
-                                      <Box key={slot.startTime} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                        <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || isThisListed ? 'line-through' : 'none' }}>
-                                          {slot.startTime} – {slot.endTime}
+                                      <Box key={row.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
+                                        <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                          {row.startTime} – {row.endTime}
                                         </Typography>
                                         {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                        {isThisListed && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                        {eligibleBookings.length > 0 && (
+                                          <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(eligibleBookings)}>
+                                            Resell
+                                          </Button>
+                                        )}
                                       </Box>
                                     )
-                                  })
-                                ) : (
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                    <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || (isListedForSale && !listedSubRange) ? 'line-through' : 'none' }}>
-                                      {booking.startTime} – {booking.endTime}
-                                    </Typography>
-                                    {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                    {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                    {isListedForSale && (
-                                      <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
-                                        Cancel Listing
-                                      </Button>
-                                    )}
-                                    {isResellEligible(booking) && (
-                                      <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(booking)}>
-                                        Resell
-                                      </Button>
-                                    )}
-                                  </Box>
-                                )}
-                              </Box>
-                            )
-                          })}
-                        </TableCell>
+                                  }
+                                  const isListedForSale = booking.resaleOutcome === BookingResaleOutcome.Listed
+                                  const listedSubRange = getListedSubRange(booking)
+                                  const soldRanges = booking.resaleSoldRanges ?? []
+                                  const showPerHour = ((isListedForSale && listedSubRange !== null) || soldRanges.length > 0) && booking.durationMinutes > 60
+                                  return (
+                                    <Box key={row.key}>
+                                      {showPerHour ? (
+                                        <>
+                                          {getHourSlots(booking.startTime, booking.endTime).map((slot) => {
+                                            const isSoldSlot = soldRanges.some(r => r.startTime === slot.startTime)
+                                            const isListedSlot = listedSubRange?.startTime === slot.startTime
+                                            return (
+                                              <Box key={slot.startTime} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
+                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || isSoldSlot || isListedSlot ? 'line-through' : 'none' }}>
+                                                  {slot.startTime} – {slot.endTime}
+                                                </Typography>
+                                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {isListedSlot && (
+                                                  <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
+                                                    Cancel Listing
+                                                  </Button>
+                                                )}
+                                              </Box>
+                                            )
+                                          })}
+                                          {isResellEligible(booking) && (
+                                            <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1, mt: 0.5 }} onClick={() => handleResellClick(booking)}>
+                                              Resell
+                                            </Button>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
+                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || (isListedForSale && !listedSubRange) ? 'line-through' : 'none' }}>
+                                            {booking.startTime} – {booking.endTime}
+                                          </Typography>
+                                          {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                          {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                          {isListedForSale && (
+                                            <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
+                                              Cancel Listing
+                                            </Button>
+                                          )}
+                                          {isResellEligible(booking) && (
+                                            <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(booking)}>
+                                              Resell
+                                            </Button>
+                                          )}
+                                        </Box>
+                                      )}
+                                    </Box>
+                                  )
+                                })}
+                              </TableCell>
+                            </>
+                          )
+                        })()}
                         <TableCell>
                           {(Number(group.totalPrice) || 0).toFixed(2)} {group.currency}
                         </TableCell>

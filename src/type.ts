@@ -455,6 +455,7 @@ export interface Booking {
   resaleListingID?: string | { id: string; subStartTime?: string; subEndTime?: string; status?: string };
   resaleSourceListingID?: string;
   resaleOutcome: BookingResaleOutcome;
+  resaleSoldRanges?: Array<{ startTime: string; endTime: string }>;
   note?: string;
   couponCode?: string;
   discountAmount?: number;
