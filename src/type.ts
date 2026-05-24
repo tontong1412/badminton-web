@@ -49,6 +49,16 @@ export interface Player {
     tel: string;
     line: string;
   }
+  paymentInfo?: {
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    promptPayID?: string;
+  }
+}
+
+export interface PlayerWithAccount extends Player {
+  userID: string;
 }
 
 
@@ -56,6 +66,7 @@ export interface Player {
 export interface User {
   id: string;
   email: string;
+  role?: string;
   player: {
     id: string;
     officialName: {
@@ -82,7 +93,9 @@ export interface User {
 export enum AppMenu {
   Home = 'home',
   Tournament = 'tournament',
-  Setting = 'setting'
+  Court = 'court',
+  Setting = 'setting',
+  Me = 'me',
   // Session = 'session',
   // Venue = 'venue'
 }
@@ -329,3 +342,214 @@ export type MuiColor =
 | 'info'
 | 'success'
 | 'warning';
+
+// Court Booking Types
+export enum BookingStatus {
+  Confirmed = 'confirmed',
+  Pending = 'pending',
+  Cancelled = 'cancelled',
+}
+
+export enum BookingType {
+  SingleShot = 'singleShot',
+  Recurring = 'recurring',
+}
+
+export enum BookingResaleOutcome {
+  None = 'none',
+  Listed = 'listed',
+  Sold = 'sold',
+  Cancelled = 'cancelled',
+}
+
+export interface DailySchedule {
+  open: string;
+  close: string;
+}
+
+export interface HolidaySchedule {
+  date: string;
+  isClosed: boolean;
+  openTime?: string;
+  closeTime?: string;
+}
+
+export interface VenuePayment {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  promptPayID?: string;
+  qrCodeUrl?: string;
+}
+
+export interface Venue {
+  id: string;
+  name: {
+    th: string;
+    en: string;
+  };
+  address: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+  };
+  ownerUserID: string;
+  managerUserIDs: string[];
+  weeklySchedule: Record<string, DailySchedule | null>;
+  holidays: HolidaySchedule[];
+  slotDurationMinutes: number;
+  gapPolicy: {
+    enabled: boolean;
+    minimumGapMinutes: number;
+  };
+  payment?: VenuePayment;
+  slipok?: {
+    branchId?: string;
+    hasApiKey?: boolean;
+    enabled?: boolean;
+  };
+  coverImage?: string;
+  logo?: string;
+  facilities?: string[];
+  termsAndConditions?: {
+    th?: string;
+    en?: string;
+  };
+}
+
+export interface CourtPricingRule {
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  pricePerHour: number;
+}
+
+export interface Court {
+  id: string;
+  venueID: string;
+  name: string;
+  description?: string;
+  pricePerHour: number;
+  pricingRules?: CourtPricingRule[];
+  slotStartOffsetMinutes?: number;
+  currency: string;
+  status: 'active' | 'inactive';
+  courtType?: string;
+}
+
+export interface Booking {
+  id: string;
+  bookingBundleID?: string;
+  bookingRef?: string;
+  courtID: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  totalPrice: number;
+  currency: string;
+  bookerType: 'guest' | 'user';
+  userID?: string;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
+  bookingType: BookingType;
+  recurringGroupID?: string;
+  status: BookingStatus;
+  paymentStatus: PaymentStatus;
+  slip?: string;
+  slipTimestamp?: string;
+  resaleListingID?: string | { id: string; subStartTime?: string; subEndTime?: string; status?: string };
+  resaleSourceListingID?: string;
+  resaleOutcome: BookingResaleOutcome;
+  resaleSoldRanges?: Array<{ startTime: string; endTime: string }>;
+  note?: string;
+  couponCode?: string;
+  discountAmount?: number;
+  bookerName?: string;
+  bookerPhone?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface Coupon {
+  id: string;
+  code: string;
+  venueID?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  maxDiscountAmount?: number;
+  maxUses?: number;
+  usedCount: number;
+  expiresAt?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface BookingAvailability {
+  court: Court;
+  date: string;
+  durationMinutes: number;
+  slots: {
+    startTime: string;
+    endTime: string;
+    available: boolean;
+    reason?: string;
+  }[];
+}
+
+export enum ResaleStatus {
+  Active = 'active',
+  Sold = 'sold',
+  Cancelled = 'cancelled',
+}
+
+export interface ResaleBookingSnapshot {
+  id: string;
+  courtID: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  currency: string;
+}
+
+export interface ResaleListing {
+  id: string;
+  bookingID: ResaleBookingSnapshot | string;
+  sellerID: string;
+  venueID: string;
+  askingPrice: number;
+  currency: string;
+  status: ResaleStatus;
+  subStartTime?: string;
+  subEndTime?: string;
+  createdAt?: string;
+}
+
+export enum SellerPayoutStatus {
+  Pending = 'pending',
+  Paid = 'paid',
+}
+
+export interface ResalePayoutItem {
+  id: string;
+  sellerID: string;
+  sellerName?: string;
+  sellerPhone?: string;
+  sellerPaymentInfo?: {
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    promptPayID?: string;
+  };
+  askingPrice: number;
+  currency: string;
+  courtName?: string;
+  bookingDate?: string;
+  bookingStartTime?: string;
+  bookingEndTime?: string;
+  soldAt?: string;
+  sellerPayoutStatus: SellerPayoutStatus;
+}

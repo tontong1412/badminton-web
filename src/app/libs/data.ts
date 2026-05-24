@@ -1,7 +1,9 @@
 import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
-import { Event, Match, Player, Tournament } from '@/type'
+import { Booking, BookingAvailability, Court, Event, Match, Player, ResaleListing, ResalePayoutItem, Tournament, Venue } from '@/type'
+import { useSelector } from 'react-redux'
+import { RootState } from './redux/store'
 
 const fetcher = (url: string, withCredentials: boolean) => axios.get(
   url,
@@ -173,5 +175,172 @@ export const useMyMatches = (tournamentID: string|undefined): MyMatchesResponse 
     isError: error,
     mutate
   }
+}
+
+// ── Venues ─────────────────────────────────────────────────────────────────
+
+export interface VenuesResponse {
+  venues: Venue[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<Venue[] | undefined>
+}
+
+export const useVenues = (): VenuesResponse => {
+  const { data, error, mutate } = useSWR(
+    `${SERVICE_ENDPOINT}/venues`,
+    fetcher
+  )
+  return { venues: data ?? [], isLoading: !error && !data, isError: error, mutate }
+}
+
+export interface VenueResponse {
+  venue: Venue | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: (data?: Venue | Promise<Venue>, options?: boolean | MutatorOptions) => Promise<Venue | undefined>
+}
+
+export const useVenue = (id: string | undefined): VenueResponse => {
+  const { data, error, mutate } = useSWR(
+    id ? `${SERVICE_ENDPOINT}/venues/${id}` : null,
+    fetcher
+  )
+  return { venue: data, isLoading: !error && !data, isError: error, mutate }
+}
+
+// ── Courts ──────────────────────────────────────────────────────────────────
+
+export interface CourtsResponse {
+  courts: Court[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<Court[] | undefined>
+}
+
+export const useCourts = (): CourtsResponse => {
+  const { data, error, mutate } = useSWR(
+    `${SERVICE_ENDPOINT}/courts`,
+    fetcher
+  )
+  return { courts: data ?? [], isLoading: !error && !data, isError: error, mutate }
+}
+
+export interface CourtResponse {
+  court: Court | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: (data?: Court | Promise<Court>, options?: boolean | MutatorOptions) => Promise<Court | undefined>
+}
+
+export const useCourt = (id: string | undefined): CourtResponse => {
+  const { data, error, mutate } = useSWR(
+    id ? `${SERVICE_ENDPOINT}/courts/${id}` : null,
+    fetcher
+  )
+  return { court: data, isLoading: !error && !data, isError: error, mutate }
+}
+
+export interface CourtAvailabilityResponse {
+  availability: BookingAvailability | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<BookingAvailability | undefined>
+}
+
+export const useCourtAvailability = (
+  courtId: string | undefined,
+  date: string | undefined,
+  durationMinutes: number | undefined,
+): CourtAvailabilityResponse => {
+  const key = courtId && date && durationMinutes
+    ? `${SERVICE_ENDPOINT}/courts/${courtId}/availability?date=${date}&durationMinutes=${durationMinutes}`
+    : null
+  const { data, error, mutate } = useSWR(key, fetcher)
+  return { availability: data, isLoading: !error && !data, isError: error, mutate }
+}
+
+// ── Bookings ─────────────────────────────────────────────────────────────────
+
+export interface BookingsResponse {
+  bookings: Booking[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<Booking[] | undefined>
+}
+
+export const useMyBookings = (): BookingsResponse => {
+  const user = useSelector((state: RootState) => state.app.user)
+  const key = user ? `${SERVICE_ENDPOINT}/bookings` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true)
+  )
+  return { bookings: data ?? [], isLoading, isError: error, mutate }
+}
+
+export interface VenueBookingsParams {
+  paymentStatus?: string
+  date?: string
+  venueID?: string
+}
+
+export interface ResaleListingsResponse {
+  listings: ResaleListing[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<ResaleListing[] | undefined>
+}
+
+export const useResaleListings = (venueID: string | null, date?: string): ResaleListingsResponse => {
+  const params = venueID ? new URLSearchParams({ venueID }) : null
+  if (params && date) {
+    params.set('dateFrom', date)
+    params.set('dateTo', date)
+  }
+  const key = params ? `${SERVICE_ENDPOINT}/resale?${params.toString()}` : null
+  const { data, error, isLoading, mutate } = useSWR(key, (url) => fetcher(url, false))
+  return { listings: data ?? [], isLoading, isError: error, mutate }
+}
+
+export const useVenueBookings = (params: VenueBookingsParams): BookingsResponse => {
+  const searchParams = new URLSearchParams()
+  if (params.venueID) searchParams.set('venueID', params.venueID)
+  if (params.paymentStatus) searchParams.set('paymentStatus', params.paymentStatus)
+  if (params.date) searchParams.set('date', params.date)
+  const key = params.venueID
+    ? `${SERVICE_ENDPOINT}/bookings/venue-admin?${searchParams.toString()}`
+    : null
+  const { data, error, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true)
+  )
+  return { bookings: data ?? [], isLoading: !error && !data, isError: error, mutate }
+}
+
+export interface ResalePayoutsResponse {
+  payouts: ResalePayoutItem[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<ResalePayoutItem[] | undefined>
+}
+
+export const useResalePayouts = (isAdmin: boolean): ResalePayoutsResponse => {
+  const key = isAdmin ? `${SERVICE_ENDPOINT}/resale/admin/payouts` : null
+  const { data, error, isLoading, mutate } = useSWR(key, (url) => fetcher(url, true))
+  return { payouts: data ?? [], isLoading, isError: !!error, mutate }
+}
+
+export interface MyPlayerResponse {
+  player: Player | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<Player | undefined>
+}
+
+export const useMyPlayer = (enabled: boolean): MyPlayerResponse => {
+  const key = enabled ? `${SERVICE_ENDPOINT}/players/me` : null
+  const { data, error, isLoading, mutate } = useSWR(key, (url) => fetcher(url, true))
+  return { player: data, isLoading, isError: !!error, mutate }
 }
 

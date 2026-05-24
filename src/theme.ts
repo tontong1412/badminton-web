@@ -24,6 +24,7 @@ const theme = createTheme({
     }
   },
   cssVariables: true,
+  colorSchemes: { light: true },
   typography: {
     fontFamily: 'var(--font-nunito)',
   },

@@ -26,8 +26,8 @@ const AccountPage = () => {
           : (
             <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', m:2, mt:5 }}>
               <Avatar sx={{ width: 100, height: 100 }} src={user.player.photo}/>
-              <Typography variant='h5' mt={2}>{user.player.displayName[language]}</Typography>
-              <Typography variant='h6'>{user.player.officialName[language]}</Typography>
+              <Typography variant='h5' mt={2}>{user.player.displayName?.[language]}</Typography>
+              <Typography variant='h6'>{user.player.officialName?.[language]}</Typography>
               <Button
                 sx={{ borderRadius:10, mt: 2 }}
                 variant='contained'

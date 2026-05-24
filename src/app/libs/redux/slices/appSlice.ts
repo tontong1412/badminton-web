@@ -5,12 +5,14 @@ import { DEFAULT_LANGUAGE, SUPPORTED_LANG } from '@/app/constants'
 
 interface AppState {
   user: User | null;
+  userReady: boolean;
   activeMenu: AppMenu | TournamentMenu;
   language: Language
 }
 
 const initialState: AppState = {
   user: null,
+  userReady: false,
   activeMenu: AppMenu.Home,
   language: DEFAULT_LANGUAGE as Language
 }
@@ -21,9 +23,14 @@ const appSlice = createSlice({
   reducers: {
     login(state, action: PayloadAction<User>) {
       state.user = { ...state.user, ...action.payload }
+      state.userReady = true
     },
     logout(state) {
       state.user = null
+      state.userReady = true
+    },
+    setUserReady(state) {
+      state.userReady = true
     },
     setActiveMenu(state, action: PayloadAction<AppMenu | TournamentMenu>) {
       state.activeMenu = action.payload
@@ -35,32 +42,21 @@ const appSlice = createSlice({
         // i18n is only available on client
         if (typeof window !== 'undefined') {
           i18n.changeLanguage(newLang)
-          // TODO: figure out how to set i18n language on server
-          // localStorage.setItem('i18nextLng', newLang)
+          localStorage.setItem('lang', newLang)
         }
       }
     },
     initializeLanguage: (state) => {
       // Only run on client
       if (typeof window !== 'undefined') {
-        // TODO: figure out how to set i18n language on server
-        // const savedLang = localStorage.getItem('i18nextLng')
-        // const browserLang = navigator.language.split('-')[0]
-
-        const detectedLang = DEFAULT_LANGUAGE // Default fallbac'
-
-        // if (savedLang && SUPPORTED_LANG.includes(savedLang)) {
-        //   detectedLang = savedLang
-        // } else if (browserLang && SUPPORTED_LANG.includes(browserLang)) {
-        //   detectedLang = browserLang
-        // }
-
-        state.language = detectedLang as Language
+        const savedLang = localStorage.getItem('lang')
+        const detectedLang = (savedLang && SUPPORTED_LANG.includes(savedLang) ? savedLang : DEFAULT_LANGUAGE) as Language
+        state.language = detectedLang
         i18n.changeLanguage(detectedLang)
       }
     }
   }
 })
 
-export const { login, logout, setActiveMenu, changeLanguage, initializeLanguage } = appSlice.actions
+export const { login, logout, setUserReady, setActiveMenu, changeLanguage, initializeLanguage } = appSlice.actions
 export default appSlice.reducer

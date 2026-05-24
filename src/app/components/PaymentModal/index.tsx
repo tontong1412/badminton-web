@@ -13,12 +13,12 @@ import {
   Typography,
 } from '@mui/material'
 import { RootState } from '@/app/libs/redux/store'
-import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react'
+import { Dispatch, ReactNode, SetStateAction, useEffect, useRef, useState } from 'react'
 import Transition from '../ModalTransition'
 import { useTranslation } from 'react-i18next'
 import { Event, EventTeam, Language, PaymentStatus } from '@/type'
 import { useSelector } from 'react-redux'
-import { Check, CopyAll, PhotoCamera } from '@mui/icons-material'
+import { Check, CopyAll, Download, PhotoCamera } from '@mui/icons-material'
 import Image from 'next/image'
 import imageCompression from 'browser-image-compression'
 import photoUtils from '@/app/libs/photo'
@@ -61,7 +61,76 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
   const [copyAlertOpen, setCopyAlertOpen] = useState(false)
   const [slipImage, setSlipImage] = useState<string | undefined>(team.slip)
   const [buttonLoading, setButtonLoading] = useState(false)
+  const qrContainerRef = useRef<HTMLDivElement>(null)
   const { t } = useTranslation()
+
+  const handleSaveQR = () => {
+    if (!qrContainerRef.current) return
+    const svg = qrContainerRef.current.querySelector('svg')
+    if (!svg) return
+
+    const padding = 32
+    const labelHeight = 56
+    const svgSize = 256
+    const canvasWidth = svgSize + padding * 2
+    const canvasHeight = svgSize + padding * 2 + labelHeight
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    const img = new window.Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+      const ctx = canvas.getContext('2d')!
+
+      // White background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      // Outer frame
+      ctx.strokeStyle = '#1565c0'
+      ctx.lineWidth = 6
+      ctx.strokeRect(4, 4, canvasWidth - 8, canvasHeight - 8)
+
+      // Inner accent line
+      ctx.strokeStyle = '#42a5f5'
+      ctx.lineWidth = 2
+      ctx.strokeRect(12, 12, canvasWidth - 24, canvasHeight - 24)
+
+      // QR code
+      ctx.drawImage(img, padding, padding, svgSize, svgSize)
+
+      // Name label
+      ctx.fillStyle = '#1565c0'
+      ctx.font = 'bold 20px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(
+        event.tournament.payment.name,
+        canvasWidth / 2,
+        svgSize + padding + labelHeight - 16,
+      )
+
+      URL.revokeObjectURL(svgUrl)
+
+      const saveCanvas = async() => {
+        const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        const file = new File([blob], 'payment-qr.png', { type: 'image/png' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Payment QR' })
+        } else {
+          const link = document.createElement('a')
+          link.download = 'payment-qr.png'
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        }
+      }
+      saveCanvas()
+    }
+    img.src = svgUrl
+  }
 
   useEffect(() => {
     setSlipImage(team.slip)
@@ -155,9 +224,12 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
           <Divider sx={{ pt: 2, pb: 2 }}>ช่องทางการชำระเงิน</Divider>
 
           {event.tournament.payment.code.length > 64 ?
-            <Box sx={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+            <Box ref={qrContainerRef} sx={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
               <QRCode value={event.tournament.payment.code} />
               <Typography variant='h6'>{event.tournament.payment.name}</Typography>
+              <Button variant='outlined' startIcon={<Download />} size='small' onClick={handleSaveQR}>
+                บันทึก QR
+              </Button>
             </Box>
             :
             <>
