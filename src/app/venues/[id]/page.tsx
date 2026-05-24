@@ -440,7 +440,11 @@ export default function VenueCourtsPage() {
     setGuidedSelectedCourts((prev) => {
       const isSelected = prev.some((c) => c.id === court.id)
       if (isSelected) return prev.filter((c) => c.id !== court.id)
-      if (prev.length >= requestedCourtCount) return prev
+      if (prev.length >= requestedCourtCount) {
+        // FIFO: drop the oldest selection and add the new one
+        const [, ...rest] = prev
+        return [...rest, court]
+      }
       return [...prev, court]
     })
   }
