@@ -108,12 +108,12 @@ export default function VenueDashboardPage() {
 
   // ── Revenue ────────────────────────────────────────────────────────────────
   const totalRevenue = useMemo(
-    () => paidBookings.reduce((s, b) => s + b.totalPrice, 0),
+    () => paidBookings.filter((b) => !b.resaleSourceListingID).reduce((s, b) => s + b.totalPrice, 0),
     [paidBookings]
   )
 
   const pendingRevenue = useMemo(
-    () => pendingBookings.reduce((s, b) => s + b.totalPrice, 0),
+    () => pendingBookings.filter((b) => !b.resaleSourceListingID).reduce((s, b) => s + b.totalPrice, 0),
     [pendingBookings]
   )
 
@@ -160,7 +160,7 @@ export default function VenueDashboardPage() {
       const day = moment().subtract(days - 1 - i, 'days')
       const dayStr = day.format('YYYY-MM-DD')
       const rev = paidBookings
-        .filter((b) => moment(b.date).format('YYYY-MM-DD') === dayStr)
+        .filter((b) => moment(b.date).format('YYYY-MM-DD') === dayStr && !b.resaleSourceListingID)
         .reduce((s, b) => s + b.totalPrice, 0)
       return { label: day.format('DD MMM'), rev }
     })
