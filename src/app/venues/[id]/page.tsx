@@ -110,6 +110,10 @@ export default function VenueCourtsPage() {
   const [guidedError, setGuidedError] = useState<string | null>(null)
   const [showCourtPicker, setShowCourtPicker] = useState(false)
 
+  // Cache availability data fetched in loadGuided so handleSelectGuidedSlot can reuse it
+  const guidedFullAvailRef = useRef<Record<string, BookingAvailability>>({})
+  const guidedStepAvailRef = useRef<Record<string, BookingAvailability>>({})
+
   const requestedDurationMinutes = requestedHours * 60
 
   // ── Free mode state ────────────────────────────────────────────────────────
@@ -259,12 +263,16 @@ export default function VenueCourtsPage() {
 
       try {
         const activeCourts = filteredCourts.filter((c) => c.status === 'active')
-        const fetched = await Promise.all(
-          activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, requestedDurationMinutes))
-        )
+        const activeCourtIds = activeCourts.map((c) => c.id)
+
+        // Single bulk request instead of N individual requests
+        const bulkFetched = await courtsService.getBulkAvailability(activeCourtIds, selectedDate, requestedDurationMinutes)
+        guidedFullAvailRef.current = bulkFetched
 
         const slotMap = new Map<string, { startTime: string; endTime: string; courtCount: number; isSplit: boolean }>()
-        fetched.forEach((avail) => {
+        activeCourts.forEach((court) => {
+          const avail = bulkFetched[court.id]
+          if (!avail) return
           avail.slots.forEach((slot) => {
             if (!slot.available) return
             if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) return
@@ -281,20 +289,23 @@ export default function VenueCourtsPage() {
         // Detect split-court slots: windows where different courts cover each sub-slot
         const numSubSlots = slotDurationMinutes > 0 ? Math.round(requestedDurationMinutes / slotDurationMinutes) : 1
         if (numSubSlots > 1) {
-          const stepFetched = await Promise.all(
-            activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
-          )
+          // Single bulk request for step-level slots
+          const stepBulkFetched = await courtsService.getBulkAvailability(activeCourtIds, selectedDate, slotDurationMinutes)
+          guidedStepAvailRef.current = stepBulkFetched
+
           // courtId -> Set<availableStepStarts>
           const courtStepAvail = new Map<string, Set<string>>()
-          stepFetched.forEach((avail, idx) => {
-            const courtId = String(activeCourts[idx].id)
+          activeCourts.forEach((court) => {
+            const avail = stepBulkFetched[court.id]
             const available = new Set<string>()
-            avail.slots.forEach((s) => { if (s.available) available.add(s.startTime) })
-            courtStepAvail.set(courtId, available)
+            avail?.slots.forEach((s) => { if (s.available) available.add(s.startTime) })
+            courtStepAvail.set(String(court.id), available)
           })
           // Potential window starts from step-level slots
           const allStepStarts = new Set<string>()
-          stepFetched.forEach((avail) => avail.slots.forEach((s) => allStepStarts.add(s.startTime)))
+          activeCourts.forEach((court) => {
+            stepBulkFetched[court.id]?.slots.forEach((s) => allStepStarts.add(s.startTime))
+          })
           allStepStarts.forEach((windowStart) => {
             if (moment(`${selectedDate} ${windowStart}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) return
             const windowEnd = addMinutes(windowStart, requestedDurationMinutes)
@@ -311,6 +322,8 @@ export default function VenueCourtsPage() {
               slotMap.set(key, { startTime: windowStart, endTime: windowEnd, courtCount: minCourts, isSplit: true })
             }
           })
+        } else {
+          guidedStepAvailRef.current = {}
         }
 
         setGuidedSlots(
@@ -376,7 +389,7 @@ export default function VenueCourtsPage() {
     return bestIndices.map((i) => sorted[i])
   }
 
-  const handleSelectGuidedSlot = async(slot: { startTime: string; endTime: string; isSplit: boolean }) => {
+  const handleSelectGuidedSlot = (slot: { startTime: string; endTime: string; isSplit: boolean }) => {
     if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {
       setGuidedError(t('booking.pastTimeNotAllowed'))
       return
@@ -389,29 +402,26 @@ export default function VenueCourtsPage() {
 
     try {
       if (!slot.isSplit) {
-        // Standard slot: find courts available for the full duration
-        const results = await Promise.all(
-          filteredCourts.map(async(court) => {
-            if (court.status !== 'active') return { court, available: false }
-            const avail = await courtsService.getAvailability(court.id, selectedDate, requestedDurationMinutes)
-            const ok = avail.slots.some((s) => s.startTime === slot.startTime && s.endTime === slot.endTime && s.available)
-            return { court, available: ok }
-          })
-        )
+        // Standard slot: use cached data from loadGuided (no extra requests)
+        const cachedFull = guidedFullAvailRef.current
+        const results = filteredCourts.map((court) => {
+          if (court.status !== 'active') return { court, available: false }
+          const avail = cachedFull[court.id]
+          const ok = avail?.slots.some((s) => s.startTime === slot.startTime && s.endTime === slot.endTime && s.available) ?? false
+          return { court, available: ok }
+        })
         const available = results.filter((r) => r.available).map((r) => r.court)
         setGuidedAvailableCourts(available)
         setGuidedSelectedCourts(suggestCourts(filteredCourts, available, requestedCourtCount))
       } else {
-        // Split slot: assign different courts per sub-slot
+        // Split slot: use cached step-level data from loadGuided (no extra requests)
         const numSubSlots = slotDurationMinutes > 0 ? Math.round(requestedDurationMinutes / slotDurationMinutes) : 1
         const subStarts = Array.from({ length: numSubSlots }, (_, i) => addMinutes(slot.startTime, i * slotDurationMinutes))
         const activeCourts = filteredCourts.filter((c) => c.status === 'active')
-        const stepFetched = await Promise.all(
-          activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
-        )
-        const courtStepAvail = activeCourts.map((court, i) => ({
+        const cachedStep = guidedStepAvailRef.current
+        const courtStepAvail = activeCourts.map((court) => ({
           court,
-          availableSteps: new Set(stepFetched[i].slots.filter((s) => s.available).map((s) => s.startTime)),
+          availableSteps: new Set((cachedStep[court.id]?.slots ?? []).filter((s) => s.available).map((s) => s.startTime)),
         }))
         // Greedily assign courts per sub-slot, preferring to reuse the same court
         const assignment: { court: Court; startTime: string; endTime: string }[] = []

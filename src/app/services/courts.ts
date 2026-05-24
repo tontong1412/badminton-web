@@ -44,6 +44,17 @@ const getAvailability = (id: string, date: string, durationMinutes: number): Pro
   return request.then((response) => response.data as BookingAvailability)
 }
 
+const getBulkAvailability = (courtIds: string[], date: string, durationMinutes: number): Promise<Record<string, BookingAvailability>> => {
+  const request = axios.get(`${baseUrl}/availability/bulk`, {
+    params: {
+      courtIds: courtIds.join(','),
+      date,
+      durationMinutes,
+    }
+  })
+  return request.then((response) => response.data as Record<string, BookingAvailability>)
+}
+
 const create = (payload: CreateCourtPayload): Promise<Court> =>
   axios.post(baseUrl, payload, { withCredentials: true }).then((r) => r.data as Court)
 
@@ -54,6 +65,7 @@ export default {
   getAll,
   getById,
   getAvailability,
+  getBulkAvailability,
   create,
   update,
 }
