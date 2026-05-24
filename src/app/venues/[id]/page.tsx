@@ -474,9 +474,11 @@ export default function VenueCourtsPage() {
 
       try {
         const activeCourts = filteredCourts.filter((c) => c.status === 'active')
-        const fetched = await Promise.all(
-          activeCourts.map((c) => courtsService.getAvailability(c.id, selectedDate, slotDurationMinutes))
+        const bulk = await courtsService.getBulkAvailability(
+          activeCourts.map((c) => c.id), selectedDate, slotDurationMinutes,
         )
+        // Preserve court order expected by CourtAvailabilityTable
+        const fetched = activeCourts.map((c) => bulk[c.id]).filter(Boolean) as BookingAvailability[]
         setFreeAvailability(fetched)
       } catch (err) {
         setFreeError(err instanceof Error ? err.message : 'Failed to load availability')
