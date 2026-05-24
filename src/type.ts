@@ -49,6 +49,12 @@ export interface Player {
     tel: string;
     line: string;
   }
+  paymentInfo?: {
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    promptPayID?: string;
+  }
 }
 
 export interface PlayerWithAccount extends Player {

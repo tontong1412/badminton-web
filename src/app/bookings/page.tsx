@@ -32,9 +32,10 @@ import {
 import { Booking, BookingResaleOutcome, BookingStatus, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
 import resaleService from '../services/resale'
+import playersService from '../services/players'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
-import { useMyBookings } from '../libs/data'
+import { useMyBookings, useMyPlayer } from '../libs/data'
 import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
@@ -190,8 +191,14 @@ export default function MyBookingsPage() {
   const [resellPrice, setResellPrice] = useState('')
   const [resellSubmitting, setResellSubmitting] = useState(false)
   const [resellError, setResellError] = useState<string | null>(null)
+  const [payInfoBankName, setPayInfoBankName] = useState('')
+  const [payInfoAccountName, setPayInfoAccountName] = useState('')
+  const [payInfoAccountNumber, setPayInfoAccountNumber] = useState('')
+  const [payInfoPromptPay, setPayInfoPromptPay] = useState('')
   // per-slot config for multi-hour bookings: key = "startTime|endTime"
-  const [resellSlotConfig, setResellSlotConfig] = useState<Record<string, { selected: boolean; price: string; bookingID?: string }>>({}) 
+  const [resellSlotConfig, setResellSlotConfig] = useState<Record<string, { selected: boolean; price: string; bookingID?: string }>>({})
+
+  const { player: myPlayer, mutate: mutateMyPlayer } = useMyPlayer(!!user) 
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -498,6 +505,30 @@ export default function MyBookingsPage() {
 
   const handleConfirmResell = async() => {
     if (!resellBooking) return
+
+    // Save payment info first if the player doesn't have one yet
+    const hasPaymentInfo = !!(myPlayer?.paymentInfo?.accountNumber || myPlayer?.paymentInfo?.promptPayID)
+    const newPayInfo = {
+      bankName: payInfoBankName.trim() || undefined,
+      accountName: payInfoAccountName.trim() || undefined,
+      accountNumber: payInfoAccountNumber.trim() || undefined,
+      promptPayID: payInfoPromptPay.trim() || undefined,
+    }
+    const isNewPayInfoProvided = !!(newPayInfo.accountNumber || newPayInfo.promptPayID)
+    if (!hasPaymentInfo && !isNewPayInfoProvided) {
+      setResellError('Please provide your payment information so we can transfer your payout')
+      return
+    }
+    if (!hasPaymentInfo && isNewPayInfoProvided && myPlayer?.id) {
+      try {
+        await playersService.updateMe(myPlayer.id, { paymentInfo: newPayInfo })
+        mutateMyPlayer()
+      } catch {
+        setResellError('Failed to save payment information')
+        return
+      }
+    }
+
     const isMultiSlot = Object.keys(resellSlotConfig).length > 0
     if (isMultiSlot) {
       const selected = Object.entries(resellSlotConfig).filter(([, v]) => v.selected)
@@ -1191,6 +1222,12 @@ export default function MyBookingsPage() {
                 </Typography>
               </Box>
             )}
+
+            {/* Fee notice */}
+            <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
+              A <strong>10% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>3 business days</strong> after the buyer pays.
+            </Alert>
+
             {Object.keys(resellSlotConfig).length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">Select which hours to list for resale:</Typography>
@@ -1230,6 +1267,32 @@ export default function MyBookingsPage() {
                 inputProps={{ min: 0 }}
               />
             )}
+
+            {/* Payment info — only shown if not already saved */}
+            {!(myPlayer?.paymentInfo?.accountNumber || myPlayer?.paymentInfo?.promptPayID) && (
+              <Box sx={{ mt: 2.5 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Payout Account</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                  We need your bank or PromptPay details to transfer your payout.
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <TextField size="small" fullWidth label="Bank Name" value={payInfoBankName} onChange={(e) => setPayInfoBankName(e.target.value)} />
+                  <TextField size="small" fullWidth label="Account Name" value={payInfoAccountName} onChange={(e) => setPayInfoAccountName(e.target.value)} />
+                  <TextField size="small" fullWidth label="Account Number" value={payInfoAccountNumber} onChange={(e) => setPayInfoAccountNumber(e.target.value)} />
+                  <TextField size="small" fullWidth label="PromptPay ID (phone / national ID)" value={payInfoPromptPay} onChange={(e) => setPayInfoPromptPay(e.target.value)} />
+                </Box>
+              </Box>
+            )}
+            {(myPlayer?.paymentInfo?.accountNumber || myPlayer?.paymentInfo?.promptPayID) && (
+              <Box sx={{ mt: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>Payout to:</Typography>
+                {myPlayer.paymentInfo.accountName && <Typography variant="body2">{myPlayer.paymentInfo.accountName}</Typography>}
+                {myPlayer.paymentInfo.bankName && <Typography variant="body2">{myPlayer.paymentInfo.bankName}</Typography>}
+                {myPlayer.paymentInfo.accountNumber && <Typography variant="body2">Acc: {myPlayer.paymentInfo.accountNumber}</Typography>}
+                {myPlayer.paymentInfo.promptPayID && <Typography variant="body2">PromptPay: {myPlayer.paymentInfo.promptPayID}</Typography>}
+              </Box>
+            )}
+
             {resellError && <Alert severity="error" sx={{ mt: 2 }}>{resellError}</Alert>}
           </DialogContent>
           <DialogActions>

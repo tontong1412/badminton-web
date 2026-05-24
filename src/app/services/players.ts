@@ -12,7 +12,15 @@ const getWithAccount = (): Promise<PlayerWithAccount[]> => {
   return axios.get(`${baseUrl}/with-account`, { withCredentials: true }).then((r) => r.data as PlayerWithAccount[])
 }
 
+const getMe = (): Promise<Player> =>
+  axios.get(`${baseUrl}/me`, { withCredentials: true }).then((r) => r.data as Player)
+
+const updateMe = (id: string, data: Partial<Player>): Promise<Player> =>
+  axios.put(`${baseUrl}/${id}`, data, { withCredentials: true }).then((r) => r.data as Player)
+
 export default {
   getAll,
   getWithAccount,
+  getMe,
+  updateMe,
 }

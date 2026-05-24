@@ -331,3 +331,16 @@ export const useResalePayouts = (isAdmin: boolean): ResalePayoutsResponse => {
   return { payouts: data ?? [], isLoading, isError: !!error, mutate }
 }
 
+export interface MyPlayerResponse {
+  player: Player | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<Player | undefined>
+}
+
+export const useMyPlayer = (enabled: boolean): MyPlayerResponse => {
+  const key = enabled ? `${SERVICE_ENDPOINT}/players/me` : null
+  const { data, error, isLoading, mutate } = useSWR(key, (url) => fetcher(url, true))
+  return { player: data, isLoading, isError: !!error, mutate }
+}
+
