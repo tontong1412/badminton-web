@@ -17,6 +17,7 @@ import { setActiveMenu } from './libs/redux/slices/appSlice'
 import { AppMenu, BookingStatus, Court, Language, PaymentStatus, TournamentQuery, Venue } from '@/type'
 import { useAppDispatch } from './providers'
 import Layout from './components/Layout'
+import HomeBanner from './components/HomeBanner'
 import TournamentList from './tournaments/TounamentList'
 import Link from 'next/link'
 import { useMyBookings } from './libs/data'
@@ -95,7 +96,8 @@ const Home = () => {
   return (
     <Layout>
       <Container>
-        <Typography sx={{ mt: 4, mb: 2, color: '#80644f' }} variant="h5">
+        <HomeBanner />
+        <Typography sx={{ mt: 2, mb: 2, color: '#80644f' }} variant="h5">
           {t('greeting')}, {user?.player?.displayName?.[language] || user?.player?.officialName[language]}
         </Typography>
 
