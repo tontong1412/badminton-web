@@ -31,6 +31,12 @@ const resaleService = {
       {},
       { withCredentials: true },
     ).then((r) => r.data),
+
+  getAdminPayouts: () =>
+    axios.get(`${SERVICE_ENDPOINT}/resale/admin/payouts`, { withCredentials: true }).then((r) => r.data),
+
+  markSellerPaid: (listingID: string) =>
+    axios.put(`${SERVICE_ENDPOINT}/resale/${listingID}/mark-seller-paid`, {}, { withCredentials: true }).then((r) => r.data),
 }
 
 export default resaleService

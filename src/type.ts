@@ -521,3 +521,23 @@ export interface ResaleListing {
   subEndTime?: string;
   createdAt?: string;
 }
+
+export enum SellerPayoutStatus {
+  Pending = 'pending',
+  Paid = 'paid',
+}
+
+export interface ResalePayoutItem {
+  id: string;
+  sellerID: string;
+  sellerName?: string;
+  sellerPhone?: string;
+  askingPrice: number;
+  currency: string;
+  courtName?: string;
+  bookingDate?: string;
+  bookingStartTime?: string;
+  bookingEndTime?: string;
+  soldAt?: string;
+  sellerPayoutStatus: SellerPayoutStatus;
+}
