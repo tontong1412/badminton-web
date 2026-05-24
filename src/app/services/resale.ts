@@ -37,6 +37,13 @@ const resaleService = {
 
   markSellerPaid: (listingID: string) =>
     axios.put(`${SERVICE_ENDPOINT}/resale/${listingID}/mark-seller-paid`, {}, { withCredentials: true }).then((r) => r.data),
+
+  payoutWithSlip: (listingIDs: string[], slipBase64: string, slipMimeType: string, slipFileName: string) =>
+    axios.post(
+      `${SERVICE_ENDPOINT}/resale/admin/payout-with-slip`,
+      { listingIDs, slipBase64, slipMimeType, slipFileName },
+      { withCredentials: true },
+    ).then((r) => r.data),
 }
 
 export default resaleService

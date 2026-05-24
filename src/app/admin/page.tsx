@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Container,
   Typography,
@@ -45,31 +45,55 @@ export default function AdminHubPage() {
   const { payouts, isLoading: payoutsLoading, mutate: mutatePayouts } = useResalePayouts(isSystemAdmin)
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
   const [payoutError, setPayoutError] = useState<string | null>(null)
+  const [slipGroupKey, setSlipGroupKey] = useState<string | null>(null)
+  const slipInputRef = useRef<HTMLInputElement>(null)
 
   // Group payouts by sellerID + bookingDate
   const groupedPayouts = useMemo(() => {
     const map = new Map<string, typeof payouts>()
     for (const p of payouts) {
-      const key = `${p.sellerID}__${p.bookingDate ?? 'unknown'}`
-      const arr = map.get(key) ?? []
+      const arr = map.get(p.sellerID) ?? []
       arr.push(p)
-      map.set(key, arr)
+      map.set(p.sellerID, arr)
     }
     return Array.from(map.values())
   }, [payouts])
 
-  const handleMarkGroupPaid = async(group: typeof payouts) => {
-    const groupKey = `${group[0].sellerID}__${group[0].bookingDate}`
-    try {
-      setMarkingPaid(groupKey)
-      setPayoutError(null)
-      await Promise.all(group.map((p) => resaleService.markSellerPaid(p.id)))
-      mutatePayouts()
-    } catch {
-      setPayoutError('Failed to mark payouts as paid')
-    } finally {
-      setMarkingPaid(null)
+  const handleUploadSlip = (groupKey: string) => {
+    setSlipGroupKey(groupKey)
+    slipInputRef.current?.click()
+  }
+
+  const handleSlipFileChange = async(e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !slipGroupKey) return
+    e.target.value = ''
+
+    const group = groupedPayouts.find((g) => g[0].sellerID === slipGroupKey)
+    if (!group) return
+
+    const listingIDs = group.map((p) => p.id)
+
+    const reader = new FileReader()
+    reader.onload = async() => {
+      const dataUrl = reader.result as string
+      // dataUrl = "data:<mime>;base64,<data>"
+      const [meta, base64] = dataUrl.split(',')
+      const mimeType = meta.replace('data:', '').replace(';base64', '')
+
+      try {
+        setMarkingPaid(slipGroupKey)
+        setPayoutError(null)
+        await resaleService.payoutWithSlip(listingIDs, base64, mimeType, file.name)
+        mutatePayouts()
+      } catch {
+        setPayoutError('Failed to upload slip and process payout')
+      } finally {
+        setMarkingPaid(null)
+        setSlipGroupKey(null)
+      }
     }
+    reader.readAsDataURL(file)
   }
 
   const venues = useMemo(() => {
@@ -173,7 +197,7 @@ export default function AdminHubPage() {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {groupedPayouts.map((group) => {
                       const first = group[0]
-                      const groupKey = `${first.sellerID}__${first.bookingDate}`
+                      const groupKey = first.sellerID
                       const total = group.reduce((sum, p) => sum + p.askingPrice, 0)
                       const netAmount = total * 0.9
                       const currency = first.currency
@@ -182,16 +206,13 @@ export default function AdminHubPage() {
 
                       return (
                         <Paper key={groupKey} variant="outlined" sx={{ p: 2 }}>
-                          {/* Header: seller + date */}
+                          {/* Header: seller info */}
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
                             <Box>
                               <Typography fontWeight={700}>{first.sellerName ?? first.sellerID}</Typography>
                               {first.sellerPhone && (
                                 <Typography variant="body2" color="text.secondary">{first.sellerPhone}</Typography>
                               )}
-                              <Typography variant="body2" color="text.secondary">
-                                {first.bookingDate ? moment(first.bookingDate).format('DD MMM YYYY') : 'Unknown date'}
-                              </Typography>
                             </Box>
                             {/* Net payout amount */}
                             <Box sx={{ textAlign: 'right' }}>
@@ -235,6 +256,7 @@ export default function AdminHubPage() {
                             <TableHead>
                               <TableRow sx={{ bgcolor: 'grey.50' }}>
                                 <TableCell sx={{ fontWeight: 700 }}>Court / Slot</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Sold At</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Asking Price</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Net</TableCell>
@@ -251,6 +273,7 @@ export default function AdminHubPage() {
                                       </Typography>
                                     )}
                                   </TableCell>
+                                  <TableCell>{payout.bookingDate ? moment(payout.bookingDate).format('DD MMM YYYY') : '—'}</TableCell>
                                   <TableCell>{payout.soldAt ? moment(payout.soldAt).format('DD MMM HH:mm') : '—'}</TableCell>
                                   <TableCell align="right">{payout.askingPrice.toFixed(2)}</TableCell>
                                   <TableCell align="right" sx={{ fontWeight: 600, color: 'success.main' }}>
@@ -267,9 +290,9 @@ export default function AdminHubPage() {
                               color="success"
                               size="small"
                               disabled={isGroupMarking}
-                              onClick={() => handleMarkGroupPaid(group)}
+                              onClick={() => handleUploadSlip(groupKey)}
                             >
-                              {isGroupMarking ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Mark All Paid'}
+                              {isGroupMarking ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Upload Slip & Pay'}
                             </Button>
                           </Box>
                         </Paper>
@@ -281,6 +304,14 @@ export default function AdminHubPage() {
             )}
           </>
         )}
+        {/* Hidden slip file input */}
+        <input
+          ref={slipInputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          style={{ display: 'none' }}
+          onChange={handleSlipFileChange}
+        />
       </Container>
     </Layout>
   )
