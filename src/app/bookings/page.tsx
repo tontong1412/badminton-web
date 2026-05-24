@@ -198,7 +198,7 @@ export default function MyBookingsPage() {
   // per-slot config for multi-hour bookings: key = "startTime|endTime"
   const [resellSlotConfig, setResellSlotConfig] = useState<Record<string, { selected: boolean; price: string; bookingID?: string }>>({})
 
-  const { player: myPlayer, mutate: mutateMyPlayer } = useMyPlayer(!!user) 
+  const { player: myPlayer, mutate: mutateMyPlayer } = useMyPlayer(!!user)
 
   const groupedBookings = useMemo(() => {
     const groupedMap = new Map<string, Booking[]>()
@@ -491,7 +491,7 @@ export default function MyBookingsPage() {
         while (cursor.isBefore(end)) {
           const slotEnd = moment(cursor).add(60, 'minutes')
           const key = `${cursor.format('HH:mm')}|${slotEnd.format('HH:mm')}`
-          const isSold = soldRanges.some(r => r.startTime === cursor.format('HH:mm'))
+          const isSold = soldRanges.some((r) => r.startTime === cursor.format('HH:mm'))
           if (!isSold) config[key] = { selected: false, price: hourlyPrice }
           cursor = slotEnd
         }
@@ -533,9 +533,9 @@ export default function MyBookingsPage() {
     if (isMultiSlot) {
       const selected = Object.entries(resellSlotConfig).filter(([, v]) => v.selected)
       if (selected.length === 0) { setResellError('Select at least one slot'); return }
-      for (const [key, { price }] of selected) {
+      for (const [, { price }] of selected) {
         const p = parseFloat(price)
-        if (isNaN(p) || p <= 0) { setResellError(`Enter a valid price for each selected slot`); return }
+        if (isNaN(p) || p <= 0) { setResellError('Enter a valid price for each selected slot'); return }
       }
       try {
         setResellSubmitting(true)
@@ -681,7 +681,7 @@ export default function MyBookingsPage() {
                         const showDate = dateStr !== prevDateStr
                         const booking = row.representative
                         const isCancelledSlot = booking.status === 'cancelled'
-                        const isDateFullyCancelled = arr.filter(r => moment(r.date).format('DD MMM YYYY') === dateStr).every(r => r.representative.status === 'cancelled')
+                        const isDateFullyCancelled = arr.filter((r) => moment(r.date).format('DD MMM YYYY') === dateStr).every((r) => r.representative.status === 'cancelled')
                         if (row.bookings.length > 1) {
                           // Merged: consecutive hours, no resale activity
                           const eligibleBookings = row.bookings.filter(isResellEligible)
@@ -714,7 +714,7 @@ export default function MyBookingsPage() {
                             {showPerHour ? (
                               <>
                                 {getHourSlots(booking.startTime, booking.endTime).map((slot) => {
-                                  const isSoldSlot = soldRanges.some(r => r.startTime === slot.startTime)
+                                  const isSoldSlot = soldRanges.some((r) => r.startTime === slot.startTime)
                                   const isListedSlot = listedSubRange?.startTime === slot.startTime
                                   return (
                                     <Box key={slot.startTime} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -844,7 +844,7 @@ export default function MyBookingsPage() {
                                   const dateStr = moment(row.date).format('DD/MM/YYYY')
                                   const prevDateStr = idx > 0 ? moment(mergedRows[idx - 1].date).format('DD/MM/YYYY') : null
                                   const isCancelledSlot = row.representative.status === 'cancelled'
-                                  const isDateFullyCancelled = mergedRows.filter(r => moment(r.date).format('DD/MM/YYYY') === dateStr).every(r => r.representative.status === 'cancelled')
+                                  const isDateFullyCancelled = mergedRows.filter((r) => moment(r.date).format('DD/MM/YYYY') === dateStr).every((r) => r.representative.status === 'cancelled')
                                   return (
                                     <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>
                                       {dateStr !== prevDateStr ? dateStr : ''}
@@ -891,7 +891,7 @@ export default function MyBookingsPage() {
                                       {showPerHour ? (
                                         <>
                                           {getHourSlots(booking.startTime, booking.endTime).map((slot) => {
-                                            const isSoldSlot = soldRanges.some(r => r.startTime === slot.startTime)
+                                            const isSoldSlot = soldRanges.some((r) => r.startTime === slot.startTime)
                                             const isListedSlot = listedSubRange?.startTime === slot.startTime
                                             return (
                                               <Box key={slot.startTime} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
