@@ -266,7 +266,7 @@ export default function VenueCourtsPage() {
         const activeCourtIds = activeCourts.map((c) => c.id)
 
         // Single bulk request instead of N individual requests
-        const bulkFetched = await courtsService.getBulkAvailability(activeCourtIds, selectedDate, requestedDurationMinutes)
+        const bulkFetched = await courtsService.getBulkAvailability(activeCourtIds, selectedDate, requestedDurationMinutes, venueId)
         guidedFullAvailRef.current = bulkFetched
 
         const slotMap = new Map<string, { startTime: string; endTime: string; courtCount: number; isSplit: boolean }>()
@@ -290,7 +290,7 @@ export default function VenueCourtsPage() {
         const numSubSlots = slotDurationMinutes > 0 ? Math.round(requestedDurationMinutes / slotDurationMinutes) : 1
         if (numSubSlots > 1) {
           // Single bulk request for step-level slots
-          const stepBulkFetched = await courtsService.getBulkAvailability(activeCourtIds, selectedDate, slotDurationMinutes)
+          const stepBulkFetched = await courtsService.getBulkAvailability(activeCourtIds, selectedDate, slotDurationMinutes, venueId)
           guidedStepAvailRef.current = stepBulkFetched
 
           // courtId -> Set<availableStepStarts>
@@ -475,7 +475,7 @@ export default function VenueCourtsPage() {
       try {
         const activeCourts = filteredCourts.filter((c) => c.status === 'active')
         const bulk = await courtsService.getBulkAvailability(
-          activeCourts.map((c) => c.id), selectedDate, slotDurationMinutes,
+          activeCourts.map((c) => c.id), selectedDate, slotDurationMinutes, venueId,
         )
         // Preserve court order expected by CourtAvailabilityTable
         const fetched = activeCourts.map((c) => bulk[c.id]).filter(Boolean) as BookingAvailability[]

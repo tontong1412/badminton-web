@@ -44,12 +44,13 @@ const getAvailability = (id: string, date: string, durationMinutes: number): Pro
   return request.then((response) => response.data as BookingAvailability)
 }
 
-const getBulkAvailability = (courtIds: string[], date: string, durationMinutes: number): Promise<Record<string, BookingAvailability>> => {
+const getBulkAvailability = (courtIds: string[], date: string, durationMinutes: number, venueId: string): Promise<Record<string, BookingAvailability>> => {
   const request = axios.get(`${baseUrl}/availability/bulk`, {
     params: {
       courtIds: courtIds.join(','),
       date,
       durationMinutes,
+      venueId,
     }
   })
   return request.then((response) => response.data as Record<string, BookingAvailability>)
