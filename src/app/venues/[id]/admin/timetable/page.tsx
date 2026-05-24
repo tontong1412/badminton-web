@@ -197,7 +197,11 @@ export default function VenueTimetablePage() {
       const startMin = timeToMinutes(booking.startTime)
       const endMin = timeToMinutes(booking.endTime)
       const rowSpan = Math.ceil((endMin - startMin) / 30)
-      courtSlots.set(minutesToTime(startMin), { booking, slotStart: minutesToTime(startMin), rowSpan })
+      const key = minutesToTime(startMin)
+      const existing = courtSlots.get(key)
+      // If this slot already has a buyer booking (real occupant), don't replace it with the original seller booking
+      if (existing && existing.booking.resaleSourceListingID && !booking.resaleSourceListingID) return
+      courtSlots.set(key, { booking, slotStart: key, rowSpan })
     })
     return map
   }, [sortedCourts, bookings])
