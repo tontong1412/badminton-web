@@ -538,6 +538,12 @@ export interface ResalePayoutItem {
   sellerID: string;
   sellerName?: string;
   sellerPhone?: string;
+  sellerPaymentInfo?: {
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    promptPayID?: string;
+  };
   askingPrice: number;
   currency: string;
   courtName?: string;

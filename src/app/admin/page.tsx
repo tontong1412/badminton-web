@@ -31,6 +31,8 @@ import { useRouter } from 'next/navigation'
 import Layout from '../components/Layout/index'
 import resaleService from '../services/resale'
 import moment from 'moment'
+import QRCode from 'react-qr-code'
+import generatePayload from 'promptpay-qr'
 
 export default function AdminHubPage() {
   const user = useSelector((state: RootState) => state.app.user) as (User & { id?: string }) | null
@@ -44,14 +46,27 @@ export default function AdminHubPage() {
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
   const [payoutError, setPayoutError] = useState<string | null>(null)
 
-  const handleMarkSellerPaid = async(listingID: string) => {
+  // Group payouts by sellerID + bookingDate
+  const groupedPayouts = useMemo(() => {
+    const map = new Map<string, typeof payouts>()
+    for (const p of payouts) {
+      const key = `${p.sellerID}__${p.bookingDate ?? 'unknown'}`
+      const arr = map.get(key) ?? []
+      arr.push(p)
+      map.set(key, arr)
+    }
+    return Array.from(map.values())
+  }, [payouts])
+
+  const handleMarkGroupPaid = async(group: typeof payouts) => {
+    const groupKey = `${group[0].sellerID}__${group[0].bookingDate}`
     try {
-      setMarkingPaid(listingID)
+      setMarkingPaid(groupKey)
       setPayoutError(null)
-      await resaleService.markSellerPaid(listingID)
+      await Promise.all(group.map((p) => resaleService.markSellerPaid(p.id)))
       mutatePayouts()
     } catch {
-      setPayoutError('Failed to mark seller as paid')
+      setPayoutError('Failed to mark payouts as paid')
     } finally {
       setMarkingPaid(null)
     }
@@ -147,65 +162,120 @@ export default function AdminHubPage() {
                   )}
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Transfer the asking price to each seller after the buyer has paid the system.
+                  Transfer the net amount (after 10% fee) to each seller. Grouped by seller and booking date.
                 </Typography>
                 {payoutError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPayoutError(null)}>{payoutError}</Alert>}
                 {payoutsLoading ? (
                   <CircularProgress size={24} />
-                ) : payouts.length === 0 ? (
+                ) : groupedPayouts.length === 0 ? (
                   <Alert severity="success">No pending seller payouts.</Alert>
                 ) : (
-                  <Paper variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ bgcolor: 'grey.50' }}>
-                          <TableCell sx={{ fontWeight: 700 }}>Seller</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Phone</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Court / Slot</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Sold At</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }} align="right">Amount</TableCell>
-                          <TableCell />
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {payouts.map((payout) => (
-                          <TableRow key={payout.id} hover>
-                            <TableCell>{payout.sellerName ?? payout.sellerID}</TableCell>
-                            <TableCell>{payout.sellerPhone ?? '—'}</TableCell>
-                            <TableCell>
-                              {payout.courtName ?? '—'}
-                              {payout.bookingStartTime && payout.bookingEndTime && (
-                                <Typography variant="caption" display="block" color="text.secondary">
-                                  {payout.bookingStartTime}–{payout.bookingEndTime}
-                                </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {groupedPayouts.map((group) => {
+                      const first = group[0]
+                      const groupKey = `${first.sellerID}__${first.bookingDate}`
+                      const total = group.reduce((sum, p) => sum + p.askingPrice, 0)
+                      const netAmount = total * 0.9
+                      const currency = first.currency
+                      const pi = first.sellerPaymentInfo
+                      const isGroupMarking = markingPaid === groupKey
+
+                      return (
+                        <Paper key={groupKey} variant="outlined" sx={{ p: 2 }}>
+                          {/* Header: seller + date */}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
+                            <Box>
+                              <Typography fontWeight={700}>{first.sellerName ?? first.sellerID}</Typography>
+                              {first.sellerPhone && (
+                                <Typography variant="body2" color="text.secondary">{first.sellerPhone}</Typography>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              {payout.bookingDate ? moment(payout.bookingDate).format('DD MMM YYYY') : '—'}
-                            </TableCell>
-                            <TableCell>
-                              {payout.soldAt ? moment(payout.soldAt).format('DD MMM HH:mm') : '—'}
-                            </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                              {payout.askingPrice.toFixed(2)} {payout.currency}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="small"
-                                variant="contained"
-                                color="success"
-                                disabled={markingPaid === payout.id}
-                                onClick={() => handleMarkSellerPaid(payout.id)}
-                              >
-                                Mark Paid
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Paper>
+                              <Typography variant="body2" color="text.secondary">
+                                {first.bookingDate ? moment(first.bookingDate).format('DD MMM YYYY') : 'Unknown date'}
+                              </Typography>
+                            </Box>
+                            {/* Net payout amount */}
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="caption" color="text.secondary">Gross</Typography>
+                              <Typography variant="body2">{total.toFixed(2)} {currency}</Typography>
+                              <Typography variant="caption" color="text.secondary">Transfer (−10%)</Typography>
+                              <Typography fontWeight={700} color="success.main" fontSize="1.1rem">
+                                {netAmount.toFixed(2)} {currency}
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          {/* Payment info */}
+                          {pi && (pi.accountNumber || pi.promptPayID) ? (
+                            <Box sx={{ bgcolor: 'grey.50', borderRadius: 1, p: 1.5, mb: 1.5, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                              <Box sx={{ flex: 1, minWidth: 160 }}>
+                                <Typography variant="caption" fontWeight={700} color="text.secondary">TRANSFER TO</Typography>
+                                {pi.accountName && <Typography variant="body2">{pi.accountName}</Typography>}
+                                {pi.bankName && <Typography variant="body2">{pi.bankName}</Typography>}
+                                {pi.accountNumber && <Typography variant="body2">Acc: {pi.accountNumber}</Typography>}
+                                {pi.promptPayID && <Typography variant="body2">PromptPay: {pi.promptPayID}</Typography>}
+                              </Box>
+                              {pi.promptPayID && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                  <Box sx={{ bgcolor: 'white', p: 1, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                    <QRCode
+                                      value={generatePayload(pi.promptPayID, { amount: netAmount })}
+                                      size={100}
+                                    />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">{netAmount.toFixed(2)} {currency}</Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          ) : (
+                            <Alert severity="warning" sx={{ mb: 1.5, py: 0.5 }}>No payment info on file for this seller.</Alert>
+                          )}
+
+                          {/* Slot rows */}
+                          <Table size="small" sx={{ mb: 1.5 }}>
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                <TableCell sx={{ fontWeight: 700 }}>Court / Slot</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Sold At</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Asking Price</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Net</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {group.map((payout) => (
+                                <TableRow key={payout.id}>
+                                  <TableCell>
+                                    {payout.courtName ?? '—'}
+                                    {payout.bookingStartTime && payout.bookingEndTime && (
+                                      <Typography variant="caption" display="block" color="text.secondary">
+                                        {payout.bookingStartTime}–{payout.bookingEndTime}
+                                      </Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>{payout.soldAt ? moment(payout.soldAt).format('DD MMM HH:mm') : '—'}</TableCell>
+                                  <TableCell align="right">{payout.askingPrice.toFixed(2)}</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600, color: 'success.main' }}>
+                                    {(payout.askingPrice * 0.9).toFixed(2)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              disabled={isGroupMarking}
+                              onClick={() => handleMarkGroupPaid(group)}
+                            >
+                              {isGroupMarking ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Mark All Paid'}
+                            </Button>
+                          </Box>
+                        </Paper>
+                      )
+                    })}
+                  </Box>
                 )}
               </Box>
             )}
