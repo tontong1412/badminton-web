@@ -65,7 +65,7 @@ export default function VenueCourtsPage() {
   const [courtTypeFilter, setCourtTypeFilter] = useState<string | null>(null)
 
   const slotDurationMinutes = venue?.slotDurationMinutes ?? 30
-  const courtTypes = [...new Set(courts.filter((c) => c.courtType).map((c) => c.courtType!))]
+  const courtTypes = [...new Set(courts.filter((c) => c.courtType && c.status === 'active').map((c) => c.courtType!))]
   const filteredCourts = useMemo(
     () => courtTypeFilter ? courts.filter((c) => c.courtType === courtTypeFilter) : courts,
     [courts, courtTypeFilter]
