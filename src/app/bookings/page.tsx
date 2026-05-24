@@ -108,10 +108,11 @@ export default function MyBookingsPage() {
   const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
   const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
   const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
+  const [isResalePay, setIsResalePay] = useState(false)
   const qrFrameRef = useRef<HTMLDivElement>(null)
 
   const handleSaveQR = () => {
-    if (!qrFrameRef.current || !payTargetVenue) return
+    if (!qrFrameRef.current || (!payTargetVenue && !isResalePay)) return
     const svg = qrFrameRef.current.querySelector('svg')
     if (!svg) return
 
@@ -327,6 +328,7 @@ export default function MyBookingsPage() {
     setPayTargetBookings(bundleBookings)
     setPayTargetCurrency(currency)
     setPayTargetVenue(venue ?? null)
+    setIsResalePay(bundleBookings.some((b) => !!b.resaleSourceListingID))
     setSlipFile(null)
     setSlipPreview(null)
     setSlipNote('')
@@ -648,12 +650,13 @@ export default function MyBookingsPage() {
                         const showDate = dateStr !== prevDateStr
                         const booking = row.representative
                         const isCancelledSlot = booking.status === 'cancelled'
+                        const isDateFullyCancelled = arr.filter(r => moment(r.date).format('DD MMM YYYY') === dateStr).every(r => r.representative.status === 'cancelled')
                         if (row.bookings.length > 1) {
                           // Merged: consecutive hours, no resale activity
                           const eligibleBookings = row.bookings.filter(isResellEligible)
                           return (
                             <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
-                              {showDate && <Typography variant="body2" fontWeight={600}>{dateStr}</Typography>}
+                              {showDate && <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>}
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{row.startTime} – {row.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
@@ -675,7 +678,7 @@ export default function MyBookingsPage() {
                         return (
                           <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
                             {showDate && (
-                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{dateStr}</Typography>
+                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>
                             )}
                             {showPerHour ? (
                               <>
@@ -684,7 +687,7 @@ export default function MyBookingsPage() {
                                   const isListedSlot = listedSubRange?.startTime === slot.startTime
                                   return (
                                     <Box key={slot.startTime} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || isSoldSlot || isListedSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || isSoldSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
                                       <Typography variant="body2" color="text.secondary">·</Typography>
                                       <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
                                       {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
@@ -706,7 +709,7 @@ export default function MyBookingsPage() {
                               </>
                             ) : (
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || (isListedForSale && !listedSubRange) ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
                                 {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
@@ -810,8 +813,9 @@ export default function MyBookingsPage() {
                                   const dateStr = moment(row.date).format('DD/MM/YYYY')
                                   const prevDateStr = idx > 0 ? moment(mergedRows[idx - 1].date).format('DD/MM/YYYY') : null
                                   const isCancelledSlot = row.representative.status === 'cancelled'
+                                  const isDateFullyCancelled = mergedRows.filter(r => moment(r.date).format('DD/MM/YYYY') === dateStr).every(r => r.representative.status === 'cancelled')
                                   return (
-                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>
                                       {dateStr !== prevDateStr ? dateStr : ''}
                                     </Typography>
                                   )
@@ -860,7 +864,7 @@ export default function MyBookingsPage() {
                                             const isListedSlot = listedSubRange?.startTime === slot.startTime
                                             return (
                                               <Box key={slot.startTime} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || isSoldSlot || isListedSlot ? 'line-through' : 'none' }}>
+                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || isSoldSlot ? 'line-through' : 'none' }}>
                                                   {slot.startTime} – {slot.endTime}
                                                 </Typography>
                                                 {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
@@ -882,7 +886,7 @@ export default function MyBookingsPage() {
                                         </>
                                       ) : (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || (isListedForSale && !listedSubRange) ? 'line-through' : 'none' }}>
+                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
                                             {booking.startTime} – {booking.endTime}
                                           </Typography>
                                           {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
@@ -1024,7 +1028,42 @@ export default function MyBookingsPage() {
             </Box>
 
             {/* Payment method */}
-            {payTargetVenue?.payment ? (
+            {isResalePay ? (
+              (() => {
+                const sysPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
+                const sysBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
+                const sysAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
+                const sysAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
+                const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
+                return (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+                      {t('booking.paymentMethod')}
+                    </Typography>
+                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                      {sysBankName && <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {sysBankName}</Typography>}
+                      {sysAccountName && <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {sysAccountName}</Typography>}
+                      {sysAccountNumber && <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {sysAccountNumber}</Typography>}
+                      {sysPromptPayID && (
+                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                          <Box ref={qrFrameRef} sx={{ width: 240, borderRadius: 3, overflow: 'hidden', border: '1.5px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                            <Box component="img" src="/thai-qr-payment.webp" alt="Thai QR Payment" sx={{ width: '100%', display: 'block' }} />
+                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                              <QRCode value={generatePayload(sysPromptPayID, { amount: promptPayTotal })} size={168} style={{ display: 'block' }} />
+                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
+                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>สแกนเพื่อชำระเงิน</Typography>
+                            </Box>
+                          </Box>
+                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>บันทึก QR</Button>
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+                )
+              })()
+            ) : payTargetVenue?.payment ? (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
                   {t('booking.paymentMethod')}
