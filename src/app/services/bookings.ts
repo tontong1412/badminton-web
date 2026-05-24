@@ -54,6 +54,7 @@ export interface CreateBundlePayload {
   slip?: string;
   bookedAsAdmin?: boolean;
   couponCode?: string;
+  overridePrice?: number;
 }
 
 export interface BookingBundleResponse {

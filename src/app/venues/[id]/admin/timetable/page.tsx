@@ -176,6 +176,7 @@ export default function VenueTimetablePage() {
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
+  const [overridePrice, setOverridePrice] = useState('')
 
   // Detail / cancel state
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
@@ -216,6 +217,7 @@ export default function VenueTimetablePage() {
     setGuestName('')
     setGuestPhone('')
     setGuestEmail('')
+    setOverridePrice('')
     setBookError(null)
   }
 
@@ -290,12 +292,14 @@ export default function VenueTimetablePage() {
       setBookSubmitting(true)
       setBookError(null)
       const endTime = minutesToTime(timeToMinutes(bookDialog.startTime) + bookDurationMinutes)
+      const parsedPrice = overridePrice !== '' ? parseFloat(overridePrice) : undefined
       await bookingsService.createBundle({
         items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime }],
         guestName: guestName || undefined,
         guestPhone: guestPhone || undefined,
         guestEmail: guestEmail || undefined,
         bookedAsAdmin: true,
+        overridePrice: parsedPrice !== undefined && !isNaN(parsedPrice) ? parsedPrice : undefined,
       })
       setBookDialog(null)
       mutateBookings()
@@ -313,12 +317,14 @@ export default function VenueTimetablePage() {
     try {
       setBookSubmitting(true)
       setBookError(null)
+      const parsedMultiPrice = overridePrice !== '' ? parseFloat(overridePrice) : undefined
       await bookingsService.createBundle({
         items,
         guestName: guestName || undefined,
         guestPhone: guestPhone || undefined,
         guestEmail: guestEmail || undefined,
         bookedAsAdmin: true,
+        overridePrice: parsedMultiPrice !== undefined && !isNaN(parsedMultiPrice) ? parsedMultiPrice : undefined,
       })
       setMultiBookDialog(false)
       setSelectedCells(new Set())
@@ -618,6 +624,7 @@ export default function VenueTimetablePage() {
                 setGuestName('')
                 setGuestPhone('')
                 setGuestEmail('')
+                setOverridePrice('')
                 setBookError(null)
                 setMultiBookDialog(true)
               }}
@@ -762,6 +769,15 @@ export default function VenueTimetablePage() {
             <TextField size="small" label="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} fullWidth />
             <TextField size="small" label="Guest Phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} fullWidth />
             <TextField size="small" label="Guest Email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} fullWidth />
+            <TextField
+              size="small"
+              label="Price override (leave blank to use court rate)"
+              type="number"
+              value={overridePrice}
+              onChange={(e) => setOverridePrice(e.target.value)}
+              inputProps={{ min: 0 }}
+              fullWidth
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setBookDialog(null)} disabled={bookSubmitting}>Cancel</Button>
@@ -788,6 +804,15 @@ export default function VenueTimetablePage() {
             <TextField size="small" label="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} fullWidth />
             <TextField size="small" label="Guest Phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} fullWidth />
             <TextField size="small" label="Guest Email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} fullWidth />
+            <TextField
+              size="small"
+              label="Price override (leave blank to use court rates)"
+              type="number"
+              value={overridePrice}
+              onChange={(e) => setOverridePrice(e.target.value)}
+              inputProps={{ min: 0 }}
+              fullWidth
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setMultiBookDialog(false)} disabled={bookSubmitting}>Cancel</Button>
