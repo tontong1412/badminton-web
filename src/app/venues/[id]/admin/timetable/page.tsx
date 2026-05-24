@@ -171,6 +171,7 @@ export default function VenueTimetablePage() {
   // Drag selection state
   const dragAnchor = useRef<{ courtID: string; slot: string } | null>(null)
   const [dragPreview, setDragPreview] = useState<Set<string>>(new Set())
+  const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // Shared guest info
   const [guestName, setGuestName] = useState('')
@@ -185,6 +186,17 @@ export default function VenueTimetablePage() {
   const [approving, setApproving] = useState(false)
 
   useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
+
+  // Auto-scroll to current time when viewing today
+  useEffect(() => {
+    if (loading || !tableContainerRef.current) return
+    const now = moment()
+    if (date !== now.format('YYYY-MM-DD')) return
+    const startMinutes = 6 * 60
+    const currentMinutes = now.hours() * 60 + now.minutes()
+    const slotIndex = Math.max(0, Math.floor((currentMinutes - startMinutes) / 30) - 1)
+    tableContainerRef.current.scrollTop = slotIndex * 36
+  }, [date, loading])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
 
@@ -478,7 +490,7 @@ export default function VenueTimetablePage() {
           <Alert severity="info" sx={{ mt: 1 }}>No active courts found for this venue.</Alert>
         ) : (
           <Paper>
-            <Box sx={{
+            <Box ref={tableContainerRef} sx={{
               overflow: 'auto',
               maxHeight: { xs: 'calc(100dvh - 340px)', md: 'calc(100dvh - 350px)' },
             }}>
