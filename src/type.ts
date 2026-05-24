@@ -515,6 +515,17 @@ export interface ResaleBookingSnapshot {
   currency: string;
 }
 
+export interface Banner {
+  id: string;
+  title?: string;
+  imageUrl: string;
+  linkUrl?: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ResaleListing {
   id: string;
   bookingID: ResaleBookingSnapshot | string;

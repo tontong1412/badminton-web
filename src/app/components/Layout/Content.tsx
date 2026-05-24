@@ -15,7 +15,8 @@ const MainContent = ({ children, noFooter }: { children:ReactNode, noFooter?: bo
         xs:`${56}px`,
         md: `${64}px`
       },
-      marginBottom: noFooter ? 0 : `${56}px`
+      marginBottom: noFooter ? 0 : `${56}px`,
+      pb: noFooter ? 0 : { xs: 3, md: 0 },
     }}>
       {children}
     </Box>

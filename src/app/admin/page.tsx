@@ -123,13 +123,19 @@ export default function AdminHubPage() {
             </Typography>
 
             {(user as { role?: string })?.role === 'admin' && (
-              <Box sx={{ mb: 3 }}>
+              <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => router.push('/admin/venues/new')}
                 >
                   Create New Venue
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => router.push('/admin/banners')}
+                >
+                  Manage Banners
                 </Button>
               </Box>
             )}
