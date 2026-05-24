@@ -477,8 +477,12 @@ export default function VenueCourtsPage() {
         const bulk = await courtsService.getBulkAvailability(
           activeCourts.map((c) => c.id), selectedDate, slotDurationMinutes, venueId,
         )
-        // Preserve court order expected by CourtAvailabilityTable
-        const fetched = activeCourts.map((c) => bulk[c.id]).filter(Boolean) as BookingAvailability[]
+        // Preserve court order expected by CourtAvailabilityTable.
+        // Override court with the local object (which has `id`) because the backend
+        // returns a lean MongoDB document that has `_id` instead of `id`.
+        const fetched = activeCourts
+          .map((c) => { const r = bulk[c.id]; return r ? { ...r, court: c } : null })
+          .filter(Boolean) as BookingAvailability[]
         setFreeAvailability(fetched)
       } catch (err) {
         setFreeError(err instanceof Error ? err.message : 'Failed to load availability')
