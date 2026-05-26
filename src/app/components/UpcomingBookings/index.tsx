@@ -49,24 +49,26 @@ const UpcomingBookings = () => {
   useEffect(() => {
     if (!upcomingBookings.length) return
     const load = async() => {
-      const courts: Record<string, Court> = { ...courtDetails }
-      const venues: Record<string, Venue> = { ...venueDetails }
-      const newCourtIds = upcomingBookings.map((b) => b.courtID).filter((id) => !courts[id])
-      for (const courtId of newCourtIds) {
+      const fetchedCourts: Record<string, Court> = {}
+      const fetchedVenues: Record<string, Venue> = {}
+      const courtIds = Array.from(new Set(upcomingBookings.map((b) => b.courtID)))
+
+      for (const courtId of courtIds) {
         try {
           const court = await courtsService.getById(courtId)
-          courts[courtId] = court
-          if (!venues[court.venueID]) {
+          fetchedCourts[courtId] = court
+
+          if (!fetchedVenues[court.venueID]) {
             const venue = await venueService.getById(court.venueID)
-            venues[court.venueID] = venue
+            fetchedVenues[court.venueID] = venue
           }
         } catch { /* non-critical */ }
       }
-      setCourtDetails(courts)
-      setVenueDetails(venues)
+
+      setCourtDetails((current) => ({ ...current, ...fetchedCourts }))
+      setVenueDetails((current) => ({ ...current, ...fetchedVenues }))
     }
     load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [upcomingBookings])
 
   if (isLoading) {
