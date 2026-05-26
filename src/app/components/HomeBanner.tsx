@@ -71,13 +71,13 @@ const HomeBanner = () => {
                 component="img"
                 src={banner.imageUrl}
                 alt={banner.title ?? 'Banner'}
-                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', flexShrink: 0 }}
+                sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             )
             return (
               <Box
                 key={banner.id ?? `slide-${i}`}
-                sx={{ minWidth: '100%', height: '100%', flexShrink: 0, cursor: banner.linkUrl ? 'pointer' : 'default' }}
+                sx={{ position: 'relative', minWidth: '100%', height: '100%', flexShrink: 0, cursor: banner.linkUrl ? 'pointer' : 'default' }}
               >
                 {banner.linkUrl ? (
                   <Link href={banner.linkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', height: '100%' }}>

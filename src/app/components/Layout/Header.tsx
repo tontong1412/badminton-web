@@ -28,7 +28,7 @@ interface Page {
   action: string;
 }
 
-const pages: Page[] = [
+const basePages: Page[] = [
   {
     name: 'Home',
     action: '/'
@@ -56,6 +56,7 @@ const  ResponsiveAppBar = () => {
   const user = useSelector((state: RootState) => state.app.user)
   const language = useSelector((state: RootState) => state.app.language)
   const dispatch = useAppDispatch()
+  const pages = basePages
   // const router = useRouter()
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null)
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null)
@@ -112,6 +113,9 @@ const  ResponsiveAppBar = () => {
     case 'Account':
       router.push('/me')
       break
+    case 'Admin':
+      router.push('/admin')
+      break
     default:
     }
     setAnchorElUser(null)
@@ -154,7 +158,7 @@ const  ResponsiveAppBar = () => {
           open={Boolean(anchorElUser)}
           onClose={handleCloseUserMenu}
         >
-          {settings.map((setting) => (
+          {(user?.role === 'admin' ? ['Admin', ...settings] : settings).map((setting) => (
             <MenuItem key={setting} onClick={() => handleCloseUserMenu(setting)}>
               <Typography sx={{ textAlign: 'center' }} >{setting}</Typography>
             </MenuItem>
