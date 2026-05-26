@@ -130,10 +130,10 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedPlayerList = players?.map((p: any) => ({
         ...p,
-        officialName: p.officialName[language] || p.officialName['en'],
+        officialName: p.officialName?.[language] || p.officialName?.['en'],
         displayName: p.displayName?.[language] || p.displayName?.['en'],
-        officialNameEn: p.officialName['en'],
-        pronunciation: p.officialName.pronunciation || '',
+        officialNameEn: p.officialName?.['en'],
+        pronunciation: p.officialName?.pronunciation || '',
       }))
       setPlayerList(formattedPlayerList)
       setFilteredPlayerList(formattedPlayerList)
