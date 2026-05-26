@@ -16,7 +16,6 @@ import { RootState, useAppDispatch } from '@/app/libs/redux/store'
 import { login, logout, setUserReady, changeLanguage } from '@/app/libs/redux/slices/appSlice'
 // import { useRouter } from 'next/navigation'
 import LoginModal from '../LoginModal'
-import LanguageSettingModal from '../LanguageSettingModal'
 import axios from 'axios'
 import { SERVICE_ENDPOINT, SUPPORTED_LANG } from '@/app/constants'
 import { useSelector } from '@/app/providers'
@@ -52,7 +51,6 @@ const  ResponsiveAppBar = () => {
   const { t } = useTranslation()
   const router = useRouter()
   const [loginModalVisible, setLoginModalVisible] = useState(false)
-  const [languageSettingModal, setLanguageSettingModal] = useState(false)
   const user = useSelector((state: RootState) => state.app.user)
   const language = useSelector((state: RootState) => state.app.language)
   const dispatch = useAppDispatch()
@@ -106,9 +104,6 @@ const  ResponsiveAppBar = () => {
     case 'Logout':
       await axios.post(`${SERVICE_ENDPOINT}/users/logout`, { userId: user?.id }, { withCredentials: true })
       dispatch(logout())
-      break
-    case 'Language Setting':
-      setLanguageSettingModal(true)
       break
     case 'Account':
       router.push('/me')
@@ -276,9 +271,7 @@ const  ResponsiveAppBar = () => {
         </Toolbar>
       </Container>
       <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
-      <LanguageSettingModal visible={languageSettingModal} setVisible={setLanguageSettingModal}/>
     </AppBar>
   )
 }
 export default ResponsiveAppBar
-
