@@ -94,7 +94,7 @@ const UpcomingBookings = () => {
                 {venue && (
                   <Box sx={{ mb: 1.25 }}>
                     <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-                      {venue.name.en || venue.name.th}
+                      {venue.name?.en || venue.name?.th}
                     </Typography>
                   </Box>
                 )}
