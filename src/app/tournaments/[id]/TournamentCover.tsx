@@ -44,7 +44,7 @@ const TournamentCover = ({ tournament }: Props) => {
           <div>
             <Avatar
               src={tournament.logo || '/avatar.png'}
-              alt={tournament.name[language]}
+              alt={tournament.name?.[language]}
               sx={{ width:200, height:200 }}
             />
           </div>
@@ -52,7 +52,7 @@ const TournamentCover = ({ tournament }: Props) => {
 
         <Box component="section" sx={{ p: 2,  width: '100%', display: 'flex', flexDirection: 'column', alignItems:{ xs: 'center', md: 'flex-start' }, justifyContent:'center' }}>
           <div className='text-gray-200'>
-            <h1 className='text-2xl'>{tournament.name[language]}</h1>
+            <h1 className='text-2xl'>{tournament.name?.[language]}</h1>
             <Box sx={{ pt:1  }}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><LocationOn/><Typography>{tournament.venue.name.en}</Typography></Box>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><CalendarMonth/><Typography>{`${moment(tournament.startDate).format('DD MMM YYYY')} ${tournament.startDate !== tournament.endDate && `to ${moment(tournament.endDate).format('DD MMM YYYY')}`}`}</Typography></Box>

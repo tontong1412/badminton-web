@@ -82,6 +82,7 @@ export default function CourtBookingModal({
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
+  const [guestFieldErrors, setGuestFieldErrors] = useState({ name: false, phone: false, email: false })
   const [userPhone, setUserPhone] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
@@ -190,7 +191,8 @@ export default function CourtBookingModal({
           setErrorState('Please enter your phone number so the venue can contact you.')
           return
         }
-      } else if (!guestName || !guestPhone) {
+      } else if (!guestName || !guestPhone || !guestEmail) {
+        setGuestFieldErrors({ name: !guestName, phone: !guestPhone, email: !guestEmail })
         setErrorState(t('booking.fillRequiredFields'))
         return
       }
@@ -370,6 +372,7 @@ export default function CourtBookingModal({
     setGuestName('')
     setGuestPhone('')
     setGuestEmail('')
+    setGuestFieldErrors({ name: false, phone: false, email: false })
     setUserPhone('')
     setNote('')
     setAgreeTerms(false)
@@ -516,18 +519,22 @@ export default function CourtBookingModal({
                       fullWidth
                       label={t('booking.name')}
                       value={guestName}
-                      onChange={(e) => setGuestName(e.target.value)}
+                      onChange={(e) => { setGuestName(e.target.value); setGuestFieldErrors((p) => ({ ...p, name: false })) }}
                       sx={{ mb: 2 }}
                       required
+                      error={guestFieldErrors.name}
+                      helperText={guestFieldErrors.name ? t('booking.fillRequiredFields') : undefined}
                     />
                     <TextField
                       size='small'
                       fullWidth
                       label={t('booking.phone')}
                       value={guestPhone}
-                      onChange={(e) => setGuestPhone(e.target.value)}
+                      onChange={(e) => { setGuestPhone(e.target.value); setGuestFieldErrors((p) => ({ ...p, phone: false })) }}
                       sx={{ mb: 2 }}
                       required
+                      error={guestFieldErrors.phone}
+                      helperText={guestFieldErrors.phone ? t('booking.fillRequiredFields') : undefined}
                     />
                     <TextField
                       size='small'
@@ -535,9 +542,11 @@ export default function CourtBookingModal({
                       label={t('booking.email')}
                       type="email"
                       value={guestEmail}
-                      onChange={(e) => setGuestEmail(e.target.value)}
+                      onChange={(e) => { setGuestEmail(e.target.value); setGuestFieldErrors((p) => ({ ...p, email: false })) }}
                       sx={{ mb: 2 }}
                       required
+                      error={guestFieldErrors.email}
+                      helperText={guestFieldErrors.email ? t('booking.fillRequiredFields') : undefined}
                     />
                   </>
                 )}

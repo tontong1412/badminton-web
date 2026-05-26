@@ -13,12 +13,11 @@ import Tooltip from '@mui/material/Tooltip'
 import MenuItem from '@mui/material/MenuItem'
 import { useState, MouseEvent, useEffect } from 'react'
 import { RootState, useAppDispatch } from '@/app/libs/redux/store'
-import { login, logout, setUserReady } from '@/app/libs/redux/slices/appSlice'
+import { login, logout, setUserReady, changeLanguage } from '@/app/libs/redux/slices/appSlice'
 // import { useRouter } from 'next/navigation'
 import LoginModal from '../LoginModal'
-import LanguageSettingModal from '../LanguageSettingModal'
 import axios from 'axios'
-import { SERVICE_ENDPOINT } from '@/app/constants'
+import { SERVICE_ENDPOINT, SUPPORTED_LANG } from '@/app/constants'
 import { useSelector } from '@/app/providers'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
@@ -28,7 +27,7 @@ interface Page {
   action: string;
 }
 
-const pages: Page[] = [
+const basePages: Page[] = [
   {
     name: 'Home',
     action: '/'
@@ -45,7 +44,6 @@ const pages: Page[] = [
 const settings: string[] = [
   // 'View Profile',
   'Account',
-  'Language Setting',
   'Logout'
 ]
 
@@ -53,9 +51,10 @@ const  ResponsiveAppBar = () => {
   const { t } = useTranslation()
   const router = useRouter()
   const [loginModalVisible, setLoginModalVisible] = useState(false)
-  const [languageSettingModal, setLanguageSettingModal] = useState(false)
   const user = useSelector((state: RootState) => state.app.user)
+  const language = useSelector((state: RootState) => state.app.language)
   const dispatch = useAppDispatch()
+  const pages = basePages
   // const router = useRouter()
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null)
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null)
@@ -106,15 +105,28 @@ const  ResponsiveAppBar = () => {
       await axios.post(`${SERVICE_ENDPOINT}/users/logout`, { userId: user?.id }, { withCredentials: true })
       dispatch(logout())
       break
-    case 'Language Setting':
-      setLanguageSettingModal(true)
-      break
     case 'Account':
       router.push('/me')
+      break
+    case 'Admin':
+      router.push('/admin')
       break
     default:
     }
     setAnchorElUser(null)
+  }
+
+  const renderLanguageToggle = () => {
+    const nextLang = SUPPORTED_LANG.find((l) => l !== language) ?? SUPPORTED_LANG[0]
+    return (
+      <Button
+        onClick={() => dispatch(changeLanguage(nextLang))}
+        size="small"
+        sx={{ color: 'white', minWidth: 'auto', px: 0.75, fontWeight: 700, mr: 1 }}
+      >
+        {language.toUpperCase()}
+      </Button>
+    )
   }
 
   const renderAvatarSetting = () => {
@@ -141,7 +153,7 @@ const  ResponsiveAppBar = () => {
           open={Boolean(anchorElUser)}
           onClose={handleCloseUserMenu}
         >
-          {settings.map((setting) => (
+          {(user?.role === 'admin' ? ['Admin', ...settings] : settings).map((setting) => (
             <MenuItem key={setting} onClick={() => handleCloseUserMenu(setting)}>
               <Typography sx={{ textAlign: 'center' }} >{setting}</Typography>
             </MenuItem>
@@ -175,6 +187,7 @@ const  ResponsiveAppBar = () => {
               display: { xs: 'none', md: 'flex' },
               fontFamily: 'Nunito',
               fontWeight: 400,
+              fontSize: '1.25rem',
               letterSpacing: '.1rem',
               color: 'inherit',
               textDecoration: 'none',
@@ -183,7 +196,7 @@ const  ResponsiveAppBar = () => {
             BADMINSTAR
           </Typography>
 
-          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
+          <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
             <IconButton
               size="large"
               aria-label="account of current user"
@@ -219,16 +232,18 @@ const  ResponsiveAppBar = () => {
             </Menu>
           </Box>
           <Typography
-            variant="h5"
+            variant="h6"
             noWrap
             component="a"
             href="/"
             sx={{
-              mr: 2,
               display: { xs: 'flex', md: 'none' },
-              flexGrow: 1,
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
               fontFamily: 'nunito',
               fontWeight: 400,
+              fontSize: { xs: '1.25rem', md: '2rem' },
               letterSpacing: '.2rem',
               color: 'inherit',
               textDecoration: 'none',
@@ -248,14 +263,15 @@ const  ResponsiveAppBar = () => {
             ))}
           </Box>
 
+          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }} />
+
+          {renderLanguageToggle()}
           {user ? renderAvatarSetting() : renderLoginButton()}
 
         </Toolbar>
       </Container>
       <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible}/>
-      <LanguageSettingModal visible={languageSettingModal} setVisible={setLanguageSettingModal}/>
     </AppBar>
   )
 }
 export default ResponsiveAppBar
-

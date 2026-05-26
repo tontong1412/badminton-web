@@ -33,7 +33,7 @@ const EventList = ({ tournament }: Props) => {
               <CardActionArea>
                 <CardContent>
                   <Typography gutterBottom variant="h5" component="div">
-                    {e.name[language]}
+                    {e.name?.[language]}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {e.description}
