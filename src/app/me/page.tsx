@@ -8,11 +8,14 @@ import { Language } from '@/type'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import LoginModal from '../components/LoginModal'
+import { useTranslation } from 'react-i18next'
+import UpcomingBookings from '../components/UpcomingBookings'
 
 const AccountPage = () => {
   const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const router = useRouter()
+  const { t } = useTranslation()
   const [loginModalVisible, setLoginModalVisible] = useState(false)
 
   return (
@@ -33,6 +36,15 @@ const AccountPage = () => {
                 variant='contained'
                 onClick={() => router.push('/me/edit-profile')}
                 color='error'>Edit Profile</Button>
+              <Button
+                sx={{ borderRadius:10, mt: 2 }}
+                variant='outlined'
+                onClick={() => router.push('/bookings')}>
+                {t('booking.myBookings')}
+              </Button>
+              <Box sx={{ mt: 3, width: '100%' }}>
+                <UpcomingBookings />
+              </Box>
             </Box>
           )
         }
