@@ -47,12 +47,12 @@ const TeamNameModal = ({ visible, setVisible, event, team, setEvent, setTeam }: 
   const { t } = useTranslation()
 
   const initialClubs = (): PlayerClub[] =>
-    team.players.map(p => ({ id: p.id, club: p.club ?? '' }))
+    team.players.map((p) => ({ id: p.id, club: p.club ?? '' }))
 
   const [playerClubs, setPlayerClubs] = useState<PlayerClub[]>(initialClubs)
 
   const handleClubChange = (playerID: string, value: string) => {
-    setPlayerClubs(prev => prev.map(pc => pc.id === playerID ? { ...pc, club: value } : pc))
+    setPlayerClubs((prev) => prev.map((pc) => pc.id === playerID ? { ...pc, club: value } : pc))
   }
 
   const handleClose = () => {
@@ -100,7 +100,7 @@ const TeamNameModal = ({ visible, setVisible, event, team, setEvent, setTeam }: 
               </Typography>
               <TextField
                 autoFocus={idx === 0}
-                value={playerClubs.find(pc => pc.id === player.id)?.club ?? ''}
+                value={playerClubs.find((pc) => pc.id === player.id)?.club ?? ''}
                 label={t('tournament.action.teamName')}
                 onChange={(e) => handleClubChange(player.id, e.target.value)}
                 fullWidth
