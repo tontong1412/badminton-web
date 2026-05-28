@@ -16,9 +16,12 @@ import {
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import moment from 'moment'
 import axios from 'axios'
+import QRCode from 'react-qr-code'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const generatePayload = require('promptpay-qr') as (id: string, options?: { amount?: number }) => string
 import Layout from '../components/Layout'
 import bookingsService from '../services/bookings'
-import { Booking, Court, Venue } from '@/type'
+import { Booking, BookingStatus, Court, Venue } from '@/type'
 
 function GuestPayContent() {
   const searchParams = useSearchParams()
@@ -100,6 +103,7 @@ function GuestPayContent() {
   const totalPrice = bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0)
   const currency = bookings[0]?.currency ?? ''
   const bookingRef = bookings[0]?.bookingRef
+  const isCancelled = bookings.some((b) => b.status === BookingStatus.Cancelled)
 
   if (loading) {
     return (
@@ -190,34 +194,40 @@ function GuestPayContent() {
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
               Payment Method
             </Typography>
-            <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-              {venue.payment.bankName && (
-                <Typography variant="body2">
-                  <strong>Bank:</strong> {venue.payment.bankName}
-                </Typography>
-              )}
-              {venue.payment.accountName && (
-                <Typography variant="body2">
-                  <strong>Account Name:</strong> {venue.payment.accountName}
-                </Typography>
-              )}
-              {venue.payment.accountNumber && (
-                <Typography variant="body2">
-                  <strong>Account Number:</strong> {venue.payment.accountNumber}
-                </Typography>
-              )}
+            <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box>
+                {venue.payment.bankName && (
+                  <Typography variant="body2">
+                    <strong>Bank:</strong> {venue.payment.bankName}
+                  </Typography>
+                )}
+                {venue.payment.accountName && (
+                  <Typography variant="body2">
+                    <strong>Account Name:</strong> {venue.payment.accountName}
+                  </Typography>
+                )}
+                {venue.payment.accountNumber && (
+                  <Typography variant="body2">
+                    <strong>Account Number:</strong> {venue.payment.accountNumber}
+                  </Typography>
+                )}
+                {venue.payment.promptPayID && (
+                  <Typography variant="body2">
+                    <strong>PromptPay ID:</strong> {venue.payment.promptPayID}
+                  </Typography>
+                )}
+              </Box>
               {venue.payment.promptPayID && (
-                <Typography variant="body2">
-                  <strong>PromptPay ID:</strong> {venue.payment.promptPayID}
-                </Typography>
-              )}
-              {venue.payment.qrCodeUrl && (
-
-                <img
-                  src={venue.payment.qrCodeUrl}
-                  alt="QR Code"
-                  style={{ marginTop: 8, maxWidth: 160, display: 'block' }}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ml: 2, flexShrink: 0 }}>
+                  <QRCode
+                    value={generatePayload(venue.payment.promptPayID, { amount: totalPrice })}
+                    size={80}
+                    style={{ borderRadius: 4, border: '1px solid #e0e0e0', padding: 4, background: 'white' }}
+                  />
+                  <Typography variant="caption" sx={{ mt: 0.5, fontWeight: 600, color: 'text.secondary' }}>
+                    Scan to Pay
+                  </Typography>
+                </Box>
               )}
             </Box>
           </Box>
@@ -225,53 +235,60 @@ function GuestPayContent() {
 
         <Divider sx={{ mb: 2 }} />
 
-        <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-          Transfer the amount above and upload your payment slip to confirm the booking.
-        </Typography>
+        {isCancelled ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            This booking has been cancelled. Payment is no longer accepted.
+          </Alert>
+        ) : (
+          <>
+            <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+              Transfer the amount above and upload your payment slip to confirm the booking.
+            </Typography>
 
-        <Button
-          variant="outlined"
-          component="label"
-          fullWidth
-          sx={{ mb: 2 }}
-        >
-          {slipFile ? `Selected: ${slipFile.name}` : 'Choose Payment Slip'}
-          <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
-        </Button>
+            <Button
+              variant="contained"
+              component="label"
+              fullWidth
+              sx={{ mb: 2 }}
+            >
+              {slipFile ? `Selected: ${slipFile.name}` : 'Choose Payment Slip'}
+              <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
+            </Button>
 
-        {slipPreview && (
+            {slipPreview && (
+              <img
+                src={slipPreview}
+                alt="slip preview"
+                style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
+              />
+            )}
 
-          <img
-            src={slipPreview}
-            alt="slip preview"
-            style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
-          />
+            <TextField
+              size="small"
+              fullWidth
+              label="Note (optional)"
+              value={slipNote}
+              onChange={(e) => setSlipNote(e.target.value)}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+            />
+
+            {submitError && (
+              <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>
+            )}
+
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              disabled={!slipPreview || submitting}
+              onClick={handleSubmit}
+            >
+              {submitting ? <CircularProgress size={24} /> : 'Submit Payment'}
+            </Button>
+          </>
         )}
-
-        <TextField
-          size="small"
-          fullWidth
-          label="Note (optional)"
-          value={slipNote}
-          onChange={(e) => setSlipNote(e.target.value)}
-          multiline
-          rows={2}
-          sx={{ mb: 2 }}
-        />
-
-        {submitError && (
-          <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>
-        )}
-
-        <Button
-          variant="contained"
-          fullWidth
-          size="large"
-          disabled={!slipPreview || submitting}
-          onClick={handleSubmit}
-        >
-          {submitting ? <CircularProgress size={24} /> : 'Submit Payment'}
-        </Button>
       </Paper>
     </Container>
   )
