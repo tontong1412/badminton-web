@@ -52,7 +52,7 @@ export default function VenuesPage() {
               variant="overline"
               sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 700, letterSpacing: 3, fontSize: '0.7rem' }}
             >
-              COURT BOOKING
+              {t('booking.courtBookingTitle')}
             </Typography>
             <Typography
               variant="h3"
@@ -64,7 +64,7 @@ export default function VenuesPage() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
               <Box sx={{ height: 2, width: 32, bgcolor: 'rgba(255,255,255,0.5)', borderRadius: 1 }} />
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-                {venues.length} {venues.length === 1 ? 'venue' : 'venues'} available
+                {t('booking.venuesAvailable', { count: venues.length })}
               </Typography>
             </Box>
           </Container>
@@ -135,7 +135,7 @@ export default function VenuesPage() {
                             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', px: 3, pb: 2 }}>
                               <SportsTennisIcon sx={{ fontSize: 26, color: 'rgba(255,255,255,0.85)', mb: 0.75 }} />
                               <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: 2.5, textTransform: 'uppercase' }}>
-                                Court Venue
+                                {t('booking.courtVenue')}
                               </Typography>
                             </Box>
                           </>

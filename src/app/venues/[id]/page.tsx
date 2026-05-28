@@ -542,13 +542,13 @@ export default function VenueCourtsPage() {
       {!currentUser && !bannerDismissed && (
         <Box sx={{ bgcolor: '#f5efe8', borderBottom: '1px solid #e8d8c8', px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography variant="body2" color="text.secondary">
-            🎾 Sign in to book faster, track your courts, and skip guest details every time.
+            {t('booking.signInBanner')}
           </Typography>
           <Button size="small" variant="outlined" onClick={() => setLoginModalOpen(true)} sx={{ borderColor: '#80644f', color: '#80644f', fontWeight: 700, '&:hover': { borderColor: '#695241', bgcolor: 'transparent' } }}>
-            Sign In
+            {t('action.login')}
           </Button>
           <Button size="small" href="/register" sx={{ color: '#80644f', fontWeight: 700 }}>
-            Create Account
+            {t('booking.createAccount')}
           </Button>
           <IconButton size="small" onClick={() => setBannerDismissed(true)} sx={{ ml: 'auto', color: 'text.secondary' }}>
             {'\u00D7'}
@@ -594,7 +594,7 @@ export default function VenueCourtsPage() {
                   size="large"
                   sx={{ borderRadius: 5, backgroundColor: '#ff7961' }}
                 >
-                  Book a Court
+                  {t('booking.bookACourt')}
                 </Button>
                 {currentUser && (venue.ownerUserID === currentUser.id || venue.managerUserIDs?.includes(currentUser.id)) && (
                   <Button
@@ -603,7 +603,7 @@ export default function VenueCourtsPage() {
                     size="large"
                     sx={{ borderRadius: 5, borderColor: 'rgba(255,255,255,0.6)', color: '#fff', '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
                   >
-                    Manage Venue
+                    {t('booking.manageVenue')}
                   </Button>
                 )}
               </Box>
@@ -621,7 +621,7 @@ export default function VenueCourtsPage() {
               {venue.location?.coordinates && (
                 <Grid item xs={12} md={venue.coverImage ? 4 : 6} sx={{ order: { xs: 0, md: 3 } }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
-                    Location
+                    {t('booking.location')}
                   </Typography>
                   <Box
                     component="iframe"
@@ -637,7 +637,7 @@ export default function VenueCourtsPage() {
               {/* Opening Hours */}
               <Grid item xs={12} md={venue.coverImage ? 4 : venue.location?.coordinates ? 6 : 12} sx={{ order: { xs: 1, md: 1 } }}>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
-                  Opening Hours
+                  {t('booking.openingHours')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const).map((dayName, i) => {
@@ -654,10 +654,10 @@ export default function VenueCourtsPage() {
                         }}
                       >
                         <Typography variant="body2" sx={{ fontWeight: isToday ? 700 : 400, color: isToday ? '#80644f' : 'text.primary', minWidth: 90 }}>
-                          {dayName}{isToday ? ' (Today)' : ''}
+                          {dayName}{isToday ? ` (${t('booking.today')})` : ''}
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: isToday ? 700 : 400, color: schedule ? (isToday ? '#80644f' : 'text.primary') : 'text.disabled' }}>
-                          {schedule ? `${schedule.open} – ${schedule.close}` : 'Closed'}
+                          {schedule ? `${schedule.open} – ${schedule.close}` : t('booking.closed')}
                         </Typography>
                       </Box>
                     )
@@ -669,7 +669,7 @@ export default function VenueCourtsPage() {
               {venue.coverImage && (
                 <Grid item xs={12} md={4} sx={{ order: { xs: 2, md: 2 } }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
-                    Photos
+                    {t('booking.photos')}
                   </Typography>
                   <Box
                     component="img"
@@ -684,7 +684,7 @@ export default function VenueCourtsPage() {
               {venue.facilities && venue.facilities.length > 0 && (
                 <Grid item xs={12} sx={{ order: { xs: 3, md: 4 } }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#80644f', mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
-                    Facilities
+                    {t('booking.facilities')}
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {venue.facilities.map((f) => (
@@ -785,7 +785,7 @@ export default function VenueCourtsPage() {
               {courtTypes.length > 1 && (
                 <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 0.75 }}>
                   <Chip
-                    label="All"
+                    label={t('booking.all')}
                     size="small"
                     onClick={() => setCourtTypeFilter(null)}
                     sx={courtTypeFilter === null ? { bgcolor: '#80644f', color: '#fff' } : {}}
@@ -873,9 +873,9 @@ export default function VenueCourtsPage() {
             {/* Court type filter — mobile only */}
             {courtTypes.length > 1 && (
               <Box sx={{ mt: 2, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Type:</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{t('booking.courtTypeLabel')}:</Typography>
                 <Chip
-                  label="All"
+                  label={t('booking.all')}
                   size="small"
                   onClick={() => setCourtTypeFilter(null)}
                   sx={courtTypeFilter === null ? { bgcolor: '#80644f', color: '#fff' } : {}}
@@ -912,15 +912,15 @@ export default function VenueCourtsPage() {
                     {t('booking.noSlotsAvailable')}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#80644f', mt: 0.5 }}>
-                    Please choose a different date or time, or switch to{' '}
+                    {t('booking.noSlotsHint')}{' '}
                     <Box
                       component="span"
                       onClick={() => handleModeChange({} as React.SyntheticEvent, 'free')}
                       sx={{ fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
                     >
-                      Table view
+                      {t('booking.tableView')}
                     </Box>
-                    {' '}to see the full availability breakdown.
+                    {' '}{t('booking.toSeeFullBreakdown')}
                   </Typography>
                 </Box>
               ) : (
@@ -945,7 +945,7 @@ export default function VenueCourtsPage() {
                           {slot.startTime} – {slot.endTime}
                         </Typography>
                         <Typography sx={{ fontSize: '0.65rem', color: isSelected ? 'rgba(255,255,255,0.75)' : '#9c795f', mt: 0.25 }}>
-                          {slot.courtCount} court{slot.courtCount !== 1 ? 's' : ''}{slot.isSplit ? ' · courts change' : ''}
+                          {slot.courtCount} court{slot.courtCount !== 1 ? 's' : ''}{slot.isSplit ? ` · ${t('booking.courtsChange')}` : ''}
                         </Typography>
                       </Box>
                     )
@@ -964,16 +964,15 @@ export default function VenueCourtsPage() {
                   ) : guidedSplitAssignment !== null ? (
                     <Box sx={{ mb: 2 }}>
                       <Alert severity="info" sx={{ mb: 1.5, fontSize: '0.8rem' }}>
-                        Courts will change each hour. You&apos;ll be assigned a different court per time slot.
-                        {' '}Switch to{' '}
+                        {t('booking.courtsChangeInfo')}{' '}
                         <Box
                           component="span"
                           onClick={() => handleModeChange({} as React.SyntheticEvent, 'free')}
                           sx={{ fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
                         >
-                          Table view
+                          {t('booking.tableView')}
                         </Box>
-                        {' '}to see the full availability breakdown.
+                        {' '}{t('booking.toSeeFullBreakdown')}
                       </Alert>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {guidedSplitAssignment.map(({ court, startTime, endTime }) => (
@@ -1063,7 +1062,7 @@ export default function VenueCourtsPage() {
               {resaleListings.length > 0 && (
                 <Box sx={{ mt: 3, p: 2, border: '1px solid #f0c060', borderRadius: 2, bgcolor: '#fffbeb' }}>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5, color: '#a06000' }}>
-                    🏸 Resale Available — {moment(selectedDate).format('DD MMM YYYY')}
+                    🏸 {t('booking.resaleAvailable')} — {moment(selectedDate).format('DD MMM YYYY')}
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {resaleListings.map((listing) => {
@@ -1095,7 +1094,7 @@ export default function VenueCourtsPage() {
                                 setResaleBuyDialogOpen(true)
                               }}
                             >
-                              Book This Slot
+                              {t('booking.bookThisSlot')}
                             </Button>
                           </Box>
                         </Box>
@@ -1165,7 +1164,7 @@ export default function VenueCourtsPage() {
           <Box sx={{ px: { xs: 2, md: 3 }, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }} onClick={() => setShowGuidedDrawer(true)}>
               <Typography variant="caption" sx={{ color: '#9c795f', lineHeight: 1, display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 1 }}>
-                tap for details
+                {t('booking.tapForDetails')}
               </Typography>
               <Typography variant="h5" fontWeight={800} sx={{ color: '#2D1800', mt: 0.5, lineHeight: 1.1 }}>
                 {fmtPrice(guidedTotalPrice)}
@@ -1207,7 +1206,7 @@ export default function VenueCourtsPage() {
           <Box sx={{ px: { xs: 2, md: 3 }, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }} onClick={() => setShowSelectionDrawer(true)}>
               <Typography variant="caption" sx={{ color: '#9c795f', lineHeight: 1, display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 1 }}>
-                tap for details
+                {t('booking.tapForDetails')}
               </Typography>
               <Typography variant="h5" fontWeight={800} sx={{ color: '#2D1800', mt: 0.5, lineHeight: 1.1 }}>
                 {fmtPrice(freeTotalPrice)}
@@ -1243,7 +1242,7 @@ export default function VenueCourtsPage() {
       >
         <Box sx={{ px: 3, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="subtitle1" fontWeight={600}>{t('booking.selectedCourts')}</Typography>
-          <Button size="small" onClick={() => setShowGuidedDrawer(false)}>Close</Button>
+          <Button size="small" onClick={() => setShowGuidedDrawer(false)}>{t('action.close')}</Button>
         </Box>
         <Divider />
         {guidedSelectedSlot && (
@@ -1282,7 +1281,7 @@ export default function VenueCourtsPage() {
         <Divider />
         <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
-            Total: {fmtPrice(guidedTotalPrice)} {guidedCurrency}
+            {t('booking.total')}: {fmtPrice(guidedTotalPrice)} {guidedCurrency}
           </Typography>
           <Button variant="outlined" onClick={() => { setGuidedSelectedCourts([]); setGuidedSelectedSlot(null); setGuidedAvailableCourts([]); setGuidedSplitAssignment(null); setShowCourtPicker(false); setShowGuidedDrawer(false) }} color="error" size="small">
             {t('booking.clearSelection')}
@@ -1307,7 +1306,7 @@ export default function VenueCourtsPage() {
       >
         <Box sx={{ px: 3, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="subtitle1" fontWeight={600}>{t('booking.selectedCourts')}</Typography>
-          <Button size="small" onClick={() => setShowSelectionDrawer(false)}>Close</Button>
+          <Button size="small" onClick={() => setShowSelectionDrawer(false)}>{t('action.close')}</Button>
         </Box>
         <Divider />
         <List dense sx={{ overflowY: 'auto' }}>
@@ -1337,7 +1336,7 @@ export default function VenueCourtsPage() {
         <Divider />
         <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
-            Total: {fmtPrice(freeTotalPrice)} {freeCurrency}
+            {t('booking.total')}: {fmtPrice(freeTotalPrice)} {freeCurrency}
           </Typography>
           <Button variant="outlined" onClick={() => { setSelectedCells(new Map()); setShowSelectionDrawer(false) }} color="error" size="small">
             {t('booking.clearSelection')}
@@ -1413,7 +1412,7 @@ export default function VenueCourtsPage() {
 
       {/* ── Buy Resale Dialog ──────────────────────────────── */}
       <Dialog open={resaleBuyDialogOpen} onClose={() => !resaleBuying && setResaleBuyDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Confirm Resale Purchase</DialogTitle>
+        <DialogTitle>{t('booking.confirmResalePurchase')}</DialogTitle>
         <DialogContent>
           {resaleBuyListing && (() => {
             const booking = typeof resaleBuyListing.bookingID === 'object' ? resaleBuyListing.bookingID as ResaleBookingSnapshot : null
@@ -1425,7 +1424,7 @@ export default function VenueCourtsPage() {
                   {resaleBuyListing.subStartTime ?? booking?.startTime} – {resaleBuyListing.subEndTime ?? booking?.endTime}
                 </Typography>
                 <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
-                  Price: {resaleBuyListing.askingPrice} {resaleBuyListing.currency}
+                  {t('booking.price')}: {resaleBuyListing.askingPrice} {resaleBuyListing.currency}
                 </Typography>
               </Box>
             )
@@ -1433,9 +1432,9 @@ export default function VenueCourtsPage() {
           {resaleBuyError && <Alert severity="error" sx={{ mt: 2 }}>{resaleBuyError}</Alert>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResaleBuyDialogOpen(false)} disabled={resaleBuying}>Cancel</Button>
+          <Button onClick={() => setResaleBuyDialogOpen(false)} disabled={resaleBuying}>{t('action.cancel')}</Button>
           <Button onClick={handleBuyResale} variant="contained" color="warning" disabled={resaleBuying}>
-            {resaleBuying ? <CircularProgress size={20} /> : 'Confirm Purchase'}
+            {resaleBuying ? <CircularProgress size={20} /> : t('booking.confirmPurchase')}
           </Button>
         </DialogActions>
       </Dialog>
