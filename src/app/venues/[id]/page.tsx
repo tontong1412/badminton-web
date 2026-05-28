@@ -129,7 +129,7 @@ export default function VenueCourtsPage() {
     const toM = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
     const segStart = toM(startTime)
     const segEnd = toM(endTime)
-    if (rules.length === 0) return Number(((court.pricePerHour / 60) * (segEnd - segStart)).toFixed(2))
+    if (rules.length === 0) return Number((((court.pricePerHour ?? 0) / 60) * (segEnd - segStart)).toFixed(2))
     const boundaries = new Set<number>([segStart, segEnd])
     for (const rule of rules) {
       const rs = toM(rule.startTime), re = toM(rule.endTime)
@@ -141,7 +141,7 @@ export default function VenueCourtsPage() {
     for (let i = 0; i < sorted.length - 1; i++) {
       const s = sorted[i], e = sorted[i + 1]
       const rule = rules.find((r: CourtPricingRule) => toM(r.startTime) <= s && toM(r.endTime) >= e)
-      total += ((rule ? rule.pricePerHour : court.pricePerHour) / 60) * (e - s)
+      total += ((rule ? (rule.pricePerHour ?? 0) : (court.pricePerHour ?? 0)) / 60) * (e - s)
     }
     return Number(total.toFixed(2))
   }
@@ -564,7 +564,7 @@ export default function VenueCourtsPage() {
             >
               <Avatar
                 src={venue.logo || '/avatar.png'}
-                alt={venue.name.en || venue.name.th}
+                alt={venue.name?.en || venue.name?.th || ''}
                 sx={{ width: 200, height: 200 }}
               >
                 <SportsTennisIcon sx={{ fontSize: 80 }} />
@@ -579,7 +579,7 @@ export default function VenueCourtsPage() {
                 className="text-gray-200"
                 sx={{ textAlign: { xs: 'center', md: 'left' } }}
               >
-                <h1 className="text-2xl">{venue.name.en || venue.name.th}</h1>
+                <h1 className="text-2xl">{venue.name?.en || venue.name?.th}</h1>
                 <Box sx={{ pt: 1 }}>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
                     <PlaceOutlinedIcon sx={{ fontSize: 18 }} />
@@ -641,7 +641,7 @@ export default function VenueCourtsPage() {
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const).map((dayName, i) => {
-                    const schedule = venue.weeklySchedule[String(i)]
+                    const schedule = venue.weeklySchedule?.[String(i)]
                     const todayIndex = new Date().getDay()
                     const isToday = i === todayIndex
                     return (
@@ -674,7 +674,7 @@ export default function VenueCourtsPage() {
                   <Box
                     component="img"
                     src={venue.coverImage}
-                    alt={venue.name.en || venue.name.th}
+                    alt={venue.name?.en || venue.name?.th || ''}
                     sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 2, display: 'block' }}
                   />
                 </Grid>
@@ -1066,7 +1066,7 @@ export default function VenueCourtsPage() {
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {resaleListings.map((listing) => {
-                      const booking = typeof listing.bookingID === 'object' ? listing.bookingID as ResaleBookingSnapshot : null
+                      const booking = typeof listing.bookingID === 'object' && listing.bookingID !== null ? listing.bookingID as ResaleBookingSnapshot : null
                       const court = booking ? courts.find((c) => c.id === booking.courtID) : null
                       return (
                         <Box
@@ -1415,7 +1415,7 @@ export default function VenueCourtsPage() {
         <DialogTitle>{t('booking.confirmResalePurchase')}</DialogTitle>
         <DialogContent>
           {resaleBuyListing && (() => {
-            const booking = typeof resaleBuyListing.bookingID === 'object' ? resaleBuyListing.bookingID as ResaleBookingSnapshot : null
+            const booking = typeof resaleBuyListing.bookingID === 'object' && resaleBuyListing.bookingID !== null ? resaleBuyListing.bookingID as ResaleBookingSnapshot : null
             const court = booking ? courts.find((c) => c.id === booking.courtID) : null
             return (
               <Box>
