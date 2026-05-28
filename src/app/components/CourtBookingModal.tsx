@@ -37,6 +37,7 @@ import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingS
 import moment from 'moment'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
+import { useRouter } from 'next/navigation'
 
 interface BookingItemInput {
   courtID: string;
@@ -72,6 +73,7 @@ export default function CourtBookingModal({
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
+  const router = useRouter()
   const currentUser = useAppSelector((state) => state.app.user)
   const language = useAppSelector((state) => state.app.language)
 
@@ -321,7 +323,6 @@ export default function CourtBookingModal({
 
       setErrorState(null)
       setActiveStep(0)
-      onBookingComplete(!currentUser?.id)
 
       // Reset form
       setSelectedDate('')
@@ -336,6 +337,15 @@ export default function CourtBookingModal({
       setCouponCode('')
       setCouponResult(null)
       setCouponError(null)
+
+      if (currentUser?.id) {
+        const highlightKey = 'bookings' in result
+          ? result.bookingBundleID
+          : (result.bookingBundleID || `single-${result.id}`)
+        router.push(`/bookings?highlight=${highlightKey}`)
+      } else {
+        onBookingComplete(true)
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Booking failed'
       setErrorState(message)

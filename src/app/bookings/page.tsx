@@ -46,6 +46,7 @@ import axios from 'axios'
 import QRCode from 'react-qr-code'
 import generatePayload from 'promptpay-qr'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 const EXPIRY_MINUTES = 10
 
@@ -89,6 +90,8 @@ export default function MyBookingsPage() {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const highlightKey = searchParams.get('highlight')
   const user = useAppSelector((state) => state.app.user)
   const userReady = useAppSelector((state) => state.app.userReady)
 
@@ -101,6 +104,23 @@ export default function MyBookingsPage() {
   const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
   const [error, setError] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+
+  // Scroll to highlighted booking after data loads
+  useEffect(() => {
+    if (!highlightKey || loading) return
+    const el = document.getElementById(`booking-${highlightKey}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.outline = '2px solid'
+      el.style.outlineColor = '#1976d2'
+      el.style.borderRadius = '8px'
+      setTimeout(() => {
+        el.style.outline = ''
+        el.style.outlineColor = ''
+      }, 3000)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, highlightKey, courtDetails])
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
   const [payingBundleID, setPayingBundleID] = useState<string | null>(null)
@@ -663,7 +683,7 @@ export default function MyBookingsPage() {
                 const firstCourt = courtDetails[group.bookings[0]?.courtID]
                 const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
                 return (
-                  <Card key={group.groupKey} variant="outlined">
+                  <Card key={group.groupKey} id={`booking-${group.groupKey}`} variant="outlined">
                     <CardContent sx={{ pb: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.25 }}>
                         <Typography variant="subtitle1" fontWeight={700}>
@@ -826,7 +846,7 @@ export default function MyBookingsPage() {
                     const firstCourt = courtDetails[group.bookings[0]?.courtID]
                     const venue = firstCourt ? venueDetails[firstCourt.venueID] : undefined
                     return (
-                      <TableRow key={group.groupKey} hover>
+                      <TableRow key={group.groupKey} id={`booking-${group.groupKey}`} hover>
                         <TableCell>
                           {group.bookingRef ? (
                             <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: 1 }}>#{group.bookingRef}</Typography>
