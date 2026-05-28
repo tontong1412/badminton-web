@@ -1360,23 +1360,23 @@ export default function VenueCourtsPage() {
       >
         <DialogTitle sx={{ textAlign: 'center', pt: 3 }}>
           <Box sx={{ fontSize: 48, lineHeight: 1, mb: 1 }}>🎉</Box>
-          Thank you for your booking!
+          {t('booking.guestSuccessTitle')}
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center', pb: 1 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Please check your email for payment instructions and upload your payment slip to confirm the booking.
+            {t('booking.guestSuccessMessage')}
           </Typography>
           <Box sx={{ bgcolor: 'warning.light', borderRadius: 1.5, px: 2, py: 1.5, mb: 2 }}>
             <Typography variant="body2" sx={{ fontWeight: 700, color: 'warning.dark' }}>
-              ⏱ Please complete payment within 10 minutes or your booking will be automatically cancelled.
+              {t('booking.guestSuccessWarning')}
             </Typography>
           </Box>
           <Box sx={{ bgcolor: '#f5efe8', borderRadius: 1.5, px: 2, py: 1.5, border: '1px solid #e8d8c8' }}>
             <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
-              Track your bookings more easily!
+              {t('booking.guestSuccessTrackTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Create a free account to view all your bookings, skip guest details next time, and get notified instantly.
+              {t('booking.guestSuccessTrackDesc')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
               <Button
@@ -1385,7 +1385,7 @@ export default function VenueCourtsPage() {
                 href="/register"
                 sx={{ bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' } }}
               >
-                Create Account
+                {t('booking.createAccount')}
               </Button>
               <Button
                 size="small"
@@ -1393,7 +1393,7 @@ export default function VenueCourtsPage() {
                 onClick={() => { setBookingSuccessMsg(null); setLoginModalOpen(true) }}
                 sx={{ borderColor: '#80644f', color: '#80644f' }}
               >
-                Sign In
+                {t('action.login')}
               </Button>
             </Box>
           </Box>
@@ -1404,7 +1404,7 @@ export default function VenueCourtsPage() {
             onClick={() => setBookingSuccessMsg(null)}
             sx={{ bgcolor: '#80644f', '&:hover': { bgcolor: '#695241' }, px: 4 }}
           >
-            Got it
+            {t('booking.gotIt')}
           </Button>
         </DialogActions>
       </Dialog>
