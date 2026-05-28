@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -88,6 +88,8 @@ export default function CourtBookingModal({
   const [loading, setLoading] = useState(false)
   const [error, setErrorState] = useState<string | null>(null)
   const [agreeTerms, setAgreeTerms] = useState(false)
+  const [termsError, setTermsError] = useState(false)
+  const termsRef = useRef<HTMLLabelElement>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   const [bookingType, setBookingType] = useState<'single' | 'recurring'>('single')
@@ -227,7 +229,8 @@ export default function CourtBookingModal({
 
   const handleSubmit = async() => {
     if (!agreeTerms) {
-      setErrorState(t('booking.mustAgreeTerms'))
+      setTermsError(true)
+      termsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
 
@@ -847,14 +850,23 @@ export default function CourtBookingModal({
                 )}
 
                 <FormControlLabel
+                  ref={termsRef}
                   control={
                     <Checkbox
                       checked={agreeTerms}
-                      onChange={(e) => setAgreeTerms(e.target.checked)}
+                      onChange={(e) => {
+                        setAgreeTerms(e.target.checked)
+                        if (e.target.checked) setTermsError(false)
+                      }}
                     />
                   }
                   label={venue.termsAndConditions && (venue.termsAndConditions.th || venue.termsAndConditions.en) ? 'I have read and agree to the Terms & Conditions' : t('booking.agreeTerms')}
                 />
+                {termsError && (
+                  <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, ml: 4 }}>
+                    Please accept the terms and conditions to continue.
+                  </Typography>
+                )}
               </Box>
             )}
           </Box>
@@ -875,7 +887,7 @@ export default function CourtBookingModal({
               onClick={handleSubmit}
               variant="contained"
               color="primary"
-              disabled={loading || !agreeTerms || (bookingType === 'recurring' && recurringDatesPreview.length === 0)}
+              disabled={loading || (bookingType === 'recurring' && recurringDatesPreview.length === 0)}
             >
               {loading ? <CircularProgress size={24} /> : bookingType === 'recurring' ? `Book (${recurringDatesPreview.length} session${recurringDatesPreview.length !== 1 ? 's' : ''})` : t('booking.confirmBooking')}
             </Button>
