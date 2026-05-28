@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import {
   Container,
   Typography,
@@ -45,8 +45,7 @@ import Layout from '../components/Layout'
 import axios from 'axios'
 import QRCode from 'react-qr-code'
 import generatePayload from 'promptpay-qr'
-import { useRouter } from 'next/navigation'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const EXPIRY_MINUTES = 10
 
@@ -86,7 +85,7 @@ function BookingCountdown({ createdAt }: { createdAt: string }) {
   )
 }
 
-export default function MyBookingsPage() {
+function MyBookingsPage() {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const router = useRouter()
@@ -1325,5 +1324,13 @@ export default function MyBookingsPage() {
         </Dialog>
       </Container>
     </Layout>
+  )
+}
+
+export default function BookingsPageWrapper() {
+  return (
+    <Suspense>
+      <MyBookingsPage />
+    </Suspense>
   )
 }
