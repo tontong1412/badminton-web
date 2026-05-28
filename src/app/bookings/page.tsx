@@ -1183,7 +1183,7 @@ function MyBookingsPage() {
               {t('booking.uploadSlipInstruction')}
             </Typography>
             <Button
-              variant="outlined"
+              variant="contained"
               component="label"
               fullWidth
               sx={{ mb: 2 }}
