@@ -60,8 +60,6 @@ interface CourtBookingModalProps {
   onBookingComplete: (isGuest: boolean) => void;
 }
 
-const steps = ['Enter Details', 'Confirm Booking']
-
 export default function CourtBookingModal({
   open,
   onClose,
@@ -72,6 +70,7 @@ export default function CourtBookingModal({
   onBookingComplete,
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
+  const steps = [t('booking.step2'), t('booking.step3')]
   const dispatch = useAppDispatch()
   const router = useRouter()
   const currentUser = useAppSelector((state) => state.app.user)
@@ -479,8 +478,8 @@ export default function CourtBookingModal({
                       }}
                       size="small"
                     >
-                      <ToggleButton value="single">One-time</ToggleButton>
-                      <ToggleButton value="recurring">Recurring</ToggleButton>
+                      <ToggleButton value="single">{t('booking.oneTime')}</ToggleButton>
+                      <ToggleButton value="recurring">{t('booking.recurring')}</ToggleButton>
                     </ToggleButtonGroup>
                   </Box>
                 )}
@@ -488,28 +487,28 @@ export default function CourtBookingModal({
                 {currentUser ? (
                   <Box sx={{ mb: 2, p: 2, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#80644f' }}>
-                      Booking as
+                      {t('booking.bookingAs')}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Name:</strong> {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.player.officialName.th || '—'}
+                      <strong>{t('booking.name')}:</strong> {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.player.officialName.th || '—'}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Email:</strong> {currentUser.email}
+                      <strong>{t('booking.email')}:</strong> {currentUser.email}
                     </Typography>
                     {currentUser.player.contact?.tel ? (
                       <Typography variant="body2">
-                        <strong>Phone:</strong> {currentUser.player.contact.tel}
+                        <strong>{t('booking.phone')}:</strong> {currentUser.player.contact.tel}
                       </Typography>
                     ) : (
                       <TextField
                         size="small"
                         fullWidth
-                        label="Phone number"
+                        label={t('booking.phoneNumber')}
                         value={userPhone}
                         onChange={(e) => setUserPhone(e.target.value)}
                         sx={{ mt: 1.5 }}
                         required
-                        helperText="Required so the venue can contact you"
+                        helperText={t('booking.phoneRequired')}
                       />
                     )}
                   </Box>
@@ -517,16 +516,16 @@ export default function CourtBookingModal({
                   <>
                     <Box sx={{ mb: 2, p: 1.5, bgcolor: '#f5efe8', borderRadius: 1.5, border: '1px solid #e8d8c8', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 160 }}>
-                        Have an account? Book faster without filling this in.
+                        {t('booking.haveAccount')}
                       </Typography>
                       <Button size="small" variant="outlined" onClick={() => setLoginModalOpen(true)} sx={{ borderColor: '#80644f', color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                        Sign In
+                        {t('action.login')}
                       </Button>
                       <Button size="small" href="/register" sx={{ color: '#80644f', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                        Sign Up
+                        {t('action.register')}
                       </Button>
                     </Box>
-                    <Divider sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary">or continue as guest</Typography></Divider>
+                    <Divider sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary">{t('booking.continueAsGuest')}</Typography></Divider>
                     <TextField
                       size='small'
                       fullWidth
@@ -568,8 +567,8 @@ export default function CourtBookingModal({
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
                     {courts.length > 1 && (
                       <FormControl fullWidth size="small">
-                        <InputLabel>Court</InputLabel>
-                        <Select value={recurringCourtID} label="Court" onChange={(e) => setRecurringCourtID(e.target.value)}>
+                        <InputLabel>{t('booking.court')}</InputLabel>
+                        <Select value={recurringCourtID} label={t('booking.court')} onChange={(e) => setRecurringCourtID(e.target.value)}>
                           {courts.map((c) => (
                             <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                           ))}
@@ -579,8 +578,8 @@ export default function CourtBookingModal({
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <FormControl fullWidth size="small">
-                        <InputLabel>Start Time</InputLabel>
-                        <Select value={recurringStartTime} label="Start Time" onChange={(e) => setRecurringStartTime(e.target.value)}>
+                        <InputLabel>{t('booking.startTime')}</InputLabel>
+                        <Select value={recurringStartTime} label={t('booking.startTime')} onChange={(e) => setRecurringStartTime(e.target.value)}>
                           {Array.from({ length: 48 }, (_, i) => {
                             const h = Math.floor(i / 2).toString().padStart(2, '0')
                             const m = i % 2 === 0 ? '00' : '30'
@@ -590,8 +589,8 @@ export default function CourtBookingModal({
                         </Select>
                       </FormControl>
                       <FormControl fullWidth size="small">
-                        <InputLabel>End Time</InputLabel>
-                        <Select value={recurringEndTime} label="End Time" onChange={(e) => setRecurringEndTime(e.target.value)}>
+                        <InputLabel>{t('booking.endTime')}</InputLabel>
+                        <Select value={recurringEndTime} label={t('booking.endTime')} onChange={(e) => setRecurringEndTime(e.target.value)}>
                           {Array.from({ length: 48 }, (_, i) => {
                             const h = Math.floor(i / 2).toString().padStart(2, '0')
                             const m = i % 2 === 0 ? '00' : '30'
@@ -603,21 +602,21 @@ export default function CourtBookingModal({
                     </Box>
 
                     <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Repeat</Typography>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{t('booking.repeat')}</Typography>
                       <ToggleButtonGroup
                         value={recurringPattern}
                         exclusive
                         onChange={(_, v) => { if (v) setRecurringPattern(v) }}
                         size="small"
                       >
-                        <ToggleButton value="weekly">Weekly</ToggleButton>
-                        <ToggleButton value="daily">Every Day</ToggleButton>
+                        <ToggleButton value="weekly">{t('booking.weekly')}</ToggleButton>
+                        <ToggleButton value="daily">{t('booking.everyDay')}</ToggleButton>
                       </ToggleButtonGroup>
                     </Box>
 
                     {recurringPattern === 'weekly' && (
                       <Box>
-                        <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Days</Typography>
+                        <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{t('booking.days')}</Typography>
                         <ToggleButtonGroup
                           value={recurringDays}
                           onChange={(_, v: number[]) => { if (v.length > 0) setRecurringDays(v) }}
@@ -633,7 +632,7 @@ export default function CourtBookingModal({
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <TextField
-                        label="From"
+                        label={t('booking.from')}
                         type="date"
                         size="small"
                         fullWidth
@@ -643,7 +642,7 @@ export default function CourtBookingModal({
                         InputLabelProps={{ shrink: true }}
                       />
                       <TextField
-                        label="To"
+                        label={t('booking.to')}
                         type="date"
                         size="small"
                         fullWidth
@@ -654,7 +653,7 @@ export default function CourtBookingModal({
                           ...(maxRangeMonths !== null ? { max: moment(rangeStart).add(maxRangeMonths, 'months').format('YYYY-MM-DD') } : {}),
                         }}
                         InputLabelProps={{ shrink: true }}
-                        helperText={!isAdmin ? 'Max 2 months' : undefined}
+                        helperText={!isAdmin ? t('booking.maxTwoMonths') : undefined}
                       />
                     </Box>
 
@@ -689,7 +688,7 @@ export default function CourtBookingModal({
             {activeStep === 1 && (
               <Box>
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  {bookingType === 'recurring' ? 'Recurring Booking Summary' : t('booking.bookingSummary')}
+                  {bookingType === 'recurring' ? t('booking.recurringBookingSummary') : t('booking.bookingSummary')}
                 </Typography>
 
                 {bookingType === 'recurring' ? (
@@ -698,22 +697,22 @@ export default function CourtBookingModal({
                       <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Court:</strong> {recurringCourt?.name ?? recurringCourtID}
+                      <strong>{t('booking.court')}:</strong> {recurringCourt?.name ?? recurringCourtID}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Time:</strong> {recurringStartTime} – {recurringEndTime}
+                      <strong>{t('booking.time')}:</strong> {recurringStartTime} – {recurringEndTime}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Repeat:</strong>{' '}
+                      <strong>{t('booking.repeat')}:</strong>{' '}
                       {recurringPattern === 'weekly'
-                        ? `Weekly on ${recurringDays.map((d) => DAY_LABELS[d]).join(', ')}`
-                        : 'Every day'}
+                        ? t('booking.weeklyOn', { days: recurringDays.map((d) => DAY_LABELS[d]).join(', ') })
+                        : t('booking.everyDayLabel')}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Date range:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
+                      <strong>{t('booking.dateRange')}:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Sessions:</strong> {recurringDatesPreview.length}
+                      <strong>{t('booking.sessions')}:</strong> {recurringDatesPreview.length}
                       {recurringDatesPreview.length > 0 && (
                         <>
                           {' '}· first {Math.min(3, recurringDatesPreview.length)}: {recurringDatesPreview.slice(0, 3).map((d) => moment(d).format('D MMM')).join(', ')}
@@ -722,7 +721,7 @@ export default function CourtBookingModal({
                       )}
                     </Typography>
                     <Typography variant="h6" sx={{ mt: 2 }}>
-                      <strong>Est. Total:</strong> {recurringTotalPrice.toFixed(2)} {recurringCourt?.currency || 'THB'}
+                      <strong>{t('booking.estTotal')}:</strong> {recurringTotalPrice.toFixed(2)} {recurringCourt?.currency || 'THB'}
                     </Typography>
                     {recurringConflicts.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
@@ -794,19 +793,19 @@ export default function CourtBookingModal({
                 {/* Coupon code input (single bookings only) */}
                 {bookingType !== 'recurring' && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Discount Coupon</Typography>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('booking.discountCoupon')}</Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <TextField
                         size="small"
                         fullWidth
-                        label="Coupon code"
+                        label={t('booking.couponCode')}
                         value={couponCode}
                         onChange={(e) => {
                           setCouponCode(e.target.value.toUpperCase())
                           setCouponResult(null)
                           setCouponError(null)
                         }}
-                        placeholder="Enter code"
+                        placeholder={t('booking.enterCode')}
                         inputProps={{ style: { textTransform: 'uppercase' } }}
                         disabled={!!couponResult}
                       />
@@ -818,7 +817,7 @@ export default function CourtBookingModal({
                           onClick={() => { setCouponResult(null); setCouponCode(''); setCouponError(null) }}
                           sx={{ whiteSpace: 'nowrap' }}
                         >
-                          Remove
+                          {t('booking.remove')}
                         </Button>
                       ) : (
                         <Button
@@ -828,7 +827,7 @@ export default function CourtBookingModal({
                           disabled={!couponCode.trim() || couponValidating}
                           sx={{ whiteSpace: 'nowrap' }}
                         >
-                          {couponValidating ? <CircularProgress size={16} /> : 'Apply'}
+                          {couponValidating ? <CircularProgress size={16} /> : t('booking.apply')}
                         </Button>
                       )}
                     </Box>
@@ -850,7 +849,7 @@ export default function CourtBookingModal({
 
                 {venue.termsAndConditions && (venue.termsAndConditions.th || venue.termsAndConditions.en) && (
                   <Box sx={{ mt: 2, mb: 1, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 160, overflowY: 'auto' }}>
-                    <Typography variant="caption" fontWeight={700} sx={{ display: 'block', mb: 0.5 }}>Terms &amp; Conditions</Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ display: 'block', mb: 0.5 }}>{t('booking.termsAndConditions')}</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
                       {(language === 'th' ? venue.termsAndConditions.th : venue.termsAndConditions.en)
                         || venue.termsAndConditions.th
@@ -870,11 +869,11 @@ export default function CourtBookingModal({
                       }}
                     />
                   }
-                  label={venue.termsAndConditions && (venue.termsAndConditions.th || venue.termsAndConditions.en) ? 'I have read and agree to the Terms & Conditions' : t('booking.agreeTerms')}
+                  label={venue.termsAndConditions && (venue.termsAndConditions.th || venue.termsAndConditions.en) ? t('booking.agreeTermsAndConditions') : t('booking.agreeTerms')}
                 />
                 {termsError && (
                   <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, ml: 4 }}>
-                    Please accept the terms and conditions to continue.
+                    {t('booking.termsRequired')}
                   </Typography>
                 )}
                 <Alert severity="warning" sx={{ mt: 1.5 }}>
