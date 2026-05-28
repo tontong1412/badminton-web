@@ -877,6 +877,9 @@ export default function CourtBookingModal({
                     Please accept the terms and conditions to continue.
                   </Typography>
                 )}
+                <Alert severity="warning" sx={{ mt: 1.5 }}>
+                  {t('booking.uploadSlipWarning')}
+                </Alert>
               </Box>
             )}
           </Box>

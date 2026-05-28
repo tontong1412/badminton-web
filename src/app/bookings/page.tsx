@@ -813,6 +813,7 @@ export default function MyBookingsPage() {
                             size="small"
                             color="primary"
                             variant="contained"
+                            fullWidth
                             onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
                             disabled={payingBundleID === group.bundleID}
                           >
