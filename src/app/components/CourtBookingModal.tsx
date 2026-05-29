@@ -490,7 +490,7 @@ export default function CourtBookingModal({
                       {t('booking.bookingAs')}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>{t('booking.name')}:</strong> {currentUser.player.displayName.en || currentUser.player.displayName.th || currentUser.player.officialName.en || currentUser.player.officialName.th || '—'}
+                      <strong>{t('booking.name')}:</strong> {currentUser.player.displayName?.en || currentUser.player.displayName?.th || currentUser.player.officialName?.en || currentUser.player.officialName?.th || '—'}
                     </Typography>
                     <Typography variant="body2">
                       <strong>{t('booking.email')}:</strong> {currentUser.email}
@@ -694,7 +694,7 @@ export default function CourtBookingModal({
                 {bookingType === 'recurring' ? (
                   <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
+                      <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>{t('booking.court')}:</strong> {recurringCourt?.name ?? recurringCourtID}
@@ -740,7 +740,7 @@ export default function CourtBookingModal({
                 ) : (
                   <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.venue')}:</strong> {venue.name.en || venue.name.th}
+                      <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
                     </Typography>
                     {isItemsPreselected && bookingItems ? (
                       bookingItems.map((item) => {

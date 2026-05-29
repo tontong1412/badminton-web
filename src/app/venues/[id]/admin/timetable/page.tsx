@@ -417,7 +417,7 @@ export default function VenueTimetablePage() {
           </Button>
         </Box>
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
-          {venue?.name.en || venue?.name.th}
+          {venue?.name?.en || venue?.name?.th}
         </Typography>
 
         <Tabs

@@ -151,10 +151,10 @@ export default function AdminHubPage() {
                   <Card key={venue.id} sx={{ minWidth: 280, maxWidth: 360, flex: '1 1 280px' }} elevation={2}>
                     <CardContent>
                       <Typography variant="h6" fontWeight={600}>
-                        {venue.name.en || venue.name.th}
+                        {venue.name?.en || venue.name?.th}
                       </Typography>
-                      {venue.name.en && venue.name.th && (
-                        <Typography variant="body2" color="text.secondary">{venue.name.th}</Typography>
+                      {venue.name?.en && venue.name?.th && (
+                        <Typography variant="body2" color="text.secondary">{venue.name?.th}</Typography>
                       )}
                       <Typography variant="caption" color="text.secondary">{venue.address}</Typography>
                     </CardContent>
