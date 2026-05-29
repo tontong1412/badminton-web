@@ -54,11 +54,11 @@ const Register = () => {
         password: data.password,
         officialName: {
           [language]: data.officialName,
-          en: data.officialNameEN,
+          ...(language !== 'en' ? { en: data.officialNameEN } : {}),
         },
         displayName: {
           [language]: data.displayName,
-          en: data.displayNameEN
+          ...(language !== 'en' ? { en: data.displayNameEN } : {}),
         },
         dob: data.birthDate,
       }, { withCredentials: true })

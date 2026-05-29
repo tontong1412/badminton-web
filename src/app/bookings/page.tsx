@@ -686,7 +686,7 @@ function MyBookingsPage() {
                     <CardContent sx={{ pb: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.25 }}>
                         <Typography variant="subtitle1" fontWeight={700}>
-                          {venue ? (venue.name.en || venue.name.th) : '—'}
+                          {venue ? (venue.name?.en || venue.name?.th) : '—'}
                         </Typography>
                         {group.bookingRef && (
                           <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1, fontWeight: 700, letterSpacing: 1 }}>
@@ -853,7 +853,7 @@ function MyBookingsPage() {
                           ) : '—'}
                         </TableCell>
                         <TableCell>
-                          {venue ? (venue.name.en || venue.name.th) : '—'}
+                          {venue ? (venue.name?.en || venue.name?.th) : '—'}
                         </TableCell>
                         {(() => {
                           const mergedRows = getDisplayRows(group.bookings)
@@ -1053,7 +1053,7 @@ function MyBookingsPage() {
               </Typography>
               {payTargetVenue && (
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.venue')}:</strong> {payTargetVenue.name.en || payTargetVenue.name.th}
+                  <strong>{t('booking.venue')}:</strong> {payTargetVenue.name?.en || payTargetVenue.name?.th}
                 </Typography>
               )}
               {payTargetBookings.map((b) => {

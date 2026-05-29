@@ -256,12 +256,12 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
           id: contactPerson.id,
           officialName: {
             [language]: user?.player.officialName?.[language],
-            en: user?.player.officialName.en,
-            pronunciation: user?.player.officialName.pronunciation,
+            en: user?.player.officialName?.en,
+            pronunciation: user?.player.officialName?.pronunciation,
           },
           displayName: {
             [language]: user?.player?.displayName?.[language],
-            en: user?.player?.displayName.en,
+            en: user?.player?.displayName?.en,
           },
           contact: contactPerson.contact
         }
@@ -333,7 +333,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
               onChange={(e) => setEvent(e.target.value)}>
               {events.map((event) => (
                 <MenuItem key={event.id} value={event.id}>
-                  {event.name?.[language] || event.name.en}
+                  {event.name?.[language] || event.name?.en}
                 </MenuItem>
               ))}
             </Select>

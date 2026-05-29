@@ -166,7 +166,7 @@ function GuestPayContent() {
           </Typography>
           {venue && (
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Venue:</strong> {venue.name.en || venue.name.th}
+              <strong>Venue:</strong> {venue.name?.en || venue.name?.th}
             </Typography>
           )}
           {bookings.map((b) => (

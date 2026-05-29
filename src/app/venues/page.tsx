@@ -119,7 +119,7 @@ export default function VenuesPage() {
                           <Box
                             component="img"
                             src={venue.coverImage}
-                            alt={venue.name.en || venue.name.th}
+                            alt={venue.name?.en || venue.name?.th}
                             sx={{
                               width: '100%',
                               height: '100%',

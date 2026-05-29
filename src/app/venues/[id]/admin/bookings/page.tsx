@@ -175,7 +175,7 @@ export default function VenuePaymentsPage() {
           </Button>
         </Box>
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
-          {venue?.name.en || venue?.name.th}
+          {venue?.name?.en || venue?.name?.th}
         </Typography>
 
         <Tabs
@@ -345,7 +345,7 @@ export default function VenuePaymentsPage() {
                     return (
                       <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
                         <Typography variant="body2">
-                          {v?.name.en || v?.name.th} · {court?.name} · {moment(b.date).format('DD/MM/YYYY')} · {b.startTime}–{b.endTime}
+                          {v?.name?.en || v?.name?.th} · {court?.name} · {moment(b.date).format('DD/MM/YYYY')} · {b.startTime}–{b.endTime}
                         </Typography>
                         <Typography variant="body2" fontWeight={600} sx={{ ml: 2, whiteSpace: 'nowrap' }}>
                           {Number(b.totalPrice).toFixed(2)} {b.currency}

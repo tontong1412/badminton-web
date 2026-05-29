@@ -54,7 +54,7 @@ const TournamentCover = ({ tournament }: Props) => {
           <div className='text-gray-200'>
             <h1 className='text-2xl'>{tournament.name?.[language]}</h1>
             <Box sx={{ pt:1  }}>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><LocationOn/><Typography>{tournament.venue.name.en}</Typography></Box>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><LocationOn/><Typography>{tournament.venue?.name?.en}</Typography></Box>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><CalendarMonth/><Typography>{`${moment(tournament.startDate).format('DD MMM YYYY')} ${tournament.startDate !== tournament.endDate && `to ${moment(tournament.endDate).format('DD MMM YYYY')}`}`}</Typography></Box>
             </Box>
           </div>

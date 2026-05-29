@@ -186,8 +186,8 @@ export default function VenueSettingsPage() {
       return
     }
     setVenueState(v)
-    setNameTH(v.name.th)
-    setNameEN(v.name.en)
+    setNameTH(v.name?.th ?? '')
+    setNameEN(v.name?.en ?? '')
     setAddress(v.address)
     setCoverImage(v.coverImage ?? '')
     setLogo(v.logo ?? '')
@@ -658,7 +658,7 @@ export default function VenueSettingsPage() {
         </Box>
 
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
-          {venue?.name.en || venue?.name.th}
+          {venue?.name?.en || venue?.name?.th}
         </Typography>
 
         {/* Navigation tabs */}
@@ -1027,9 +1027,9 @@ export default function VenueSettingsPage() {
                 inputValue.length < 3 ? [] : options.filter((p) => {
                   const q = inputValue.toLowerCase()
                   return (
-                    p.officialName.en?.toLowerCase().includes(q) ||
-                    p.officialName.th?.toLowerCase().includes(q) ||
-                    p.officialName.pronunciation?.toLowerCase().includes(q) ||
+                    p.officialName?.en?.toLowerCase().includes(q) ||
+                    p.officialName?.th?.toLowerCase().includes(q) ||
+                    p.officialName?.pronunciation?.toLowerCase().includes(q) ||
                     p.displayName?.en?.toLowerCase().includes(q) ||
                     p.displayName?.th?.toLowerCase().includes(q)
                   )
@@ -1041,7 +1041,7 @@ export default function VenueSettingsPage() {
               )}
               renderOption={(props, p) => {
                 const displayName = p.displayName?.en || p.displayName?.th
-                const officialName = p.officialName.en || p.officialName.th || p.officialName.pronunciation
+                const officialName = p.officialName?.en || p.officialName?.th || p.officialName?.pronunciation
                 return (
                   <Box component="li" {...props} key={p.userID} sx={{ flexDirection: 'column', alignItems: 'flex-start !important' }}>
                     <Typography variant="body2" fontWeight={600}>{displayName || officialName}</Typography>
