@@ -197,7 +197,7 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
                   <TableCell>
                     {team.players.map((player) => {
                       return(<div key={player.id} onClick={(e) => handleShowPlayerDetail(e, player)}>
-                        <Typography >{player.officialName[language]}</Typography>
+                        <Typography >{player.officialName?.[language]}</Typography>
                       </div>)
                     })}
                   </TableCell>
@@ -237,7 +237,7 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
               {
                 group?.map((team, j) => <CardContent key={j}>
                   {team?.players.map((p) => <Box key={p.id} display={'flex'}>
-                    <Typography width={150}>{p.officialName[language]}</Typography>
+                    <Typography width={150}>{p.officialName?.[language]}</Typography>
                     <Typography >{p.club}</Typography>
                   </Box>)}
                 </CardContent>)

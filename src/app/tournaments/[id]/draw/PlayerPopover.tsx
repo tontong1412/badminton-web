@@ -43,7 +43,7 @@ const PlayerPopover = ({ showPlayer, anchorEl, setShowPlayer, setAnchorEl, useHa
                   }}
                   style={{ textDecoration: 'underline' }}
                 >
-                  {showPlayer?.officialName[language]}
+                  {showPlayer?.officialName?.[language]}
                 </Link>
               </Typography>
               {useHandicap && showPlayer?.level && <Chip label={LEVEL[showPlayer?.level][language]}/>}

@@ -44,9 +44,9 @@ const EditProfilePage = () => {
   useEffect(() => {
     if(user){
       const defaultProfileValues: ProfileFormInputs = {
-        officialName: user?.player.officialName[language] || '',
+        officialName: user?.player.officialName?.[language] || '',
         officialNameEN: user?.player.officialName['en'],
-        displayName: user?.player.displayName[language] || '',
+        displayName: user?.player.displayName?.[language] || '',
         displayNameEN: user?.player.displayName['en'],
         club: user?.player.club
       }

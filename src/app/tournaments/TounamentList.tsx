@@ -73,7 +73,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
                       sx={{ color: 'text.secondary' }}
                     >
                       <LocationOn sx={{ fontSize: 'small', marginRight: 1 }} />
-                      {tournament.venue.name[language]}
+                      {tournament.venue?.name?.[language]}
                     </Typography>
                     <Typography
                       variant="subtitle1"

@@ -78,7 +78,7 @@ const SetscoreModal = ({ visible, setVisible, tournamentID, match }: SetscoreMod
         <DialogContent dividers sx={{ maxHeight: 600, display: 'flex', justifyContent:'space-between', alignItems: 'center' }}>
 
           <Box width={'50%'} textAlign={'center'}>
-            {match.teamA?.players.map((p) => <Typography key={p.id}>{p.officialName[language]}</Typography>)}
+            {match.teamA?.players.map((p) => <Typography key={p.id}>{p.officialName?.[language]}</Typography>)}
           </Box>
           <Box width={'50%'}>
             <TextField
@@ -106,7 +106,7 @@ const SetscoreModal = ({ visible, setVisible, tournamentID, match }: SetscoreMod
             />
           </Box>
           <Box width={'50%'} textAlign={'center'}>
-            {match.teamB?.players.map((p) => <Typography key={p.id}>{p.officialName[language]}</Typography>)}
+            {match.teamB?.players.map((p) => <Typography key={p.id}>{p.officialName?.[language]}</Typography>)}
           </Box>
 
         </DialogContent>

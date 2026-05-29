@@ -89,7 +89,7 @@ const SelectEventModal = ({ visible, setVisible, event, team, setEvent, setTeam 
               onChange={(e) => setSelectedEvent(e.target.value)}>
               {tournament?.events.filter((e) => e.id !== event.id).map((e) => (
                 <MenuItem key={e.id} value={e.id}>
-                  {e.name[language] || e.name.en}
+                  {e.name?.[language] || e.name?.en}
                 </MenuItem>
               ))}
             </Select>

@@ -195,7 +195,7 @@ const Organizer = () => {
       return (
         <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}>
           <Box>
-            <Typography>{match.event?.name[language]}</Typography>
+            <Typography>{match.event?.name?.[language]}</Typography>
             {match.groupOrder !== undefined ? <Typography>Group {MAP_GROUP_NAME[match.groupOrder].NAME}</Typography> : null}
             <Typography>{match.step === MatchStep.Group ? `Round ${match.round + 1}` : MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}</Typography>
             {match.bracketOrder !== undefined && <Typography>{`Bracket  ${match.bracketOrder}`}</Typography>}
@@ -512,7 +512,7 @@ const Organizer = () => {
             aria-label="basic tabs example"
           >
             {tournament.events.map((e: TournamentEvent, idx) => (
-              <Tab key={idx} label={e.name[language]} />
+              <Tab key={idx} label={e.name?.[language]} />
             ))}
           </Tabs>
           <Box component="main" sx={{ flexGrow: 1, p: 1, pt:0 }}>

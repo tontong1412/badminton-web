@@ -185,7 +185,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                 <TableCell>
                   {team.players.map((player) => {
                     return(<div key={player.id} onClick={(e) => handleShowPlayerDetail(e, player)}>
-                      <Typography >{player.officialName[language]}</Typography>
+                      <Typography >{player.officialName?.[language]}</Typography>
                     </div>)
                   })}
                 </TableCell>

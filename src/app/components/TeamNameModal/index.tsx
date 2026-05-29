@@ -96,7 +96,7 @@ const TeamNameModal = ({ visible, setVisible, event, team, setEvent, setTeam }: 
           {team.players.map((player, idx) => (
             <Box key={player.id} sx={{ mb: 2 }}>
               <Typography variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
-                {player.officialName[language] || player.officialName.th || player.officialName.en || ''}
+                {player.officialName?.[language] || player.officialName.th || player.officialName.en || ''}
               </Typography>
               <TextField
                 autoFocus={idx === 0}

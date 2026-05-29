@@ -106,10 +106,10 @@ const ShuttlecockCreditModal = ({ visible, setVisible, event, team, setEvent, se
         </DialogTitle>
 
         <DialogContent dividers sx={{ maxHeight:'600px' }}>
-          <Detail title='รายการ' content={event.name[language] || '-'}/>
+          <Detail title='รายการ' content={event.name?.[language] || '-'}/>
           {
             team.players.map((p, idx) => (
-              <Detail key={p.id} title={`ผู้เล่น ${idx + 1}`} content={p.officialName[language] || ''}/>
+              <Detail key={p.id} title={`ผู้เล่น ${idx + 1}`} content={p.officialName?.[language] || ''}/>
             ))
           }
           <Detail title='คูปองคงเหลือ' content={`${team.shuttlecockCredit}`} />

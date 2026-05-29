@@ -92,12 +92,12 @@ const MyDocument = ({ data, language }: { data: Match[], language: Language }) =
                 <Text style={{ textAlign: 'center' }}>{moment(row?.date).format('DD MMM yy')}</Text>
                 <Text>{moment(row?.date).format('HH:mm')}</Text>
               </View>
-              <Text style={styles.row8}>{row?.event?.name[language]}</Text>
+              <Text style={styles.row8}>{row?.event?.name?.[language]}</Text>
               <Text style={styles.row8}>{row.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[row.round?.toString() as keyof typeof MAP_ROUND_NAME]}</Text>
 
 
               <View style={styles.row15}>
-                {row.teamA?.players.map((player) => <Text key={player?.id}>{player?.officialName[language]}</Text>)}
+                {row.teamA?.players.map((player) => <Text key={player?.id}>{player?.officialName?.[language]}</Text>)}
               </View>
 
               <View style={styles.row15}>
@@ -107,7 +107,7 @@ const MyDocument = ({ data, language }: { data: Match[], language: Language }) =
               <Text style={styles.row10}>{''}</Text>
 
               <View style={styles.row15}>
-                {row.teamB?.players.map((player) => <Text key={player?.id}>{player?.officialName[language]}</Text>)}
+                {row.teamB?.players.map((player) => <Text key={player?.id}>{player?.officialName?.[language]}</Text>)}
               </View>
 
               <View style={styles.row15}>

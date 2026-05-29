@@ -108,12 +108,12 @@ const AssignMatchModal = ({ visible, setVisible, tournamentID, match }: AssignMa
             margin="normal"
           />
           <Box sx={{ mt:2 }}/>
-          <Typography>{t('tournament.matchList.announce.event')} {match.event?.name[language]}</Typography>
+          <Typography>{t('tournament.matchList.announce.event')} {match.event?.name?.[language]}</Typography>
           <Typography>{t('tournament.matchList.announce.round')} {match.step === MatchStep.Group ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}</Typography>
 
           <Box sx={{ mt:2 }}/>
           {match.teamA?.players.map((p) => <Box key={p.id} sx={{ display:'flex' }}>
-            <Typography sx={{ width: 200 }}>{p.officialName[language] || p.officialName['th']}</Typography>
+            <Typography sx={{ width: 200 }}>{p.officialName?.[language] || p.officialName['th']}</Typography>
             <Typography>{p.club}</Typography>
           </Box>)}
 
@@ -122,7 +122,7 @@ const AssignMatchModal = ({ visible, setVisible, tournamentID, match }: AssignMa
 
           <Box sx={{ mt:2 }}/>
           {match.teamB?.players.map((p) => <Box key={p.id} sx={{ display:'flex' }}>
-            <Typography sx={{ width: 200 }}>{p.officialName[language] || p.officialName['th']}</Typography>
+            <Typography sx={{ width: 200 }}>{p.officialName?.[language] || p.officialName['th']}</Typography>
             <Typography>{p.club}</Typography>
           </Box>)}
 
@@ -138,7 +138,7 @@ const AssignMatchModal = ({ visible, setVisible, tournamentID, match }: AssignMa
               {availableUmpires.sort((a, b) => a.totalMatchJudged - b.totalMatchJudged).map((u) => (
                 <MenuItem key={u.id} value={u.id}>
                   <Box sx={{ width: '100%', display:'flex', justifyContent:'space-between' }}>
-                    <Typography>{u.officialName[language]}</Typography>
+                    <Typography>{u.officialName?.[language]}</Typography>
                     <Typography>Total Match: {u.totalMatchJudged}</Typography>
                   </Box>
                 </MenuItem>

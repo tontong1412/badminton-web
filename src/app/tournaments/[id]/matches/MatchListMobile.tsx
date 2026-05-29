@@ -42,7 +42,7 @@ const MatchListMobile = ({ tournamentID, status }: MatchListMobileProps) => {
             justifyContent: 'space-between',
 
           }}>
-            <div>{`${match.event?.name[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+            <div>{`${match.event?.name?.[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
             <div style={{ display: 'flex', gap: '10px' }}>
               {match.status !== 'waiting' && <div>{`#${match.matchNumber}`}</div>}
               {match.status === 'playing' && <div>{`คอร์ด - ${match.court}`}</div>}

@@ -98,12 +98,12 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                     ? <Chip size='small' label={match.status} color={MAP_STATUS_COLOR[match.status]} variant="outlined" />
                     : <Box >
                       <Chip size='small' label={`court ${match.court}`} color={MAP_STATUS_COLOR[match.status]} variant="outlined" sx={{ m:'1px' }}/>
-                      {match.umpire && <Chip size='small' label={match.umpire.officialName[language]?.split(' ')[0]} color={MAP_STATUS_COLOR[match.status]} variant="outlined" sx={{ m:'1px' }}/>}
+                      {match.umpire && <Chip size='small' label={match.umpire.officialName?.[language]?.split(' ')[0]} color={MAP_STATUS_COLOR[match.status]} variant="outlined" sx={{ m:'1px' }}/>}
                     </Box>
                   }
                 </TableCell>
                 <TableCell align="center">
-                  <Typography >{match.event?.name[language]}</Typography>
+                  <Typography >{match.event?.name?.[language]}</Typography>
                 </TableCell>
                 <TableCell align="center">
                   <Typography >{moment(match.date).format('H.mm')}</Typography>
@@ -114,7 +114,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                 <TableCell >
                   {match.teamA?.players.map((player) => {
                     return(<Box key={player.id} sx={{ display:'flex', gap: 2 }}>
-                      <Typography sx={{ width: 170 }}>{player.officialName[language]}</Typography>
+                      <Typography sx={{ width: 170 }}>{player.officialName?.[language]}</Typography>
                       <Typography sx={{ maxWidth: 150 }}>{player.club}</Typography>
                     </Box>)
                   })}
@@ -125,7 +125,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                 <TableCell>
                   {match.teamB?.players.map((player) => {
                     return(<Box key={player.id} sx={{ display:'flex', gap: 2 }}>
-                      <Typography sx={{ width: 170 }}>{player.officialName[language]}</Typography>
+                      <Typography sx={{ width: 170 }}>{player.officialName?.[language]}</Typography>
                       <Typography sx={{ maxWidth: 150 }}>{player.club}</Typography>
                     </Box>)
                   })}

@@ -73,12 +73,12 @@ const SettingMatchDialog = ({ visible, setVisible, match, setMatch }: SettingMat
             >
               {match.teamA.players.map((player, i) => (
                 <MenuItem key={player.id} value={`A-${i}`}>
-                  {player.officialName[language]}
+                  {player.officialName?.[language]}
                 </MenuItem>
               ))}
               {match.teamB.players.map((player, i) => (
                 <MenuItem key={player.id} value={`B-${i}`}>
-                  {player.officialName[language]}
+                  {player.officialName?.[language]}
                 </MenuItem>
               ))}
             </Select>
@@ -95,12 +95,12 @@ const SettingMatchDialog = ({ visible, setVisible, match, setMatch }: SettingMat
             >
               {match.teamA.players.map((player, i) => (
                 <MenuItem key={player.id} value={`A-${i}`}>
-                  {player.officialName[language]}
+                  {player.officialName?.[language]}
                 </MenuItem>
               ))}
               {match.teamB.players.map((player, i) => (
                 <MenuItem key={player.id} value={`B-${i}`}>
-                  {player.officialName[language]}
+                  {player.officialName?.[language]}
                 </MenuItem>
               ))}
             </Select>
