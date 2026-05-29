@@ -47,7 +47,7 @@ const EditProfilePage = () => {
         officialName: user?.player.officialName?.[language] || '',
         officialNameEN: user?.player.officialName['en'],
         displayName: user?.player.displayName?.[language] || '',
-        displayNameEN: user?.player.displayName['en'],
+        displayNameEN: user?.player.displayName?.['en'],
         club: user?.player.club
       }
       setInitialData(defaultProfileValues)}
