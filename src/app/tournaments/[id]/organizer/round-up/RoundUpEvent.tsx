@@ -191,7 +191,7 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
                       <Typography >{team.group}</Typography>
                     </TableCell>
                     <TableCell>
-                      {team.team.players.map((p) => <Typography key={p.id}>{p.officialName[language]}</Typography>)}
+                      {team.team.players.map((p) => <Typography key={p.id}>{p.officialName?.[language]}</Typography>)}
                     </TableCell>
                     <TableCell>
                       {team.team.players.map((p) => <Typography key={p.id}>{p.club}</Typography>)}

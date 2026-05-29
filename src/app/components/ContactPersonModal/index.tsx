@@ -46,8 +46,8 @@ const ContactPersonModal = ({ visible, setVisible, player }: ContactPersonModalP
         </DialogTitle>
         <DialogContent dividers sx={{ textAlign:'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Avatar src={player.photo || '/avatar.png'} sx={{ width: 100, height: 100 }}/>
-          <Typography>{player.officialName[language]}</Typography>
-          {player.displayName && <Typography>{player.displayName[language]}</Typography>}
+          <Typography>{player.officialName?.[language]}</Typography>
+          {player.displayName && <Typography>{player.displayName?.[language]}</Typography>}
           <Box sx={{ display:'flex', gap: 1, alignItems: 'center' }}>
             <Typography>{`${t('tournament.registration.tel')}: `}</Typography>
             <Typography>{player.contact?.tel}</Typography>

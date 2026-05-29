@@ -142,7 +142,7 @@ const ParticipantMenu = ({ menuTeam, setMenuTeam, anchorElMenu, event, setEvent,
         <DialogContent>
           <DialogContentText component={'div'} id="alert-dialog-description">
             {menuTeam.players.map((player) => <Box  key={player.id} sx={{ display: 'flex', color: '#333' }}>
-              <Typography width={150}>{player.officialName[language]}</Typography>
+              <Typography width={150}>{player.officialName?.[language]}</Typography>
               <Typography>{player.club}</Typography>
             </Box>)}
             <Typography style={{ fontSize: '14px', paddingTop: 16 }}>{t('tournament.action.withdrawWarning')}</Typography>

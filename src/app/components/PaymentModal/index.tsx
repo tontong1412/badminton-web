@@ -201,13 +201,13 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
           {t('tournament.registration.payment')}
         </DialogTitle>
         <DialogContent dividers sx={{ maxHeight:'550px' }}>
-          <Detail title='รายการ' content={event.name[language] || '-'}/>
+          <Detail title='รายการ' content={event.name?.[language] || '-'}/>
           {
             team.players.map((p, idx) => (
-              <Detail key={p.id} title={`ผู้เล่น ${idx + 1}`} content={p.officialName[language] || ''}/>
+              <Detail key={p.id} title={`ผู้เล่น ${idx + 1}`} content={p.officialName?.[language] || ''}/>
             ))
           }
-          <Detail title='ผู้จัดการทีม' content={`${team.contactPerson.officialName[language]} (${team.contactPerson.displayName?.[language]})`}/>
+          <Detail title='ผู้จัดการทีม' content={`${team.contactPerson.officialName?.[language]} (${team.contactPerson.displayName?.[language]})`}/>
           <Detail title='ค่าสมัคร' content={`${event.fee.amount} ${event.fee.currency}`} />
           <Detail title='ประเมินมือ' content={<Chip
             size='small'

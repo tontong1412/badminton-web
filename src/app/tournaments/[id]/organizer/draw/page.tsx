@@ -61,7 +61,7 @@ const Organizer = () => {
               aria-label="basic tabs example"
             >
               {tournament.events.map((e: TournamentEvent, idx) => (
-                <Tab key={idx} label={e.name[language]} />
+                <Tab key={idx} label={e.name?.[language]} />
               ))}
             </Tabs>
             <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>

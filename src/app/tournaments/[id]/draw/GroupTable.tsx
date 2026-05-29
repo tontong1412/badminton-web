@@ -82,7 +82,7 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
             }}
           >
             {teamA.team.players.map((p) => <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
-              <Typography >{p.officialName[language]}</Typography>
+              <Typography >{p.officialName?.[language]}</Typography>
             </div>)}
           </TableCell>
           {
@@ -162,7 +162,7 @@ const GroupTable = ({ eventID }: GroupTableProps) => {
                             minWidth:180,
                             borderRight: '1px solid #e0e0e0',
                             backgroundColor: '#e0e0e0',
-                          }} key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName[language]}</Typography>)}</TableCell>
+                          }} key={`team-${team.id}`}>{team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName?.[language]}</Typography>)}</TableCell>
                       )
                     })
                   }

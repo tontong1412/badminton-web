@@ -22,7 +22,7 @@ const ResultEvent = ({ eventID }: {eventID: string}) => {
         <Typography  variant='h5'>ชนะเลิศ</Typography>
         {
           finalMatch[winner].players.map((p) => <Box key={p.id} display={'flex'}>
-            <Typography width={180}>{p.officialName[language]}</Typography>
+            <Typography width={180}>{p.officialName?.[language]}</Typography>
             <Typography>{p.club}</Typography>
           </Box>)
         }
@@ -30,7 +30,7 @@ const ResultEvent = ({ eventID }: {eventID: string}) => {
         <Typography variant='h5'>รองชนะเลิศอันดับ 1</Typography>
         {
           finalMatch[runnerup].players.map((p) => <Box key={p.id} display={'flex'}>
-            <Typography width={180}>{p.officialName[language]}</Typography>
+            <Typography width={180}>{p.officialName?.[language]}</Typography>
             <Typography>{p.club}</Typography>
           </Box>)
         }
@@ -51,7 +51,7 @@ const ResultEvent = ({ eventID }: {eventID: string}) => {
         <Typography  variant='h5'>รองชนะเลิศอันดับ 2</Typography>
         {
           semiMatch.map((match, i) => match[semifinalist[i]].players.map((p) => <Box key={p.id} display={'flex'}>
-            <Typography width={180}>{p.officialName[language]}</Typography>
+            <Typography width={180}>{p.officialName?.[language]}</Typography>
             <Typography>{p.club}</Typography>
           </Box>)
           )

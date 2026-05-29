@@ -171,7 +171,7 @@ const Me = () => {
                                 color={MAP_PAYMENT_STATUS[team.paymentStatus].color} />
                             </Box>
                           }
-                          title={<Typography variant='h5' >{t('tournament.registration.event')} {event.name[language]}</Typography>}
+                          title={<Typography variant='h5' >{t('tournament.registration.event')} {event.name?.[language]}</Typography>}
                         />
                         <CardContent>
                           <Box >
@@ -180,7 +180,7 @@ const Me = () => {
                                 {team.players.map((p: Player) => <div key={p.id}>
                                   <Box sx={{ display: 'flex' }}>
                                     <div key={p.id}>
-                                      <Typography width={150}>{p.officialName[language]}</Typography>
+                                      <Typography width={150}>{p.officialName?.[language]}</Typography>
                                     </div>
                                     <Typography>{p.club}</Typography>
                                   </Box>
@@ -221,8 +221,8 @@ const Me = () => {
       return <Container>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 5 }}>
           <Avatar sx={{ width: 100, height: 100, m:1 }} src={user?.player.photo}/>
-          <Typography variant='h5'>{user?.player.officialName[language]}</Typography>
-          <Typography variant='h6'>{tournament.name[language]}</Typography>
+          <Typography variant='h5'>{user?.player.officialName?.[language]}</Typography>
+          <Typography variant='h6'>{tournament.name?.[language]}</Typography>
         </Box>
 
         { myNextMatch &&
@@ -241,7 +241,7 @@ const Me = () => {
                 justifyContent: 'space-between',
 
               }}>
-                <div>{`${myNextMatch.event?.name[language]}  รอบ ${myNextMatch.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[myNextMatch.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+                <div>{`${myNextMatch.event?.name?.[language]}  รอบ ${myNextMatch.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[myNextMatch.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {myNextMatch.status !== MatchStatus.Waiting && <div>{`#${myNextMatch.matchNumber}`}</div>}
                   {myNextMatch.status === MatchStatus.Playing && <div>{`คอร์ด - ${myNextMatch.court}`}</div>}
@@ -267,7 +267,7 @@ const Me = () => {
                   justifyContent: 'space-between',
 
                 }}>
-                  <div>{`${match.event?.name[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+                  <div>{`${match.event?.name?.[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     {match.status !== 'waiting' && <div>{`#${match.matchNumber}`}</div>}
                     {match.status === 'playing' && <div>{`คอร์ด - ${match.court}`}</div>}

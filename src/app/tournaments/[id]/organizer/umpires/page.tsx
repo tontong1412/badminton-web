@@ -85,14 +85,14 @@ const Umpire = () => {
                   sx={{ width: 250 }}
                   renderInput={(params) => <TextField {...params} label="Add new umpire" />}
                   getOptionLabel={(option) => {
-                    return option.officialName[language] || option.officialName['th'] || ''
+                    return option.officialName?.[language] || option.officialName['th'] || ''
                   }}
                   renderOption={(props, option) => {
                     // eslint-disable-next-line react/prop-types, @typescript-eslint/no-unused-vars
                     const { key, ...optionProps } = props
                     return (
                       <li key={option.id} {...optionProps}>
-                        <span>{option.officialName[language] || option.officialName['th'] || ''}</span>
+                        <span>{option.officialName?.[language] || option.officialName['th'] || ''}</span>
                         {option.displayName?.[language] && <span>{` (${option.displayName?.[language]})`}</span>}
                       </li>
                     )
@@ -112,7 +112,7 @@ const Umpire = () => {
                     <ListItemAvatar>
                       <Avatar src={m.photo}/>
                     </ListItemAvatar>
-                    <ListItemText primary={m.officialName[language]} secondary={m.displayName?.[language]} />
+                    <ListItemText primary={m.officialName?.[language]} secondary={m.displayName?.[language]} />
                   </ListItem>
                   <Divider  component="li" />
                 </Box>)

@@ -85,7 +85,7 @@ const ParticipantsPage = () => {
                 aria-label="basic tabs example"
               >
                 {tournament.events.map((event, idx) => (
-                  <Tab key={idx} label={event.name[language]} />
+                  <Tab key={idx} label={event.name?.[language]} />
                 ))}
               </Tabs>
             </Box>

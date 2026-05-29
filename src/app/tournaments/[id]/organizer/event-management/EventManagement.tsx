@@ -47,7 +47,7 @@ const EventManagement = ({ tournament, setTournament }: EventManagementProps) =>
             {tournament.events?.map((e, idx) => (
               <TableRow key={idx}>
                 <TableCell>
-                  <Typography >{e.name[language]}</Typography>
+                  <Typography >{e.name?.[language]}</Typography>
                 </TableCell>
                 <TableCell>{e.type} </TableCell>
                 <TableCell> {e.description}</TableCell>

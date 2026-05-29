@@ -72,7 +72,7 @@ const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
                   <div>{(typeof team === 'string' || team === null)
                     ? team
                     : team.players.map((p) => <Box key={p.id} display={'flex'}>
-                      <Typography width={200}>{p.officialName[language]}</Typography>
+                      <Typography width={200}>{p.officialName?.[language]}</Typography>
                       <Typography width={150} overflow={'hidden'} noWrap>{p.club}</Typography>
                     </Box>)}
                   </div>

@@ -93,7 +93,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
                     color={MAP_PAYMENT_STATUS[team.paymentStatus].color} />
                 </Box>
               }
-              title={<Typography >{t('tournament.registration.event')} {event.name[language]}</Typography>}
+              title={<Typography >{t('tournament.registration.event')} {event.name?.[language]}</Typography>}
             />
             <CardContent >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -102,7 +102,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
                   {team.players.map((p: Player) => <div key={p.id}>
                     <Box sx={{ display: 'flex' }}>
                       <div key={p.id} onClick={(e) => handleShowPlayerDetail(e, p)}>
-                        <Typography width={150}>{p.officialName[language]}</Typography>
+                        <Typography width={150}>{p.officialName?.[language]}</Typography>
                       </div>
                       <Typography>{p.club}</Typography>
                     </Box>

@@ -28,11 +28,11 @@ const MatchCard = ({ match }: MatchCardProps) => {
       <AccordionDetails>
         {match.teamA &&
         <Box component="div">
-          {match.teamA.players.map((p) => <Typography key={p.id}>{p.officialName[language]}</Typography>)}
+          {match.teamA.players.map((p) => <Typography key={p.id}>{p.officialName?.[language]}</Typography>)}
         </Box>}
         {match.teamB &&
         <Box component="div" sx={{ mt:1 }}>
-          {match.teamB.players.map((p) => <Typography key={p.id}>{p.officialName[language]}</Typography>)}
+          {match.teamB.players.map((p) => <Typography key={p.id}>{p.officialName?.[language]}</Typography>)}
         </Box>}
       </AccordionDetails>
     </Accordion>

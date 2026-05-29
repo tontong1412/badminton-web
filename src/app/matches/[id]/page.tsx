@@ -155,7 +155,7 @@ const MatchPage = () => {
                   <div style={{ width: '40px', height: '40px', borderRadius: '20px', overflow: 'hidden', objectFit: 'contain' }}>
                     <Avatar src={player.photo} alt='avatar' />
                   </div>
-                  <div>{player.officialName[language]}</div>
+                  <div>{player.officialName?.[language]}</div>
                   {match.teamA.serving === index && match.teamA.isServing && <div style={{ padding: '2px 5px', backgroundColor: '#80644f', borderRadius: '5px', color: 'white' }}>S</div>}
                   {match.teamA.receiving === index && !match.teamA.isServing && <div style={{ padding: '2px 5px', backgroundColor: '#80644f', borderRadius: '5px', color: 'white'   }}>R</div>}
                 </Box>
@@ -213,7 +213,7 @@ const MatchPage = () => {
                   <div style={{ width: '40px', height: '40px', borderRadius: '20px', overflow: 'hidden', objectFit: 'contain' }}>
                     <Avatar src={player.photo} alt='player' />
                   </div>
-                  <div className='info' style={{ marginRight: '5px', marginLeft: 0, textAlign: 'right' }}>{player.officialName[language]}</div>
+                  <div className='info' style={{ marginRight: '5px', marginLeft: 0, textAlign: 'right' }}>{player.officialName?.[language]}</div>
                   {match.teamB.serving === index && match.teamB.isServing && <div style={{ padding: '2px 5px', backgroundColor: '#80644f', borderRadius: '5px', color: 'white' }}>S</div>}
                   {match.teamB.receiving === index && !match.teamB.isServing && < div style={{ padding: '2px 5px', backgroundColor: '#80644f', borderRadius: '5px', color: 'white' }}>R</div>}
                 </Box>
@@ -225,7 +225,7 @@ const MatchPage = () => {
         <Box>
           <div style={{ textAlign: 'center', fontSize: '20px' }}>แมตช์ที่: {match.matchNumber}</div>
           {match.umpire && <div style={{ textAlign: 'center', fontSize: '20px' }}>จำนวนลูก: {match.shuttlecockUsed} ลูก</div>}
-          {match.umpire && <div style={{ textAlign: 'center', fontSize: '20px' }}>ผู้ตัดสิน: {match.umpire?.officialName[language]}</div>}
+          {match.umpire && <div style={{ textAlign: 'center', fontSize: '20px' }}>ผู้ตัดสิน: {match.umpire?.officialName?.[language]}</div>}
         </Box>
 
         {isUmpire && match.status === MatchStatus.Playing &&
