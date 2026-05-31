@@ -410,21 +410,57 @@ export default function CourtBookingModal({
     if (!qrRef.current) return
     const svg = qrRef.current.querySelector('svg')
     if (!svg) return
+
+    const promptPayTotal = Number(bookingResult?.totalPrice ?? 0)
+    const payCurrency = bookingResult?.currency ?? 'THB'
+    const frameWidth = 320
+    const svgSize = 224
+    const textAreaHeight = 72
+
     const svgData = new XMLSerializer().serializeToString(svg)
-    const canvas = document.createElement('canvas')
-    const size = 200
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    const img = new window.Image()
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(svgBlob)
-    img.onload = async() => {
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    const headerImg = new window.Image()
+    const qrImg = new window.Image()
+    let loaded = 0
+
+    const draw = async() => {
+      loaded++
+      if (loaded < 2) return
+
+      const scaledHeaderH = Math.round(frameWidth * headerImg.naturalHeight / headerImg.naturalWidth)
+      const canvasH = scaledHeaderH + svgSize + textAreaHeight + 24
+
+      const canvas = document.createElement('canvas')
+      canvas.width = frameWidth
+      canvas.height = canvasH
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      // White background frame
       ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, size, size)
-      ctx.drawImage(img, 0, 0, size, size)
-      URL.revokeObjectURL(url)
+      ctx.fillRect(0, 0, frameWidth, canvasH)
+
+      // Thai QR payment header
+      ctx.drawImage(headerImg, 0, 0, frameWidth, scaledHeaderH)
+
+      // QR code
+      const qrX = (frameWidth - svgSize) / 2
+      ctx.drawImage(qrImg, qrX, scaledHeaderH + 12, svgSize, svgSize)
+
+      // Amount
+      ctx.fillStyle = '#1a237e'
+      ctx.font = 'bold 22px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(`${promptPayTotal.toFixed(2)} ${payCurrency}`, frameWidth / 2, scaledHeaderH + svgSize + 44)
+
+      // Scan label
+      ctx.fillStyle = '#666666'
+      ctx.font = '13px sans-serif'
+      ctx.fillText('สแกนเพื่อชำระเงิน', frameWidth / 2, scaledHeaderH + svgSize + 66)
+
+      URL.revokeObjectURL(svgUrl)
 
       const pngBlob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob((blob) => resolve(blob), 'image/png')
@@ -435,7 +471,7 @@ export default function CourtBookingModal({
         || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
       if (isIOS && navigator.share) {
-        const qrFile = new File([pngBlob], 'promptpay-qr.png', { type: 'image/png' })
+        const qrFile = new File([pngBlob], 'payment-qr.png', { type: 'image/png' })
         const canShareFiles = typeof navigator.canShare === 'function'
           ? navigator.canShare({ files: [qrFile] })
           : false
@@ -454,12 +490,16 @@ export default function CourtBookingModal({
       }
 
       const a = document.createElement('a')
-      a.download = 'promptpay-qr.png'
+      a.download = 'payment-qr.png'
       a.href = URL.createObjectURL(pngBlob)
       a.click()
       setTimeout(() => URL.revokeObjectURL(a.href), 1000)
     }
-    img.src = url
+
+    headerImg.onload = draw
+    qrImg.onload = draw
+    headerImg.src = '/thai-qr-payment.webp'
+    qrImg.src = svgUrl
   }
 
   const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
