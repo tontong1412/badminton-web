@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { ChevronLeft, ChevronRight } from '@mui/icons-material'
 import { Box, Divider, Drawer, IconButton, List, ListItem, ListItemButton, ListItemText, Toolbar, Tooltip } from '@mui/material'
@@ -107,12 +107,21 @@ const MenuDrawer = ({ tournamentID }: {tournamentID: string}) => {
     variant="permanent"
     anchor="left"
   >
-    <Toolbar sx={{ display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-end' }}>
+    <Toolbar
+      sx={{
+        display: 'flex',
+        justifyContent: isCollapsed ? 'center' : 'flex-end',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        backgroundColor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}>
       <IconButton onClick={() => setIsCollapsed((prev) => !prev)} size="small">
         {isCollapsed ? <ChevronRight /> : <ChevronLeft />}
       </IconButton>
     </Toolbar>
-    <Divider />
     {renderMenuSection(organizerMenu)}
     <Divider />
     {renderMenuSection(duringTournamentMenu)}
