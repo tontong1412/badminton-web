@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  InputAdornment,
 } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -48,6 +49,7 @@ export default function VenueCourtsPage() {
   const params = useParams()
   const venueId = params.id as string
   const currentUser = useAppSelector((state) => state.app.user)
+  const language = useAppSelector((state) => state.app.language)
 
   const [venue, setVenue] = useState<Venue | null>(null)
   const [courts, setCourts] = useState<Court[]>([])
@@ -717,9 +719,39 @@ export default function VenueCourtsPage() {
               mb: 3,
             }}
           >
-            {/* Row 1 (all screens): date picker + toggle */}
-            <Box sx={{ mb: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+            {/* Row 1 (mobile): Mode toggle — on top, centered, full width */}
+            <ToggleButtonGroup
+              value={bookingMode}
+              exclusive
+              onChange={(_e, val) => { if (val) handleModeChange(_e, val) }}
+              size="small"
+              sx={{
+                display: { xs: 'flex', sm: 'none' },
+                width: '100%',
+                mb: 1.5,
+                flexShrink: 0,
+                '& .MuiToggleButton-root': {
+                  textTransform: 'none', fontWeight: 600,
+                  fontSize: '0.7rem',
+                  px: 1,
+                  py: 0.5,
+                  color: '#695241', border: '1px solid #D4B8A0',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                },
+                '& .Mui-selected': {
+                  bgcolor: '#80644f !important', color: '#fff !important',
+                  borderColor: '#80644f !important',
+                },
+              }}
+            >
+              <ToggleButton value="guided">{t('booking.modeGuided')}</ToggleButton>
+              <ToggleButton value="free">{t('booking.modeFree')}</ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* Row 2: date (stacked on mobile) */}
+            <Box sx={{ mb: 1.5, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-start' } }}>
                 <IconButton
                   size="small"
                   onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').format('YYYY-MM-DD'))}
@@ -727,15 +759,42 @@ export default function VenueCourtsPage() {
                 >
                   <ChevronLeftIcon fontSize="small" />
                 </IconButton>
-                <TextField
-                  size="small"
-                  label={t('booking.date')}
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  sx={{ width: { xs: 130, sm: 160 } }}
-                  inputProps={{ min: moment().format('YYYY-MM-DD') }}
-                />
+                <Box sx={{ position: 'relative', width: { xs: 'auto', sm: 160 }, flex: { xs: 1, sm: 'initial' } }}>
+                  <TextField
+                    size="small"
+                    label={t('booking.date')}
+                    value={selectedDate ? moment(selectedDate).locale(language).format('ddd, D MMM') : ''}
+                    fullWidth
+                    slotProps={{
+                      input: {
+                        readOnly: true,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <CalendarTodayOutlinedIcon fontSize="small" color="action" />
+                          </InputAdornment>
+                        ),
+                      },
+                      inputLabel: { shrink: true },
+                    }}
+                  />
+                  <Box
+                    component="input"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={moment().format('YYYY-MM-DD')}
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer',
+                      border: 'none',
+                      background: 'transparent',
+                    }}
+                  />
+                </Box>
                 <IconButton size="small" onClick={() => setSelectedDate(moment(selectedDate).add(1, 'day').format('YYYY-MM-DD'))}>
                   <ChevronRightIcon fontSize="small" />
                 </IconButton>
@@ -802,19 +861,20 @@ export default function VenueCourtsPage() {
                 </Box>
               )}
 
-              {/* Mode toggle — right-aligned, compact */}
+              {/* Mode toggle — desktop only, right-aligned */}
               <ToggleButtonGroup
                 value={bookingMode}
                 exclusive
                 onChange={(_e, val) => { if (val) handleModeChange(_e, val) }}
                 size="small"
                 sx={{
+                  display: { xs: 'none', sm: 'flex' },
                   ml: 'auto',
                   flexShrink: 0,
                   '& .MuiToggleButton-root': {
                     textTransform: 'none', fontWeight: 600,
-                    fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                    px: { xs: 1, sm: 2 },
+                    fontSize: '0.8rem',
+                    px: 2,
                     py: 0.5,
                     color: '#695241', border: '1px solid #D4B8A0',
                     whiteSpace: 'nowrap',
@@ -830,50 +890,52 @@ export default function VenueCourtsPage() {
               </ToggleButtonGroup>
             </Box>
 
-            {/* Row 2 (mobile only): court count + hours */}
+            {/* Row 3: Court count — mobile only */}
             {bookingMode === 'guided' && (
-              <Box sx={{ mt: 2, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))} disabled={requestedCourtCount <= 1}>
-                    <ChevronLeftIcon fontSize="small" />
-                  </IconButton>
-                  <TextField
-                    size="small"
-                    label={t('booking.numberOfCourts')}
-                    type="number"
-                    value={requestedCourtCount}
-                    onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
-                    sx={{ width: 100 }}
-                    inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                  />
-                  <IconButton size="small" onClick={() => setRequestedCourtCount((v) => v + 1)}>
-                    <ChevronRightIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => setRequestedHours((v) => Math.max(1, v - 1))} disabled={requestedHours <= 1}>
-                    <ChevronLeftIcon fontSize="small" />
-                  </IconButton>
-                  <TextField
-                    size="small"
-                    label={t('booking.numberOfHours')}
-                    type="number"
-                    value={requestedHours}
-                    onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
-                    sx={{ width: 100 }}
-                    inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                  />
-                  <IconButton size="small" onClick={() => setRequestedHours((v) => v + 1)}>
-                    <ChevronRightIcon fontSize="small" />
-                  </IconButton>
-                </Box>
+              <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+                <IconButton size="small" onClick={() => setRequestedCourtCount((v) => Math.max(1, v - 1))} disabled={requestedCourtCount <= 1}>
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+                <TextField
+                  size="small"
+                  label={t('booking.numberOfCourts')}
+                  type="number"
+                  value={requestedCourtCount}
+                  onChange={(e) => setRequestedCourtCount(Math.max(1, Number(e.target.value) || 1))}
+                  sx={{ flex: 1 }}
+                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                />
+                <IconButton size="small" onClick={() => setRequestedCourtCount((v) => v + 1)}>
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
               </Box>
             )}
 
-            {/* Court type filter — mobile only */}
+            {/* Row 4: Hours — mobile only */}
+            {bookingMode === 'guided' && (
+              <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+                <IconButton size="small" onClick={() => setRequestedHours((v) => Math.max(1, v - 1))} disabled={requestedHours <= 1}>
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+                <TextField
+                  size="small"
+                  label={t('booking.numberOfHours')}
+                  type="number"
+                  value={requestedHours}
+                  onChange={(e) => setRequestedHours(Math.max(1, Number(e.target.value) || 1))}
+                  sx={{ flex: 1 }}
+                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                />
+                <IconButton size="small" onClick={() => setRequestedHours((v) => v + 1)}>
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
+
+            {/* Row 5: Court type filter — mobile only */}
             {courtTypes.length > 1 && (
-              <Box sx={{ mt: 2, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{t('booking.courtTypeLabel')}:</Typography>
+              <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, width: '100%' }}>{t('booking.courtTypeLabel')}:</Typography>
                 <Chip
                   label={t('booking.all')}
                   size="small"
@@ -891,6 +953,7 @@ export default function VenueCourtsPage() {
                 ))}
               </Box>
             )}
+
 
           </Box> {/* end controls card */}
 

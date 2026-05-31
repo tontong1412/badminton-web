@@ -558,6 +558,11 @@ export default function CourtBookingModal({
   }
 
   const handleClose = () => {
+    const isLoggedIn = Boolean(currentUser?.id)
+    const bundleID = bookingResult?.bundleID
+    const email = guestEmail
+    const hasUploadedSlip = slipSuccess
+
     setActiveStep(0)
     setSelectedDate('')
     setStartTime('')
@@ -589,6 +594,11 @@ export default function CourtBookingModal({
     setSlipError(null)
     setSlipSuccess(false)
     onClose()
+
+    // Redirect guests to pay page only if they didn't upload slip
+    if (!isLoggedIn && !hasUploadedSlip && bundleID && email) {
+      router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
+    }
   }
 
   const handleCloseAfterBooking = () => {
@@ -627,6 +637,9 @@ export default function CourtBookingModal({
     if (seedCourtID) setRecurringCourtID(seedCourtID)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, preselectedSlot, bookingItems])
+
+  const isGuestBooking = Boolean(bookingResult?.isGuest)
+  const isGuestPaid = isGuestBooking && slipSuccess
 
   return (
     <>
@@ -952,7 +965,7 @@ export default function CourtBookingModal({
                         return (
                           <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
                             <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
-                            <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('DD/MM/YYYY')}</Typography>
+                            <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('dddd, D MMM')}</Typography>
                             <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
                             <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
                           </Box>
@@ -964,7 +977,7 @@ export default function CourtBookingModal({
                           <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
                         </Typography>
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('DD/MM/YYYY')}
+                          <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('dddd, D MMM')}
                         </Typography>
                         <Typography variant="body2" sx={{ mb: 1 }}>
                           <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
@@ -1102,117 +1115,130 @@ export default function CourtBookingModal({
                   )}
                 </Box>
 
-                {venue.payment && (venue.payment.bankName || venue.payment.accountNumber || venue.payment.promptPayID) && (
-                  <Box sx={{ mb: 2, textAlign: 'left' }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                      {t('booking.paymentMethod')}
+                {isGuestPaid ? (
+                  <Alert severity="success" sx={{ textAlign: 'left' }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                      {t('booking.guestSuccessTrackTitle')}
                     </Typography>
-                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Box>
-                        {venue.payment.bankName && (
-                          <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {venue.payment.bankName}</Typography>
-                        )}
-                        {venue.payment.accountName && (
-                          <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {venue.payment.accountName}</Typography>
-                        )}
-                        {venue.payment.accountNumber && (
-                          <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {venue.payment.accountNumber}</Typography>
-                        )}
-                        {venue.payment.promptPayID && (
-                          <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {venue.payment.promptPayID}</Typography>
-                        )}
-                      </Box>
-                      {venue.payment.promptPayID && bookingResult?.totalPrice !== undefined && (
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box
-                            ref={qrRef}
-                            sx={{
-                              width: 240,
-                              borderRadius: 3,
-                              overflow: 'hidden',
-                              border: '1.5px solid #e0e0e0',
-                              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                            }}
-                          >
-                            <Box
-                              component="img"
-                              src="/thai-qr-payment.webp"
-                              alt="Thai QR Payment"
-                              sx={{ width: '100%', display: 'block' }}
-                            />
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode
-                                value={generatePayload(venue.payment.promptPayID, { amount: Number(bookingResult.totalPrice) })}
-                                size={168}
-                                style={{ display: 'block' }}
-                              />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {Number(bookingResult.totalPrice).toFixed(2)}{' '}
-                                <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>
-                                  {bookingResult.currency}
-                                </Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
-                                สแกนเพื่อชำระเงิน
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={handleSaveQR}>
-                            บันทึก QR
-                          </Button>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-                )}
-
-                <Alert severity="warning" sx={{ textAlign: 'left' }}>
-                  {t('booking.uploadSlipWarning')}
-                </Alert>
-
-                {/* Slip upload section */}
-                {!slipSuccess ? (
-                  <Box sx={{ mt: 2, textAlign: 'left' }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                      {t('booking.uploadSlip')}
+                    <Typography variant="body2">
+                      {t('booking.guestSuccessTrackDesc')}
                     </Typography>
-                    <Button
-                      variant="contained"
-                      component="label"
-                      size="small"
-                      fullWidth
-                      sx={{ mb: 1.5 }}
-                    >
-                      {slipPreview ? t('booking.fileSelected') : t('booking.chooseFile')}
-                      <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
-                    </Button>
-                    {slipPreview && (
-                      <Box sx={{ mb: 1.5 }}>
-                        <img
-                          src={slipPreview}
-                          alt="slip preview"
-                          style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 4, border: '1px solid #e0e0e0' }}
-                        />
-                      </Box>
-                    )}
-                    <TextField
-                      size="small"
-                      fullWidth
-                      label={t('booking.note')}
-                      value={slipNote}
-                      onChange={(e) => setSlipNote(e.target.value)}
-                      multiline
-                      rows={2}
-                      sx={{ mb: 1.5 }}
-                    />
-                    {slipError && (
-                      <Alert severity="error" sx={{ mb: 1 }}>{slipError}</Alert>
-                    )}
-                  </Box>
-                ) : (
-                  <Alert severity="success" sx={{ mt: 2, textAlign: 'left' }}>
-                    {t('booking.uploadSlipSubmitted')}
                   </Alert>
+                ) : (
+                  <>
+                    {venue.payment && (venue.payment.bankName || venue.payment.accountNumber || venue.payment.promptPayID) && (
+                      <Box sx={{ mb: 2, textAlign: 'left' }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                          {t('booking.paymentMethod')}
+                        </Typography>
+                        <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Box>
+                            {venue.payment.bankName && (
+                              <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {venue.payment.bankName}</Typography>
+                            )}
+                            {venue.payment.accountName && (
+                              <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {venue.payment.accountName}</Typography>
+                            )}
+                            {venue.payment.accountNumber && (
+                              <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {venue.payment.accountNumber}</Typography>
+                            )}
+                            {venue.payment.promptPayID && (
+                              <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {venue.payment.promptPayID}</Typography>
+                            )}
+                          </Box>
+                          {venue.payment.promptPayID && bookingResult?.totalPrice !== undefined && (
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                ref={qrRef}
+                                sx={{
+                                  width: 240,
+                                  borderRadius: 3,
+                                  overflow: 'hidden',
+                                  border: '1.5px solid #e0e0e0',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                                }}
+                              >
+                                <Box
+                                  component="img"
+                                  src="/thai-qr-payment.webp"
+                                  alt="Thai QR Payment"
+                                  sx={{ width: '100%', display: 'block' }}
+                                />
+                                <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                                  <QRCode
+                                    value={generatePayload(venue.payment.promptPayID, { amount: Number(bookingResult.totalPrice) })}
+                                    size={168}
+                                    style={{ display: 'block' }}
+                                  />
+                                  <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
+                                    {Number(bookingResult.totalPrice).toFixed(2)}{' '}
+                                    <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>
+                                      {bookingResult.currency}
+                                    </Box>
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
+                                    สแกนเพื่อชำระเงิน
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={handleSaveQR}>
+                                บันทึก QR
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+
+                    <Alert severity="warning" sx={{ textAlign: 'left' }}>
+                      {t('booking.uploadSlipWarning')}
+                    </Alert>
+
+                    {/* Slip upload section */}
+                    {!slipSuccess ? (
+                      <Box sx={{ mt: 2, textAlign: 'left' }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                          {t('booking.uploadSlip')}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          component="label"
+                          size="small"
+                          fullWidth
+                          sx={{ mb: 1.5 }}
+                        >
+                          {slipPreview ? t('booking.fileSelected') : t('booking.chooseFile')}
+                          <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
+                        </Button>
+                        {slipPreview && (
+                          <Box sx={{ mb: 1.5 }}>
+                            <img
+                              src={slipPreview}
+                              alt="slip preview"
+                              style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 4, border: '1px solid #e0e0e0' }}
+                            />
+                          </Box>
+                        )}
+                        <TextField
+                          size="small"
+                          fullWidth
+                          label={t('booking.note')}
+                          value={slipNote}
+                          onChange={(e) => setSlipNote(e.target.value)}
+                          multiline
+                          rows={2}
+                          sx={{ mb: 1.5 }}
+                        />
+                        {slipError && (
+                          <Alert severity="error" sx={{ mb: 1 }}>{slipError}</Alert>
+                        )}
+                      </Box>
+                    ) : (
+                      <Alert severity="success" sx={{ mt: 2, textAlign: 'left' }}>
+                        {t('booking.uploadSlipSubmitted')}
+                      </Alert>
+                    )}
+                  </>
                 )}
               </Box>
             )}
@@ -1244,17 +1270,30 @@ export default function CourtBookingModal({
               <Button onClick={handleCloseAfterBooking} color="inherit">
                 {t('action.close')}
               </Button>
-              <Button
-                onClick={handleSlipSubmit}
-                variant="contained"
-                sx={{
-                  bgcolor: '#80644f',
-                  '&:hover': { bgcolor: '#6e5542' },
-                }}
-                disabled={!bookingResult?.bundleID || !slipPreview || slipSubmitting || slipSuccess}
-              >
-                {slipSubmitting ? <CircularProgress size={20} /> : t('booking.uploadSlip')}
-              </Button>
+              {isGuestPaid ? (
+                <Button
+                  onClick={() => router.push('/register')}
+                  variant="contained"
+                  sx={{
+                    bgcolor: '#80644f',
+                    '&:hover': { bgcolor: '#6e5542' },
+                  }}
+                >
+                  {t('booking.createAccount')}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSlipSubmit}
+                  variant="contained"
+                  sx={{
+                    bgcolor: '#80644f',
+                    '&:hover': { bgcolor: '#6e5542' },
+                  }}
+                  disabled={!bookingResult?.bundleID || !slipPreview || slipSubmitting || slipSuccess}
+                >
+                  {slipSubmitting ? <CircularProgress size={20} /> : t('booking.uploadSlip')}
+                </Button>
+              )}
             </>
           )}
         </DialogActions>

@@ -9,7 +9,9 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  InputAdornment,
 } from '@mui/material'
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
 import { BookingAvailability, Court } from '@/type'
 import courtsService from '../services/courts'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +28,7 @@ export default function BookingAvailabilityComponent({
   onSlotSelected,
   minDate,
 }: BookingAvailabilityProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [selectedDate, setSelectedDate] = useState<string>(minDate || moment().format('YYYY-MM-DD'))
   const [availability, setAvailability] = useState<BookingAvailability | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<{ startTime: string; endTime: string } | null>(null)
@@ -88,18 +90,43 @@ export default function BookingAvailabilityComponent({
       </Typography>
 
       <Box sx={{ mb: 3 }}>
-        <TextField
-          size='small'
-          type="date"
-          value={selectedDate}
-          onChange={handleDateChange}
-          inputProps={{
-            min: minDateStr,
-            max: maxDateStr,
-          }}
-          fullWidth
-          label={t('booking.date')}
-        />
+        <Box sx={{ position: 'relative' }}>
+          <TextField
+            size='small'
+            value={selectedDate ? moment(selectedDate).locale(i18n.language).format('ddd, D MMM') : ''}
+            fullWidth
+            label={t('booking.date')}
+            slotProps={{
+              input: {
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <CalendarTodayOutlinedIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+              },
+              inputLabel: { shrink: true },
+            }}
+          />
+          <Box
+            component="input"
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            min={minDateStr}
+            max={maxDateStr}
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+              border: 'none',
+              background: 'transparent',
+            }}
+          />
+        </Box>
       </Box>
 
       {error && (
