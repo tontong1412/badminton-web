@@ -32,12 +32,18 @@ import LoginModal from './LoginModal'
 import { useTranslation } from 'react-i18next'
 import bookingsService from '../services/bookings'
 import couponService, { ValidateCouponResponse } from '../services/coupons'
+import playersService from '../services/players'
 import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingSlice'
+import { login } from '../libs/redux/slices/appSlice'
 import moment from 'moment'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 import { useRouter } from 'next/navigation'
+import QRCode from 'react-qr-code'
+import DownloadIcon from '@mui/icons-material/Download'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const generatePayload = require('promptpay-qr') as (id: string, options?: { amount?: number }) => string
 
 interface BookingItemInput {
   courtID: string;
@@ -70,7 +76,7 @@ export default function CourtBookingModal({
   onBookingComplete,
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
-  const steps = [t('booking.step2'), t('booking.step3')]
+  const steps = [t('booking.step2'), t('booking.step3'), t('booking.step4')]
   const dispatch = useAppDispatch()
   const router = useRouter()
   const currentUser = useAppSelector((state) => state.app.user)
@@ -91,7 +97,15 @@ export default function CourtBookingModal({
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [termsError, setTermsError] = useState(false)
   const termsRef = useRef<HTMLLabelElement>(null)
+  const qrRef = useRef<HTMLDivElement>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [bookingResult, setBookingResult] = useState<{ bookingRef?: string; totalPrice?: number; currency?: string; highlightKey?: string; isGuest?: boolean; bundleID?: string } | null>(null)
+  const [slipPreview, setSlipPreview] = useState<string | null>(null)
+  const [slipNote, setSlipNote] = useState('')
+  const [slipSubmitting, setSlipSubmitting] = useState(false)
+  const [slipError, setSlipError] = useState<string | null>(null)
+  const [slipSuccess, setSlipSuccess] = useState(false)
 
   const [bookingType, setBookingType] = useState<'single' | 'recurring'>('single')
   const [recurringCourtID, setRecurringCourtID] = useState('')
@@ -189,8 +203,8 @@ export default function CourtBookingModal({
   const handleNext = () => {
     if (activeStep === 0) {
       if (currentUser) {
-        const profilePhone = currentUser.player.contact?.tel
-        if (!profilePhone && !userPhone) {
+        const profilePhone = currentUser.player.contact?.tel?.trim()
+        if (!profilePhone && !userPhone.trim()) {
           setErrorState('Please enter your phone number so the venue can contact you.')
           return
         }
@@ -254,12 +268,13 @@ export default function CourtBookingModal({
           { withCredentials: true },
         )
         setErrorState(null)
-        setActiveStep(0)
         setAgreeTerms(false)
         setNote('')
         setBookingType('single')
         setRecurringConflicts([])
-        onBookingComplete(false)
+        const currency = recurringCourt?.currency ?? 'THB'
+        setBookingResult({ totalPrice: recurringTotalPrice, currency })
+        setActiveStep(2)
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
           const data = err.response?.data as { message?: string; conflicts?: { date: string; reason: string }[] }
@@ -289,6 +304,40 @@ export default function CourtBookingModal({
     try {
       setLoading(true)
 
+      const enteredUserPhone = userPhone.trim()
+      const profilePhone = currentUser?.player.contact?.tel?.trim()
+
+      if (currentUser?.id && !profilePhone && enteredUserPhone) {
+        try {
+          const updatedPlayer = await playersService.updateMe(currentUser.player.id, {
+            contact: {
+              line: currentUser.player.contact?.line ?? '',
+              tel: enteredUserPhone,
+            },
+          })
+          dispatch(login({
+            ...currentUser,
+            player: {
+              ...currentUser.player,
+              contact: {
+                line: updatedPlayer.contact?.line ?? currentUser.player.contact?.line ?? '',
+                tel: updatedPlayer.contact?.tel ?? enteredUserPhone,
+              },
+            },
+          }))
+        } catch (savePhoneError: unknown) {
+          if (axios.isAxiosError(savePhoneError)) {
+            const msg = (savePhoneError.response?.data as { message?: string } | undefined)?.message
+            setErrorState(msg ?? 'Failed to save your phone number. Please try again.')
+          } else {
+            setErrorState('Failed to save your phone number. Please try again.')
+          }
+          return
+        }
+      }
+
+      const bookingPhone = currentUser?.id ? (enteredUserPhone || profilePhone) : undefined
+
       const effectiveItems = isItemsPreselected && bookingItems
         ? bookingItems
         : courts.map((court) => ({
@@ -305,8 +354,8 @@ export default function CourtBookingModal({
           guestPhone,
           guestEmail,
         }),
-        ...(currentUser?.id && (userPhone || currentUser.player.contact?.tel) && {
-          guestPhone: userPhone || currentUser.player.contact?.tel,
+        ...(currentUser?.id && bookingPhone && {
+          guestPhone: bookingPhone,
         }),
         ...(note && { note }),
         ...(couponResult && { couponCode: couponResult.code }),
@@ -321,37 +370,129 @@ export default function CourtBookingModal({
       }
 
       setErrorState(null)
-      setActiveStep(0)
 
-      // Reset form
-      setSelectedDate('')
-      setStartTime('')
-      setEndTime('')
-      setGuestName('')
-      setGuestPhone('')
-      setGuestEmail('')
-      setUserPhone('')
-      setNote('')
-      setAgreeTerms(false)
-      setCouponCode('')
-      setCouponResult(null)
-      setCouponError(null)
-
-      if (currentUser?.id) {
-        const highlightKey = 'bookings' in result
-          ? result.bookingBundleID
-          : (result.bookingBundleID || `single-${result.id}`)
-        router.push(`/bookings?highlight=${highlightKey}`)
-      } else {
-        onBookingComplete(true)
-      }
+      const totalPrice = 'bookings' in result
+        ? result.totalPrice
+        : result.totalPrice
+      const currency = 'bookings' in result
+        ? (result.bookings?.[0]?.currency ?? courts[0]?.currency ?? 'THB')
+        : (result.currency ?? courts[0]?.currency ?? 'THB')
+      const highlightKey = 'bookings' in result
+        ? result.bookingBundleID
+        : (result.bookingBundleID || `single-${result.id}`)
+      const bookingRef = 'bookingRef' in result ? result.bookingRef : undefined
+      setBookingResult({
+        bookingRef,
+        totalPrice,
+        currency,
+        highlightKey,
+        isGuest: !currentUser?.id,
+        bundleID: 'bookings' in result ? result.bookingBundleID : result.bookingBundleID,
+      })
+      setActiveStep(2)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Booking failed'
+      let message = 'Booking failed. Please try again.'
+      if (axios.isAxiosError(err)) {
+        message = (err.response?.data as { message?: string } | undefined)?.message ?? message
+      } else if (err instanceof Error) {
+        message = err.message
+      }
       setErrorState(message)
       dispatch(setError(message))
       console.error('Booking error:', err)
+      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSaveQR = async() => {
+    if (!qrRef.current) return
+    const svg = qrRef.current.querySelector('svg')
+    if (!svg) return
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const canvas = document.createElement('canvas')
+    const size = 200
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const img = new window.Image()
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    img.onload = async() => {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, size, size)
+      ctx.drawImage(img, 0, 0, size, size)
+      URL.revokeObjectURL(url)
+
+      const pngBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png')
+      })
+      if (!pngBlob) return
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+      if (isIOS && navigator.share) {
+        const qrFile = new File([pngBlob], 'promptpay-qr.png', { type: 'image/png' })
+        const canShareFiles = typeof navigator.canShare === 'function'
+          ? navigator.canShare({ files: [qrFile] })
+          : false
+        if (canShareFiles) {
+          try {
+            await navigator.share({
+              files: [qrFile],
+              title: 'PromptPay QR',
+              text: 'Save this QR image to Photos',
+            })
+            return
+          } catch {
+            // User cancelled or share failed; continue with regular download fallback.
+          }
+        }
+      }
+
+      const a = document.createElement('a')
+      a.download = 'promptpay-qr.png'
+      a.href = URL.createObjectURL(pngBlob)
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+    }
+    img.src = url
+  }
+
+  const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => setSlipPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setSlipPreview(null)
+    }
+  }
+
+  const handleSlipSubmit = async() => {
+    if (!bookingResult?.bundleID || !slipPreview) return
+    try {
+      setSlipSubmitting(true)
+      setSlipError(null)
+      await bookingsService.payBooking(
+        bookingResult.bundleID,
+        { slip: slipPreview, note: slipNote || undefined },
+        bookingResult.isGuest ? guestEmail : undefined,
+      )
+      setSlipSuccess(true)
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const msg = (err.response?.data as { message?: string } | undefined)?.message
+        setSlipError(msg ?? 'Failed to submit slip. Please try again.')
+      } else {
+        setSlipError('Failed to submit slip. Please try again.')
+      }
+    } finally {
+      setSlipSubmitting(false)
     }
   }
 
@@ -401,7 +542,28 @@ export default function CourtBookingModal({
     setCouponCode('')
     setCouponResult(null)
     setCouponError(null)
+    setBookingResult(null)
+    setSlipPreview(null)
+    setSlipNote('')
+    setSlipSubmitting(false)
+    setSlipError(null)
+    setSlipSuccess(false)
     onClose()
+  }
+
+  const handleCloseAfterBooking = () => {
+    const targetHighlight = bookingResult?.highlightKey
+    const isLoggedIn = Boolean(currentUser?.id)
+    handleClose()
+    if (isLoggedIn) {
+      if (targetHighlight) {
+        router.push(`/bookings?highlight=${targetHighlight}`)
+      } else {
+        router.push('/bookings')
+      }
+    } else {
+      onBookingComplete(true)
+    }
   }
 
   useEffect(() => {
@@ -447,7 +609,7 @@ export default function CourtBookingModal({
             </Stepper>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert ref={errorRef} severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
@@ -881,20 +1043,153 @@ export default function CourtBookingModal({
                 </Alert>
               </Box>
             )}
+
+            {activeStep === 2 && (
+              <Box sx={{ textAlign: 'center' }}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" color="warning.main" fontWeight={700} sx={{ mb: 0.5 }}>
+                    {t('booking.bookingPending')}
+                  </Typography>
+                  {bookingResult?.bookingRef && (
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', display: 'inline-block', px: 1.5, py: 0.5, borderRadius: 1, fontWeight: 700, letterSpacing: 1 }}>
+                      #{bookingResult.bookingRef}
+                    </Typography>
+                  )}
+                  {bookingResult?.totalPrice !== undefined && (
+                    <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
+                      {t('booking.total')}: {Number(bookingResult.totalPrice).toFixed(2)} {bookingResult.currency}
+                    </Typography>
+                  )}
+                </Box>
+
+                {venue.payment && (venue.payment.bankName || venue.payment.accountNumber || venue.payment.promptPayID) && (
+                  <Box sx={{ mb: 2, textAlign: 'left' }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                      {t('booking.paymentMethod')}
+                    </Typography>
+                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box>
+                        {venue.payment.bankName && (
+                          <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {venue.payment.bankName}</Typography>
+                        )}
+                        {venue.payment.accountName && (
+                          <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {venue.payment.accountName}</Typography>
+                        )}
+                        {venue.payment.accountNumber && (
+                          <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {venue.payment.accountNumber}</Typography>
+                        )}
+                        {venue.payment.promptPayID && (
+                          <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {venue.payment.promptPayID}</Typography>
+                        )}
+                      </Box>
+                      {venue.payment.promptPayID && bookingResult?.totalPrice !== undefined && (
+                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                          <Box
+                            ref={qrRef}
+                            sx={{
+                              width: 240,
+                              borderRadius: 3,
+                              overflow: 'hidden',
+                              border: '1.5px solid #e0e0e0',
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src="/thai-qr-payment.webp"
+                              alt="Thai QR Payment"
+                              sx={{ width: '100%', display: 'block' }}
+                            />
+                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                              <QRCode
+                                value={generatePayload(venue.payment.promptPayID, { amount: Number(bookingResult.totalPrice) })}
+                                size={168}
+                                style={{ display: 'block' }}
+                              />
+                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
+                                {Number(bookingResult.totalPrice).toFixed(2)}{' '}
+                                <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>
+                                  {bookingResult.currency}
+                                </Box>
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
+                                สแกนเพื่อชำระเงิน
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={handleSaveQR}>
+                            บันทึก QR
+                          </Button>
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+
+                <Alert severity="warning" sx={{ textAlign: 'left' }}>
+                  {t('booking.uploadSlipWarning')}
+                </Alert>
+
+                {/* Slip upload section */}
+                {!slipSuccess ? (
+                  <Box sx={{ mt: 2, textAlign: 'left' }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                      {t('booking.uploadSlip')}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      size="small"
+                      fullWidth
+                      sx={{ mb: 1.5 }}
+                    >
+                      {slipPreview ? t('booking.fileSelected') : t('booking.chooseFile')}
+                      <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
+                    </Button>
+                    {slipPreview && (
+                      <Box sx={{ mb: 1.5 }}>
+                        <img
+                          src={slipPreview}
+                          alt="slip preview"
+                          style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 4, border: '1px solid #e0e0e0' }}
+                        />
+                      </Box>
+                    )}
+                    <TextField
+                      size="small"
+                      fullWidth
+                      label={t('booking.note')}
+                      value={slipNote}
+                      onChange={(e) => setSlipNote(e.target.value)}
+                      multiline
+                      rows={2}
+                      sx={{ mb: 1.5 }}
+                    />
+                    {slipError && (
+                      <Alert severity="error" sx={{ mb: 1 }}>{slipError}</Alert>
+                    )}
+                  </Box>
+                ) : (
+                  <Alert severity="success" sx={{ mt: 2, textAlign: 'left' }}>
+                    {t('booking.uploadSlipSubmitted')}
+                  </Alert>
+                )}
+              </Box>
+            )}
           </Box>
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={handleClose}>{t('booking.cancel')}</Button>
-          {activeStep > 0 && (
+          {activeStep < 2 && <Button onClick={handleClose}>{t('booking.cancel')}</Button>}
+          {activeStep > 0 && activeStep < 2 && (
             <Button onClick={handleBack}>{t('booking.back')}</Button>
           )}
-          {activeStep < steps.length - 1 && (
+          {activeStep < steps.length - 2 && (
             <Button onClick={handleNext} variant="contained" color="primary">
               {t('booking.next')}
             </Button>
           )}
-          {activeStep === steps.length - 1 && (
+          {activeStep === steps.length - 2 && (
             <Button
               onClick={handleSubmit}
               variant="contained"
@@ -903,6 +1198,24 @@ export default function CourtBookingModal({
             >
               {loading ? <CircularProgress size={24} /> : bookingType === 'recurring' ? `Book (${recurringDatesPreview.length} session${recurringDatesPreview.length !== 1 ? 's' : ''})` : t('booking.confirmBooking')}
             </Button>
+          )}
+          {activeStep === steps.length - 1 && (
+            <>
+              <Button onClick={handleCloseAfterBooking} color="inherit">
+                {t('action.close')}
+              </Button>
+              <Button
+                onClick={handleSlipSubmit}
+                variant="contained"
+                sx={{
+                  bgcolor: '#80644f',
+                  '&:hover': { bgcolor: '#6e5542' },
+                }}
+                disabled={!bookingResult?.bundleID || !slipPreview || slipSubmitting || slipSuccess}
+              >
+                {slipSubmitting ? <CircularProgress size={20} /> : t('booking.uploadSlip')}
+              </Button>
+            </>
           )}
         </DialogActions>
       </Dialog>
