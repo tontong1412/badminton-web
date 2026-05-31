@@ -727,7 +727,8 @@ export default function VenueCourtsPage() {
               size="small"
               sx={{
                 display: { xs: 'flex', sm: 'none' },
-                width: '100%',
+                width: { xs: 'calc(100% - 84px)', sm: 'auto' },
+                mx: 'auto',
                 mb: 1.5,
                 flexShrink: 0,
                 '& .MuiToggleButton-root': {
