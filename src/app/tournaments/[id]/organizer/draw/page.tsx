@@ -47,6 +47,14 @@ const Organizer = () => {
     setTabIndex(newValue)
   }
 
+  const isGroupDrawFormat = (format?: string) => {
+    const normalized = format?.toLowerCase()
+    return (
+      normalized === EventFormat.GroupPlayoff.toLowerCase() ||
+      normalized === EventFormat.GroupPlayoffConsolation.toLowerCase()
+    )
+  }
+
   return (
     <TournamentLayout tournament={tournament}>
       {!tournament ? <CircularProgress/> :
@@ -66,7 +74,7 @@ const Organizer = () => {
             </Tabs>
             <Box component="main" sx={{ flexGrow: 1, p: 2, pt:0 }}>
               {tournament.events.map(((event, idx) => {
-                if(event.format === EventFormat.GroupPlayoff){
+                if(isGroupDrawFormat(event.format)){
                   return (
                     <TabPanel value={tabIndex} index={idx} key={event.id} >
                       <GroupDraw eventID={event.id}/>

@@ -107,10 +107,11 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
 
   }
 
-  const onRandomDraw = async(eventID: string) => {
+  const onRandomDraw = async(eventID: string, stage: 'group' | 'ko' | 'all') => {
     try{
       const response = await axios.post(`${SERVICE_ENDPOINT}/events/random-draw`, {
         eventID,
+        stage,
         groupCount: numGroup,
         qualifiedCount: numPlayoff
       }, { withCredentials:true })
@@ -178,7 +179,9 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
           variant="outlined"
           type='number' />
         <Button sx={{ borderRadius: 10, width:'100px' }} onClick={() => setConfirmVisible(true)} color='error' variant='contained' size='large'>Reset</Button>
-        <Button sx={{ borderRadius: 10, width:'100px'  }} onClick={() => onRandomDraw(event.id)} color='primary' variant='contained' size='large'>Random</Button>
+        <Button sx={{ borderRadius: 10 }} onClick={() => onRandomDraw(event.id, 'group')} color='primary' variant='outlined' size='large'>Random Group</Button>
+        <Button sx={{ borderRadius: 10 }} onClick={() => onRandomDraw(event.id, 'ko')} color='primary' variant='outlined' size='large'>Random KO</Button>
+        <Button sx={{ borderRadius: 10 }} onClick={() => onRandomDraw(event.id, 'all')} color='primary' variant='contained' size='large'>Random All</Button>
         <Button sx={{ borderRadius: 10, width:'100px'  }} onClick={() => onSaveDraw(event.id)} color='primary' variant='contained' size='large'>Save</Button>
       </Box>
       <Box sx={{ display:'flex' }}>
