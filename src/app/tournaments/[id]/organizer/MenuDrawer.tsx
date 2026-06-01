@@ -1,7 +1,7 @@
 'use client'
 
 import { ChevronLeft, ChevronRight } from '@mui/icons-material'
-import { Box, Divider, Drawer, IconButton, List, ListItem, ListItemButton, ListItemText, Toolbar, Tooltip } from '@mui/material'
+import { Divider, Drawer, IconButton, List, ListItem, ListItemButton, ListItemText, Toolbar, Tooltip } from '@mui/material'
 import { useState } from 'react'
 
 const expandedDrawerWidth = 200
