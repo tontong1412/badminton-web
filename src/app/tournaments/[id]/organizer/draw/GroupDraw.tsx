@@ -1,7 +1,7 @@
 import { MAP_GROUP_NAME, SERVICE_ENDPOINT } from '@/app/constants'
 import { RootState } from '@/app/libs/redux/store'
-import { Event, EventTeam, Language, Player } from '@/type'
-import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { Event, EventFormat, EventTeam, Language, Player } from '@/type'
+import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControl, InputLabel, MenuItem, Paper, Select, Step, StepLabel, Stepper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import axios from 'axios'
 import { MouseEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,12 +23,15 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
   const [groupDisplayArray, setGroupDisplayArray] = useState<(number)[]>([])
   const [draw, setDraw] = useState<Event['draw']>({})
   const [numPlayoff, setNumPlayoff] = useState(8)
+  const [numConsolation, setNumConsolation] = useState(8)
   const [numGroup, setNumGroup] = useState(4)
+  const [activeStep, setActiveStep] = useState(0)
   const [confirmVisible, setConfirmVisible] = useState(false)
   const { event } = useEvent(eventID)
 
   useEffect(() => {
     setNumPlayoff(numGroup * 2)
+    setNumConsolation(numGroup * 2)
   }, [numGroup])
 
   useEffect(() => {
@@ -107,12 +110,27 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
 
   }
 
-  const onRandomDraw = async(eventID: string) => {
+  const onRandomDraw = async(eventID: string, stage: 'group' | 'ko' | 'consolation') => {
     try{
-      const response = await axios.post(`${SERVICE_ENDPOINT}/events/random-draw`, {
+      const payload: {
+        eventID: string;
+        stage: 'group' | 'ko' | 'consolation';
+        groupCount: number;
+        qualifiedCount: number;
+        qualifiedConsolationCount?: number;
+      } = {
         eventID,
+        stage,
         groupCount: numGroup,
-        qualifiedCount: numPlayoff
+        qualifiedCount: numPlayoff,
+      }
+
+      if(stage === 'consolation'){
+        payload.qualifiedConsolationCount = numConsolation
+      }
+
+      const response = await axios.post(`${SERVICE_ENDPOINT}/events/random-draw`, {
+        ...payload
       }, { withCredentials:true })
       setDraw(response.data.draw)
     } catch(error){
@@ -159,95 +177,172 @@ const GroupDraw = ({ eventID }: GroupDrawProps) => {
     return null
   }
 
+  const isConsolationFormat = event.format?.toLowerCase() === EventFormat.GroupPlayoffConsolation.toLowerCase()
+  const drawSteps: { label: string; stage: 'group' | 'ko' | 'consolation' }[] = [
+    { label: 'Group Draw', stage: 'group' },
+    { label: 'Knockout Draw', stage: 'ko' },
+    ...(isConsolationFormat ? [{ label: 'Consolation Draw', stage: 'consolation' as const }] : []),
+  ]
+
+  const currentStep = drawSteps[activeStep]
+
+  const onRunStep = () => {
+    if(!currentStep){
+      return
+    }
+    onRandomDraw(event.id, currentStep.stage)
+  }
+
   return (
     <Box sx={{ display:'flex', gap: 1, overflow: 'hidden', p:1, flexDirection:'column'  }}>
-      <Box sx={{ display:'flex', gap:2, margin: 1 }}>
-        <TextField
-          autoFocus
-          value={numGroup}
-          onChange={(e) => setNumGroup(Number(e.target.value))}
-          size='small'
-          label="จำนวนกลุ่ม"
-          variant="outlined"
-          type='number' />
-        <TextField
-          value={numPlayoff}
-          onChange={(e) => setNumPlayoff(Number(e.target.value))}
-          size='small'
-          label="จำนวนทีมที่เข้ารอบ"
-          variant="outlined"
-          type='number' />
-        <Button sx={{ borderRadius: 10, width:'100px' }} onClick={() => setConfirmVisible(true)} color='error' variant='contained' size='large'>Reset</Button>
-        <Button sx={{ borderRadius: 10, width:'100px'  }} onClick={() => onRandomDraw(event.id)} color='primary' variant='contained' size='large'>Random</Button>
-        <Button sx={{ borderRadius: 10, width:'100px'  }} onClick={() => onSaveDraw(event.id)} color='primary' variant='contained' size='large'>Save</Button>
-      </Box>
-      <Box sx={{ display:'flex' }}>
-        <TableContainer component={Paper} sx={{ maxWidth: '50%', maxHeight: 500 }} >
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('tournament.participants.team')}</TableCell>
-                <TableCell>{t('tournament.participants.club')}</TableCell>
-                <TableCell>{'กลุ่ม'}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {event.teams?.map((team, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    {team.players.map((player) => {
-                      return(<div key={player.id} onClick={(e) => handleShowPlayerDetail(e, player)}>
-                        <Typography >{player.officialName?.[language]}</Typography>
-                      </div>)
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    {team.players.map((player) => <Typography key={player.id}>{player.club}</Typography>)}
-                  </TableCell>
-                  <TableCell>
-                    <FormControl fullWidth>
-                      <InputLabel id="event-label">{'Group'}</InputLabel>
-                      <Select
-                        size='small'
-                        required
-                        label="Event"
-                        labelId="event-label"
-                        value={groupDisplayArray[idx]?.toString()}
-                        onChange={(e) => handleSelectChange(e.target.value, team, idx)}>
-                        {MAP_GROUP_NAME.slice(0, numGroup).map((group) => (
-                          <MenuItem key={group.VALUE} value={group.VALUE}>
-                            {group.NAME}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </TableCell>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, margin: 1, width: '100%' }}>
+        <Stepper
+          activeStep={activeStep}
+          alternativeLabel
+          sx={{
+            width: '100%',
+            '& .MuiStep-root': { flex: 1 },
+          }}>
+          {drawSteps.map((step) => (
+            <Step key={step.stage}>
+              <StepLabel>{step.label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
 
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={event.tournament.useHandicap}/>}
-        </TableContainer>
-        {draw.group && draw.group.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
-        <Box sx={{ display:'flex', flexWrap: 'wrap', gap:2, width:'50%', overflow:'scroll', p:1, pt:0, maxHeight: 500 }}>
-          {
-            draw.group?.map((group, i) => <Card key={i} sx={{ width:'320px' }}>
-              <CardHeader title={MAP_GROUP_NAME[i].NAME} sx={{ borderBottom: '1px solid #ddd' }}/>
-              {
-                group?.map((team, j) => <CardContent key={j}>
-                  {team?.players.map((p) => <Box key={p.id} display={'flex'}>
-                    <Typography width={150}>{p.officialName?.[language]}</Typography>
-                    <Typography >{p.club}</Typography>
-                  </Box>)}
-                </CardContent>)
-              }
-            </Card>)
-          }
+        <Box sx={{ display:'flex', gap:2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            autoFocus
+            value={numGroup}
+            onChange={(e) => setNumGroup(Number(e.target.value))}
+            size='small'
+            label="จำนวนกลุ่ม"
+            variant="outlined"
+            type='number' />
+
+          {currentStep?.stage === 'ko' && <TextField
+            value={numPlayoff}
+            onChange={(e) => setNumPlayoff(Number(e.target.value))}
+            size='small'
+            label="จำนวนทีมที่เข้ารอบ"
+            variant="outlined"
+            type='number' />}
+
+          {currentStep?.stage === 'consolation' && <TextField
+            value={numConsolation}
+            onChange={(e) => setNumConsolation(Number(e.target.value))}
+            size='small'
+            label="จำนวนทีมสายปลอบใจ"
+            variant="outlined"
+            type='number' />}
+
+          <Button sx={{ borderRadius: 10 }} onClick={onRunStep} color='primary' variant='outlined' size='large'>
+            {`Random ${currentStep?.label ?? ''}`}
+          </Button>
+          <Button
+            sx={{ borderRadius: 10 }}
+            onClick={() => setActiveStep((prev) => Math.max(prev - 1, 0))}
+            disabled={activeStep === 0}
+            variant='text'>
+            Back
+          </Button>
+          <Button
+            sx={{ borderRadius: 10 }}
+            onClick={() => setActiveStep((prev) => Math.min(prev + 1, drawSteps.length - 1))}
+            disabled={activeStep === drawSteps.length - 1}
+            variant='text'>
+            Next
+          </Button>
+          <Button sx={{ borderRadius: 10, width:'100px' }} onClick={() => setConfirmVisible(true)} color='error' variant='contained' size='large'>Reset</Button>
+          <Button sx={{ borderRadius: 10, width:'100px'  }} onClick={() => onSaveDraw(event.id)} color='primary' variant='contained' size='large'>Save</Button>
         </Box>
+        <Typography variant='body2' color='text.secondary'>
+          {currentStep?.stage === 'group' && 'Step 1: จับสลากแบ่งกลุ่มก่อน'}
+          {currentStep?.stage === 'ko' && 'Step 2: จับสลากรอบน็อคเอาท์จากจำนวนทีมที่เข้ารอบ'}
+          {currentStep?.stage === 'consolation' && 'Step 3: จับสลากสายปลอบใจแยกจากรอบหลัก'}
+        </Typography>
       </Box>
-      {draw.ko && draw.ko?.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
-      <DrawBracket draw={draw} order={draw.ko ?? []} setDraw={setDraw}/>
+      {currentStep?.stage === 'group' && (
+        <Box sx={{ display:'flex' }}>
+          <TableContainer component={Paper} sx={{ maxWidth: '50%', maxHeight: 500 }} >
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('tournament.participants.team')}</TableCell>
+                  <TableCell>{t('tournament.participants.club')}</TableCell>
+                  <TableCell>{'กลุ่ม'}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {event.teams?.map((team, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      {team.players.map((player) => {
+                        return(<div key={player.id} onClick={(e) => handleShowPlayerDetail(e, player)}>
+                          <Typography >{player.officialName?.[language]}</Typography>
+                        </div>)
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {team.players.map((player) => <Typography key={player.id}>{player.club}</Typography>)}
+                    </TableCell>
+                    <TableCell>
+                      <FormControl fullWidth>
+                        <InputLabel id="event-label">{'Group'}</InputLabel>
+                        <Select
+                          size='small'
+                          required
+                          label="Event"
+                          labelId="event-label"
+                          value={groupDisplayArray[idx]?.toString()}
+                          onChange={(e) => handleSelectChange(e.target.value, team, idx)}>
+                          {MAP_GROUP_NAME.slice(0, numGroup).map((group) => (
+                            <MenuItem key={group.VALUE} value={group.VALUE}>
+                              {group.NAME}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </TableCell>
+
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {showPlayer && <PlayerPopover showPlayer={showPlayer} setShowPlayer={setShowPlayer} anchorEl={anchorEl} setAnchorEl={setAnchorEl} useHandicap={event.tournament.useHandicap}/>}
+          </TableContainer>
+          {draw.group && draw.group.length > 0 && <Divider sx={{ mt:3, mb:3 }}/>}
+          <Box sx={{ display:'flex', flexWrap: 'wrap', gap:2, width:'50%', overflow:'scroll', p:1, pt:0, maxHeight: 500 }}>
+            {
+              draw.group?.map((group, i) => <Card key={i} sx={{ width:'320px' }}>
+                <CardHeader title={MAP_GROUP_NAME[i].NAME} sx={{ borderBottom: '1px solid #ddd' }}/>
+                {
+                  group?.map((team, j) => <CardContent key={j}>
+                    {team?.players.map((p) => <Box key={p.id} display={'flex'}>
+                      <Typography width={150}>{p.officialName?.[language]}</Typography>
+                      <Typography >{p.club}</Typography>
+                    </Box>)}
+                  </CardContent>)
+                }
+              </Card>)
+            }
+          </Box>
+        </Box>
+      )}
+
+      {currentStep?.stage === 'ko' && (
+        <>
+          <Typography variant='h6' sx={{ mb: 1 }}>Knockout</Typography>
+          <DrawBracket draw={draw} order={draw.ko ?? []} setDraw={setDraw}/>
+        </>
+      )}
+
+      {currentStep?.stage === 'consolation' && (
+        <>
+          <Typography variant='h6' sx={{ mb: 1 }}>Consolation</Typography>
+          <DrawBracket draw={draw} order={draw.consolation ?? []}/>
+        </>
+      )}
       <Dialog
         open={confirmVisible}
         slots={{
