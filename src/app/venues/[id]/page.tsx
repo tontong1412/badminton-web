@@ -277,7 +277,7 @@ export default function VenueCourtsPage() {
           if (!avail) return
           avail.slots.forEach((slot) => {
             if (!slot.available) return
-            if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) return
+            if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isBefore(moment().startOf('hour'))) return
             const key = `${slot.startTime}-${slot.endTime}`
             const existing = slotMap.get(key)
             if (existing) {
@@ -309,7 +309,7 @@ export default function VenueCourtsPage() {
             stepBulkFetched[court.id]?.slots.forEach((s) => allStepStarts.add(s.startTime))
           })
           allStepStarts.forEach((windowStart) => {
-            if (moment(`${selectedDate} ${windowStart}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) return
+            if (moment(`${selectedDate} ${windowStart}`, 'YYYY-MM-DD HH:mm').isBefore(moment().startOf('hour'))) return
             const windowEnd = addMinutes(windowStart, requestedDurationMinutes)
             const key = `${windowStart}-${windowEnd}`
             if (slotMap.has(key)) return  // already a same-court slot
@@ -392,7 +392,7 @@ export default function VenueCourtsPage() {
   }
 
   const handleSelectGuidedSlot = (slot: { startTime: string; endTime: string; isSplit: boolean }) => {
-    if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {
+    if (moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm').isBefore(moment().startOf('hour'))) {
       setGuidedError(t('booking.pastTimeNotAllowed'))
       return
     }
@@ -498,7 +498,7 @@ export default function VenueCourtsPage() {
   }, [selectedDate, filteredCourts, slotDurationMinutes])
 
   const handleCellClick = (startTime: string, court: Court) => {
-    if (moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())) {
+    if (moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm').isBefore(moment().startOf('hour'))) {
       setFreeError(t('booking.pastTimeNotAllowed'))
       return
     }

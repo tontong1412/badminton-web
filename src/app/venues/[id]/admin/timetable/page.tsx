@@ -23,7 +23,9 @@ import {
   MenuItem,
   Divider,
   ToggleButton,
+  ToggleButtonGroup,
   IconButton,
+  Snackbar,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -184,6 +186,12 @@ export default function VenueTimetablePage() {
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [approving, setApproving] = useState(false)
+  const [movingBookingID, setMovingBookingID] = useState<string | null>(null)
+  const [draggedBooking, setDraggedBooking] = useState<Booking | null>(null)
+  const [dropTargetCell, setDropTargetCell] = useState<string | null>(null)
+  const [moveMode, setMoveMode] = useState<'single' | 'bundle'>('single')
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const touchDragging = useRef(false)
 
   useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
 
@@ -197,6 +205,36 @@ export default function VenueTimetablePage() {
     const slotIndex = Math.max(0, Math.floor((currentMinutes - startMinutes) / 30) - 1)
     tableContainerRef.current.scrollTop = slotIndex * 36
   }, [date, loading])
+
+  // Global touch move listener for mobile drag-to-swap
+  useEffect(() => {
+    if (!draggedBooking || !touchDragging.current) return
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (!touchDragging.current || !draggedBooking) return
+      const touch = e.touches[0]
+      if (!touch) return
+      const el = document.elementFromPoint(touch.clientX, touch.clientY)
+      const target = el?.closest('td[data-cell-key]') as HTMLTableCellElement | null
+      if (!target) {
+        setDropTargetCell(null)
+        return
+      }
+      const key = target.dataset.cellKey
+      const courtID = target.dataset.courtId
+      const slot = target.dataset.slot
+      if (!key || !courtID || !slot) {
+        setDropTargetCell(null)
+        return
+      }
+      if (!isRangeAvailableForMove(draggedBooking, courtID, slot)) {
+        setDropTargetCell(null)
+        return
+      }
+      setDropTargetCell(key)
+    }
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+    return () => document.removeEventListener('touchmove', handleGlobalTouchMove)
+  }, [draggedBooking, moveMode])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
 
@@ -395,6 +433,109 @@ export default function VenueTimetablePage() {
     }
   }
 
+  // Returns the single booked booking that exactly fills the target range (swap candidate), or null.
+  const getSwappableBooking = (dragged: Booking, targetCourtID: string, targetStartTime: string): Booking | null => {
+    const targetStart = timeToMinutes(targetStartTime)
+    const targetEnd = targetStart + dragged.durationMinutes
+    const conflicts = bookings.filter((b) => {
+      if (b.status === BookingStatus.Cancelled || b.id === dragged.id) return false
+      if (moveMode === 'bundle' && dragged.bookingBundleID && b.bookingBundleID === dragged.bookingBundleID) return false
+      if (b.courtID !== targetCourtID) return false
+      const bStart = timeToMinutes(b.startTime)
+      const bEnd = timeToMinutes(b.endTime)
+      return targetStart < bEnd && targetEnd > bStart
+    })
+    // Exactly one conflict that has identical duration and fits perfectly → swappable
+    if (conflicts.length === 1) {
+      const c = conflicts[0]
+      if (c.durationMinutes === dragged.durationMinutes
+        && timeToMinutes(c.startTime) === targetStart
+        && timeToMinutes(c.endTime) === targetEnd) {
+        return c
+      }
+    }
+    return null
+  }
+
+  const isRangeAvailableForMove = (booking: Booking, targetCourtID: string, targetStartTime: string): boolean => {
+    const targetStart = timeToMinutes(targetStartTime)
+    const targetEnd = targetStart + booking.durationMinutes
+    if (targetEnd > timeToMinutes('23:00')) return false
+
+    const conflicts = bookings.filter((b) => {
+      if (b.status === BookingStatus.Cancelled || b.id === booking.id) return false
+      // In bundle mode, treat all siblings in the same bundle as non-blocking
+      if (moveMode === 'bundle' && booking.bookingBundleID && b.bookingBundleID === booking.bookingBundleID) return false
+      if (b.courtID !== targetCourtID) return false
+      const bStart = timeToMinutes(b.startTime)
+      const bEnd = timeToMinutes(b.endTime)
+      return targetStart < bEnd && targetEnd > bStart
+    })
+    if (conflicts.length === 0) return true
+    // Allow drop on a perfectly-sized single booking (swap)
+    if (conflicts.length === 1) {
+      const c = conflicts[0]
+      if (c.durationMinutes === booking.durationMinutes
+        && timeToMinutes(c.startTime) === targetStart
+        && timeToMinutes(c.endTime) === targetEnd) {
+        return true
+      }
+    }
+    return false
+  }
+
+  const handleDropBooking = async(targetCourtID: string, targetStartTime: string) => {
+    if (!draggedBooking || selectMode || movingBookingID) return
+    if (!isRangeAvailableForMove(draggedBooking, targetCourtID, targetStartTime)) {
+      setError('Cannot move booking to this slot.')
+      return
+    }
+
+    const targetEndTime = minutesToTime(timeToMinutes(targetStartTime) + draggedBooking.durationMinutes)
+    const sameSlot = draggedBooking.courtID === targetCourtID
+      && draggedBooking.startTime === targetStartTime
+      && draggedBooking.endTime === targetEndTime
+    if (sameSlot) return
+
+    const swapTarget = getSwappableBooking(draggedBooking, targetCourtID, targetStartTime)
+    const bundleBookingsCount = draggedBooking.bookingBundleID
+      ? bookings.filter((b) => b.bookingBundleID === draggedBooking.bookingBundleID && b.status !== BookingStatus.Cancelled).length
+      : 0
+    const applyToBundle = !swapTarget && moveMode === 'bundle' && bundleBookingsCount > 1
+
+    try {
+      setMovingBookingID(draggedBooking.id)
+      setError(null)
+      const sourceStart = draggedBooking.startTime
+      const sourceEnd = draggedBooking.endTime
+      await bookingsService.reschedule(draggedBooking.id, {
+        courtID: targetCourtID,
+        date,
+        startTime: targetStartTime,
+        endTime: targetEndTime,
+        applyToBundle,
+        swapWithBookingID: swapTarget?.id,
+      })
+      setDraggedBooking(null)
+      setDropTargetCell(null)
+      if (detailBooking?.id === draggedBooking.id) setDetailBooking(null)
+      if (swapTarget) {
+        setSuccessMessage(`Swapped ${sourceStart}-${sourceEnd} ↔ ${targetStartTime}-${targetEndTime}`)
+      } else if (applyToBundle) {
+        setSuccessMessage(`Moved ${bundleBookingsCount} bundle slots: ${sourceStart}-${sourceEnd} → ${targetStartTime}-${targetEndTime}`)
+      } else {
+        setSuccessMessage(`Moved slot: ${sourceStart}-${sourceEnd} → ${targetStartTime}-${targetEndTime}`)
+      }
+      mutateBookings()
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? 'Failed to move booking')
+      console.error(e)
+    } finally {
+      setMovingBookingID(null)
+    }
+  }
+
   const multiBookItems = useMemo(() => buildBundleItems(selectedCells, date), [selectedCells, date])
   const courtNameById = useMemo(() => Object.fromEntries(courts.map((c) => [c.id, c.name])), [courts])
 
@@ -469,6 +610,20 @@ export default function VenueTimetablePage() {
               <SelectAllIcon sx={{ mr: 0.5, fontSize: 16 }} />
               {selectMode ? 'Selecting' : 'Select Slots'}
             </ToggleButton>
+            {!selectMode && (
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={moveMode}
+                onChange={(_, next) => {
+                  if (next) setMoveMode(next)
+                }}
+                sx={{ ml: { xs: 0, sm: 1 } }}
+              >
+                <ToggleButton value="single" sx={{ fontSize: 12, px: 1.2 }}>Move Slot</ToggleButton>
+                <ToggleButton value="bundle" sx={{ fontSize: 12, px: 1.2 }}>Move Bundle</ToggleButton>
+              </ToggleButtonGroup>
+            )}
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 1 }}>
               <Box sx={{ width: 14, height: 14, bgcolor: '#bbdefb', border: '1px solid #ccc', borderRadius: 0.5 }} />
               <Typography variant="caption">Unpaid</Typography>
@@ -481,6 +636,11 @@ export default function VenueTimetablePage() {
                   <Box sx={{ width: 14, height: 14, bgcolor: '#ffe0b2', border: '2px solid #fb8c00', borderRadius: 0.5, ml: 1 }} />
                   <Typography variant="caption">Selected</Typography>
                 </>
+              )}
+              {!selectMode && (
+                <Typography variant="caption" sx={{ ml: 1 }}>
+                  Drag booking blocks to move. On mobile: press, drag, and release.
+                </Typography>
               )}
             </Box>
           </Box>
@@ -549,20 +709,103 @@ export default function VenueTimetablePage() {
 
                           if (cell) {
                             const { booking, rowSpan } = cell
+                            const isSwapTarget = !!draggedBooking && !selectMode
+                              && !!getSwappableBooking(draggedBooking, court.id, slot)
                             return (
                               <td
                                 key={court.id}
                                 rowSpan={rowSpan}
+                                data-cell-key={`${court.id}:${slot}`}
+                                data-court-id={court.id}
+                                data-slot={slot}
+                                draggable={!selectMode && !movingBookingID}
+                                onDragOver={(e) => {
+                                  if (!isSwapTarget) return
+                                  e.preventDefault()
+                                  e.dataTransfer.dropEffect = 'move'
+                                }}
+                                onDragEnter={() => {
+                                  if (!isSwapTarget) return
+                                  setDropTargetCell(`${court.id}:${slot}`)
+                                }}
+                                onDragLeave={() => {
+                                  if (dropTargetCell === `${court.id}:${slot}`) setDropTargetCell(null)
+                                }}
+                                onDrop={(e) => {
+                                  if (!isSwapTarget) return
+                                  e.preventDefault()
+                                  setDropTargetCell(null)
+                                  void handleDropBooking(court.id, slot)
+                                }}
+                                onDragStart={(e) => {
+                                  if (selectMode || movingBookingID) return
+                                  setDraggedBooking(booking)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  e.dataTransfer.setData('text/plain', booking.id)
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedBooking(null)
+                                  setDropTargetCell(null)
+                                }}
+                                onTouchStart={() => {
+                                  if (selectMode || movingBookingID) return
+                                  setDraggedBooking(booking)
+                                  touchDragging.current = true
+                                }}
+                                onTouchMove={(e) => {
+                                  if (!touchDragging.current || !draggedBooking) return
+                                  const touch = e.touches[0]
+                                  if (!touch) return
+                                  const el = document.elementFromPoint(touch.clientX, touch.clientY)
+                                  const target = el?.closest('td[data-cell-key]') as HTMLTableCellElement | null
+                                  if (!target) {
+                                    setDropTargetCell(null)
+                                    return
+                                  }
+                                  const key = target.dataset.cellKey
+                                  const courtID = target.dataset.courtId
+                                  const slot = target.dataset.slot
+                                  if (!key || !courtID || !slot) {
+                                    setDropTargetCell(null)
+                                    return
+                                  }
+                                  if (!isRangeAvailableForMove(draggedBooking, courtID, slot)) {
+                                    setDropTargetCell(null)
+                                    return
+                                  }
+                                  setDropTargetCell(key)
+                                }}
+                                onTouchEnd={() => {
+                                  if (!touchDragging.current || !draggedBooking) return
+                                  touchDragging.current = false
+                                  const cellKey = dropTargetCell
+                                  if (!cellKey) {
+                                    setDraggedBooking(null)
+                                    return
+                                  }
+                                  const colonIdx = cellKey.indexOf(':')
+                                  const courtID = cellKey.slice(0, colonIdx)
+                                  const slot = cellKey.slice(colonIdx + 1)
+                                  setDropTargetCell(null)
+                                  void handleDropBooking(courtID, slot)
+                                }}
                                 onClick={() => !selectMode && setDetailBooking(booking)}
                                 style={{
                                   background: getStatusColor(booking.status, booking.paymentStatus),
-                                  border: '2px solid white',
+                                  border: isSwapTarget && dropTargetCell === `${court.id}:${slot}`
+                                    ? '2px dashed #7b1fa2'
+                                    : '2px solid white',
                                   padding: '4px 8px',
                                   verticalAlign: 'top',
                                   cursor: selectMode ? 'default' : 'pointer',
                                   fontSize: 12,
                                   lineHeight: 1.4,
                                   height: rowSpan * 36,
+                                  opacity: movingBookingID === booking.id ? 0.5 : 1,
+                                  outline: isSwapTarget && dropTargetCell === `${court.id}:${slot}`
+                                    ? '2px dashed #7b1fa2'
+                                    : undefined,
+                                  outlineOffset: '-2px',
                                 }}
                               >
                                 <div style={{ fontWeight: 600 }}>{booking.startTime}–{booking.endTime}</div>
@@ -582,13 +825,36 @@ export default function VenueTimetablePage() {
                           const cellKey = `${court.id}:${slot}`
                           const isSelected = selectedCells.has(cellKey)
                           const isDragPreview = dragPreview.has(cellKey)
+                          const isDnDTarget = dropTargetCell === cellKey
+                          const canDropBooking = !!draggedBooking && !selectMode
+                            && isRangeAvailableForMove(draggedBooking, court.id, slot)
 
                           return (
                             <td
                               key={court.id}
+                              data-cell-key={cellKey}
+                              data-court-id={court.id}
+                              data-slot={slot}
                               onMouseDown={() => handleCellMouseDown(court.id, slot)}
                               onMouseEnter={() => handleCellMouseEnter(court.id, slot)}
                               onMouseUp={() => handleCellMouseUp(court.id, slot)}
+                              onDragOver={(e) => {
+                                if (!canDropBooking) return
+                                e.preventDefault()
+                                e.dataTransfer.dropEffect = 'move'
+                              }}
+                              onDragEnter={() => {
+                                if (!canDropBooking) return
+                                setDropTargetCell(cellKey)
+                              }}
+                              onDragLeave={() => {
+                                if (dropTargetCell === cellKey) setDropTargetCell(null)
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                setDropTargetCell(null)
+                                void handleDropBooking(court.id, slot)
+                              }}
                               onClick={() => {
                                 if (!selectMode) openSingleBookDialog(court, slot)
                               }}
@@ -598,7 +864,13 @@ export default function VenueTimetablePage() {
                                 height: 36,
                                 cursor: selectMode ? 'cell' : 'pointer',
                                 background: isSelected ? '#ffe0b2' : isDragPreview ? '#fff3e0' : '',
-                                outline: isSelected ? '2px solid #fb8c00' : isDragPreview ? '2px solid #ffb74d' : '',
+                                outline: isSelected
+                                  ? '2px solid #fb8c00'
+                                  : isDragPreview
+                                    ? '2px solid #ffb74d'
+                                    : isDnDTarget
+                                      ? '2px dashed #1976d2'
+                                      : '',
                                 outlineOffset: '-2px',
                                 userSelect: 'none',
                               }}
@@ -833,6 +1105,17 @@ export default function VenueTimetablePage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={2500}
+          onClose={() => setSuccessMessage(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setSuccessMessage(null)} severity="success" sx={{ width: '100%' }}>
+            {successMessage}
+          </Alert>
+        </Snackbar>
       </Container>
     </Layout>
   )

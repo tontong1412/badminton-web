@@ -140,6 +140,15 @@ interface VenueBookingsParams {
   venueID?: string;
 }
 
+interface RescheduleBookingPayload {
+  courtID: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  applyToBundle?: boolean;
+  swapWithBookingID?: string;
+}
+
 const getVenueBookings = (params?: VenueBookingsParams): Promise<Booking[]> => {
   return axios.get(`${baseUrl}/venue-admin`, {
     withCredentials: true,
@@ -159,6 +168,12 @@ const markAsPaid = (bookingID: string): Promise<{ message: string; booking: Book
   }).then((response) => response.data as { message: string; booking: Booking })
 }
 
+const reschedule = (bookingID: string, payload: RescheduleBookingPayload): Promise<Booking> => {
+  return axios.put(`${baseUrl}/${bookingID}/reschedule`, payload, {
+    withCredentials: true,
+  }).then((response) => response.data as Booking)
+}
+
 export default {
   getAll,
   getById,
@@ -171,4 +186,5 @@ export default {
   getVenueBookings,
   approvePayment,
   markAsPaid,
+  reschedule,
 }
