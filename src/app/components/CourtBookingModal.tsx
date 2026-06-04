@@ -296,7 +296,7 @@ export default function CourtBookingModal({
     const bookingStartAt = isItemsPreselected && bookingItems
       ? moment(`${bookingItems[0].date} ${bookingItems[0].startTime}`, 'YYYY-MM-DD HH:mm')
       : moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm')
-    if (bookingStartAt.isSameOrBefore(moment())) {
+    if (bookingStartAt.isBefore(moment().startOf('hour'))) {
       setErrorState(t('booking.pastTimeNotAllowed'))
       return
     }
