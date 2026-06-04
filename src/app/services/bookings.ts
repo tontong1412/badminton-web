@@ -146,6 +146,7 @@ interface RescheduleBookingPayload {
   startTime: string;
   endTime: string;
   applyToBundle?: boolean;
+  swapWithBookingID?: string;
 }
 
 const getVenueBookings = (params?: VenueBookingsParams): Promise<Booking[]> => {
