@@ -249,7 +249,7 @@
     "clearSelection": "Clear",
     "selectedCourt": "Courts",
     "modeGuided": "Default",
-    "modeFree": "Table",
+    "modeFree": "Table View",
     "uploadSlip": "Upload Payment Slip",
     "uploadSlipInstruction": "Please upload a photo of your payment slip to confirm payment.",
     "uploadSlipSubmitted": "Payment slip submitted! The venue will verify it shortly.",
