@@ -192,6 +192,8 @@ export default function VenueTimetablePage() {
   const [moveMode, setMoveMode] = useState<'single' | 'bundle'>('single')
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const touchDragging = useRef(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressPending = useRef<Booking | null>(null)
 
   useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
 
@@ -639,7 +641,7 @@ export default function VenueTimetablePage() {
               )}
               {!selectMode && (
                 <Typography variant="caption" sx={{ ml: 1 }}>
-                  Drag booking blocks to move. On mobile: press, drag, and release.
+                  Drag booking blocks to move. On mobile: hold for 3 seconds, then drag and release.
                 </Typography>
               )}
             </Box>
@@ -749,11 +751,26 @@ export default function VenueTimetablePage() {
                                 }}
                                 onTouchStart={() => {
                                   if (selectMode || movingBookingID) return
-                                  setDraggedBooking(booking)
-                                  touchDragging.current = true
+                                  longPressPending.current = booking
+                                  longPressTimer.current = setTimeout(() => {
+                                    if (longPressPending.current) {
+                                      setDraggedBooking(longPressPending.current)
+                                      touchDragging.current = true
+                                      longPressPending.current = null
+                                    }
+                                  }, 3000)
                                 }}
                                 onTouchMove={(e) => {
-                                  if (!touchDragging.current || !draggedBooking) return
+                                  if (!touchDragging.current) {
+                                    // Cancel long-press if user moves finger before 3s
+                                    if (longPressTimer.current) {
+                                      clearTimeout(longPressTimer.current)
+                                      longPressTimer.current = null
+                                      longPressPending.current = null
+                                    }
+                                    return
+                                  }
+                                  if (!draggedBooking) return
                                   const touch = e.touches[0]
                                   if (!touch) return
                                   const el = document.elementFromPoint(touch.clientX, touch.clientY)
@@ -776,6 +793,11 @@ export default function VenueTimetablePage() {
                                   setDropTargetCell(key)
                                 }}
                                 onTouchEnd={() => {
+                                  if (longPressTimer.current) {
+                                    clearTimeout(longPressTimer.current)
+                                    longPressTimer.current = null
+                                  }
+                                  longPressPending.current = null
                                   if (!touchDragging.current || !draggedBooking) return
                                   touchDragging.current = false
                                   const cellKey = dropTargetCell
