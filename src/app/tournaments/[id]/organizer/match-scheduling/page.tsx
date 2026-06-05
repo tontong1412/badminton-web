@@ -15,7 +15,7 @@ import {
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Paper, Popover, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
-import React, { MouseEvent, useEffect, useState } from 'react'
+import React, { MouseEvent, useCallback, useEffect, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
@@ -46,6 +46,10 @@ interface MatchData {
   playoff: Playoff;
   consolation: Playoff;
 }
+
+type ScheduleCell = Match | null | string
+type ScheduleTable = ScheduleCell[][]
+
 const Organizer = () => {
   // const { t } = useTranslation()
   const language: Language = useSelector((state: RootState) => state.app.language)
@@ -55,16 +59,18 @@ const Organizer = () => {
   const [numCourt, setNumCourt] = useState(8)
   const [startTime, setStartTime] = useState(9)
   const [matchDuration, setMatchDuration] = useState(25)
-  const [eventMatches, setEventMatches] = useState([])
+  const [eventMatches, setEventMatches] = useState<Match[]>([])
   const [selectedDay, setSelectedDay] = useState<string|null>(null)
+  const [eventOrder, setEventOrder] = useState<string[]>([])
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({ group:{}, playoff:{}, consolation:{} })
-  const [tableRowData, setTableRowData ] = useState<(Match | null | string)[][]>([])
+  const [tableRowData, setTableRowData ] = useState<ScheduleTable>([])
+  const [scheduleByDay, setScheduleByDay] = useState<Record<string, ScheduleTable>>({})
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(-1)
   const [selectedCourt, setSelectedCourt] = useState(-1)
   const { tournament } = useTournament(params.id as string)
 
-  const [tableRowDataHistory, setTableRowDataHistory] = useState<(Match | null | string)[][][]>([])
+  const [tableRowDataHistory, setTableRowDataHistory] = useState<ScheduleTable[]>([])
 
   const [step, setStep] = useState<string | null>(null)
   const [group, setGroup] = useState<string | null>(null)
@@ -82,11 +88,31 @@ const Organizer = () => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
   }, [dispatch])
 
-  useEffect(() => {
-    generateTimeSlots(matchDuration)
-  }, [])
+  const createEmptyScheduleTable = useCallback((
+    stepMinutes: number,
+    startHour = 5,
+    startMinute = 0,
+    endHour = 24,
+    endMinute = 30,
+    courts = numCourt
+  ): ScheduleTable => {
+    const slots: ScheduleTable = []
+    const totalMinutes = endHour * 60 + endMinute
+    let currentMinutes = startHour * 60 + startMinute
 
-  const getMatches = async(eventID: string) => {
+    while (currentMinutes <= totalMinutes) {
+      const hours = Math.floor(currentMinutes / 60)
+      const minutes = currentMinutes % 60
+      slots.push(
+        [`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+          , ...Array.from({ length:courts }, () => null)]
+      )
+      currentMinutes += stepMinutes
+    }
+    return slots
+  }, [numCourt])
+
+  const getMatches = useCallback(async(eventID: string) => {
     const response = await axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${eventID}&status=waiting`)
     setEventMatches(response.data)
     const iteratableMatch: MatchData = response.data.reduce((prev: MatchData, match:Match) => {
@@ -120,9 +146,21 @@ const Organizer = () => {
       }
       return accumulater
 
-    }, {})
+    }, { group: {}, playoff: {}, consolation: {} })
     setMatchInIterationFormat(iteratableMatch)
-  }
+  }, [])
+
+  const getDaysArray = useCallback((startDate: Date, endDate: Date): Date[] => {
+    const days: Date[] = []
+    const current = new Date(startDate)
+
+    while (current <= endDate) {
+      days.push(new Date(current)) // clone, don’t push reference
+      current.setDate(current.getDate() + 1)
+    }
+
+    return days
+  }, [])
 
   const onGenerateMatches = async(eventID:string) => {
     await axios.post(`${SERVICE_ENDPOINT}/events/generate-matches`, { eventID }, { withCredentials :true })
@@ -131,20 +169,43 @@ const Organizer = () => {
 
   useEffect(() => {
     if(tournament){
-      getMatches(tournament.events[tabIndex].id)
-      setSelectedDay(getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate))[0].toISOString())
+      getMatches(tournament.events[0].id)
+      const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
+      const firstDay = days[0]
+      const nextScheduleByDay = days.reduce((acc, day) => {
+        acc[day] = createEmptyScheduleTable(matchDuration, startTime)
+        return acc
+      }, {} as Record<string, ScheduleTable>)
+
+      setTabIndex(0)
+      setEventOrder(tournament.events.map((event) => event.id))
+      setScheduleByDay(nextScheduleByDay)
+      setSelectedDay(firstDay)
+      setTableRowData(nextScheduleByDay[firstDay] ?? [])
+      setTableRowDataHistory([])
     }
-  }, [tournament])
+  }, [tournament, getMatches, getDaysArray, createEmptyScheduleTable, matchDuration, startTime])
 
   useEffect(() => {
     if(!tournament) return
     const eventID = tournament.events[tabIndex].id
     getMatches(eventID)
-  }, [tabIndex])
+  }, [tabIndex, tournament, getMatches])
 
   useEffect(() => {
-    generateTimeSlots(matchDuration, startTime)
-  }, [matchDuration, numCourt, startTime])
+    if(!tournament) return
+    const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
+    const firstDay = days[0]
+    const nextScheduleByDay = days.reduce((acc, day) => {
+      acc[day] = createEmptyScheduleTable(matchDuration, startTime)
+      return acc
+    }, {} as Record<string, ScheduleTable>)
+
+    setScheduleByDay(nextScheduleByDay)
+    setSelectedDay(firstDay)
+    setTableRowData(nextScheduleByDay[firstDay] ?? [])
+    setTableRowDataHistory([])
+  }, [matchDuration, numCourt, startTime, tournament, getDaysArray, createEmptyScheduleTable])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
@@ -208,23 +269,28 @@ const Organizer = () => {
   }
 
   const onSaveSchedule = async() => {
+    const selectedDaySchedule = selectedDay ? { [selectedDay]: tableRowData } : {}
+    const schedules = { ...scheduleByDay, ...selectedDaySchedule }
+    const matches = Object.entries(schedules).reduce((allDayAccumulator: {id: string, date: string}[], [day, schedule]) => {
+      const dayMatches = schedule.reduce((accumulator: {id: string, date: string}[], currentTimeSlot: ScheduleCell[]) => {
 
-    const matches = tableRowData.reduce((accumulator: {id: string, date: string}[], currentTimeSlot: (Match | null | string)[]) => {
+        for(let i = 1;i < currentTimeSlot.length; i++){
+          if(typeof currentTimeSlot[i] === 'string' || currentTimeSlot[i] === null) {
+            continue
+          }
 
-      for(let i = 1;i < currentTimeSlot.length; i++){
-        if(typeof currentTimeSlot[i] === 'string' || currentTimeSlot[i] === null) {
-          continue
+          const date = moment(day)
+            .set('hour', Number(currentTimeSlot[0]?.toString().split(':')[0]))
+            .set('minute', Number(currentTimeSlot[0]?.toString().split(':')[1]))
+            .toISOString()
+          const match: Match = currentTimeSlot[i] as Match
+
+          accumulator.push({ id: match.id, date })
         }
-
-        const date = moment(selectedDay)
-          .set('hour', Number(currentTimeSlot[0]?.toString().split(':')[0]))
-          .set('minute', Number(currentTimeSlot[0]?.toString().split(':')[1]))
-          .toISOString()
-        const match: Match = currentTimeSlot[i] as Match
-
-        accumulator.push({ id: match.id, date })
-      }
-      return accumulator
+        return accumulator
+      }, [])
+      allDayAccumulator.push(...dayMatches)
+      return allDayAccumulator
     }, [])
 
 
@@ -234,46 +300,265 @@ const Organizer = () => {
     }, { withCredentials:true })
   }
 
-  const generateTimeSlots = (
-    stepMinutes: number,
-    startHour = 5,
-    startMinute = 0,
-    endHour = 24,
-    endMinute = 30
-  ) => {
-    const slots: (Match | null | string)[][] = []
-    const totalMinutes = endHour * 60 + endMinute
-    let currentMinutes = startHour * 60 + startMinute
+  const resetAllDaySchedules = () => {
+    if(!tournament) return
+    const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
+    const nextScheduleByDay = days.reduce((acc, day) => {
+      acc[day] = createEmptyScheduleTable(matchDuration, startTime)
+      return acc
+    }, {} as Record<string, ScheduleTable>)
 
-    while (currentMinutes <= totalMinutes) {
-      const hours = Math.floor(currentMinutes / 60)
-      const minutes = currentMinutes % 60
-      slots.push(
-        [`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-          , ...Array.from({ length:numCourt }, () => null)]
-      )
-      currentMinutes += stepMinutes
+    setScheduleByDay(nextScheduleByDay)
+    if(selectedDay){
+      setTableRowData(nextScheduleByDay[selectedDay] ?? [])
     }
-    setTableRowData(slots)
-  }
-
-  const getDaysArray = (startDate: Date, endDate: Date): Date[] => {
-    const days: Date[] = []
-    const current = new Date(startDate)
-
-    while (current <= endDate) {
-      days.push(new Date(current)) // clone, don’t push reference
-      current.setDate(current.getDate() + 1)
-    }
-
-    return days
+    setTableRowDataHistory([])
   }
 
   const onChangeDay = (
     event: React.MouseEvent<HTMLElement>,
     newDay: string,
   ) => {
+    if(!newDay) return
+    const nextScheduleByDay = { ...scheduleByDay }
+    if(selectedDay){
+      nextScheduleByDay[selectedDay] = tableRowData
+    }
+    if(!nextScheduleByDay[newDay]){
+      nextScheduleByDay[newDay] = createEmptyScheduleTable(matchDuration, startTime)
+    }
+    setScheduleByDay(nextScheduleByDay)
     setSelectedDay(newDay)
+    setTableRowData(nextScheduleByDay[newDay])
+    setTableRowDataHistory([])
+  }
+
+  const moveEventOrder = (eventID: string, direction: 'up' | 'down') => {
+    const currentIndex = eventOrder.findIndex((id) => id === eventID)
+    if(currentIndex < 0) return
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if(targetIndex < 0 || targetIndex >= eventOrder.length) return
+
+    const nextOrder = [...eventOrder]
+    const [current] = nextOrder.splice(currentIndex, 1)
+    nextOrder.splice(targetIndex, 0, current)
+    setEventOrder(nextOrder)
+  }
+
+  const getMatchTeamIDs = (match: Match): string[] => {
+    const ids: string[] = []
+    if(match.teamA?.id) ids.push(match.teamA.id)
+    if(match.teamB?.id) ids.push(match.teamB.id)
+    return ids
+  }
+
+  const isMatchAvailableForSlot = (match: Match, slot: number, teamNextAvailableSlot: Record<string, number>): boolean => {
+    const teamIDs = getMatchTeamIDs(match)
+    return teamIDs.every((teamID) => {
+      const earliestSlot = teamNextAvailableSlot[teamID] ?? 0
+      return earliestSlot <= slot
+    })
+  }
+
+  const findNextEmptyPosition = (table: ScheduleTable, startSlot: number, startCourt: number) => {
+    let slot = startSlot
+    let court = startCourt
+
+    while (slot < table.length) {
+      while (court <= numCourt) {
+        if(table[slot][court] === null){
+          return { slot, court }
+        }
+        court++
+      }
+      slot++
+      court = 1
+    }
+
+    return null
+  }
+
+  const onAutoScheduleTwoDays = async() => {
+    if(!tournament) return
+
+    const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
+    if(days.length < 2){
+      window.alert('Auto schedule needs at least 2 tournament days')
+      return
+    }
+
+    const waitingMatchesResponse = await axios.get(`${SERVICE_ENDPOINT}/matches?tournamentID=${tournament.id}&status=waiting`)
+    const waitingMatches = waitingMatchesResponse.data as Match[]
+    const matchByEvent = waitingMatches.reduce((acc, match) => {
+      const eventID = match.event?.id
+      if(!eventID) return acc
+      if(!acc[eventID]){
+        acc[eventID] = []
+      }
+      acc[eventID].push(match)
+      return acc
+    }, {} as Record<string, Match[]>)
+
+    const orderedEventIDs = eventOrder.length > 0 ? eventOrder : tournament.events.map((event) => event.id)
+    const dayOneTable = createEmptyScheduleTable(matchDuration, startTime)
+    const dayTwoTable = createEmptyScheduleTable(matchDuration, startTime)
+
+    const groupStates = orderedEventIDs.flatMap((eventID) => {
+      const eventGroupMatches = (matchByEvent[eventID] ?? [])
+        .filter((match) => match.step === MatchStep.Group && match.groupOrder !== undefined && match.round !== undefined)
+
+      const groups: Record<number, Record<number, Match[]>> = {}
+      for(const match of eventGroupMatches){
+        const groupOrder = match.groupOrder as number
+        const round = match.round as number
+        if(!groups[groupOrder]){
+          groups[groupOrder] = {}
+        }
+        if(!groups[groupOrder][round]){
+          groups[groupOrder][round] = []
+        }
+        groups[groupOrder][round].push(match)
+      }
+
+      return Object.keys(groups)
+        .map((groupOrder) => Number(groupOrder))
+        .sort((a, b) => a - b)
+        .map((groupOrder) => {
+          const rounds = Object.keys(groups[groupOrder])
+            .map((round) => Number(round))
+            .sort((a, b) => a - b)
+            .map((round) => groups[groupOrder][round].sort((a, b) => {
+              if(a.bracketOrder === undefined || b.bracketOrder === undefined) return 0
+              return a.bracketOrder - b.bracketOrder
+            }))
+
+          return {
+            rounds,
+            roundCursor: 0,
+            nextAvailableSlot: 0,
+            hasStarted: false,
+            lastScheduledSlot: -1,
+          }
+        })
+    })
+
+    const teamNextAvailableSlot: Record<string, number> = {}
+    for(let slot = 0; slot < dayOneTable.length; slot++){
+      const remainingCourts = Array.from({ length:numCourt }, (_, i) => i + 1)
+      if(groupStates.length < 1) break
+
+      const blockedGroupsInSlot = new Set<number>()
+      while(remainingCourts.length > 0){
+        const candidates = groupStates
+          .map((groupState, index) => ({ groupState, index }))
+          .filter(({ groupState, index }) => (
+            !blockedGroupsInSlot.has(index)
+            && groupState.roundCursor < groupState.rounds.length
+            && groupState.nextAvailableSlot <= slot
+          ))
+          .sort((a, b) => {
+            if(a.groupState.hasStarted !== b.groupState.hasStarted){
+              return a.groupState.hasStarted ? -1 : 1
+            }
+
+            if(a.groupState.hasStarted && b.groupState.hasStarted){
+              return a.groupState.lastScheduledSlot - b.groupState.lastScheduledSlot
+            }
+
+            return a.index - b.index
+          })
+
+        if(candidates.length < 1) break
+
+        const selected = candidates[0]
+        const selectedGroupState = selected.groupState
+        const currentRoundMatches = selectedGroupState.rounds[selectedGroupState.roundCursor]
+
+        let assignedInThisGroup = 0
+        while(remainingCourts.length > 0 && currentRoundMatches.length > 0){
+          const matchIndex = currentRoundMatches.findIndex((match) => isMatchAvailableForSlot(match, slot, teamNextAvailableSlot))
+          if(matchIndex < 0){
+            break
+          }
+
+          const court = remainingCourts.shift()
+          if(court === undefined) break
+
+          const [match] = currentRoundMatches.splice(matchIndex, 1)
+          if(!match) break
+
+          dayOneTable[slot][court] = match
+          const teamIDs = getMatchTeamIDs(match)
+          for(const teamID of teamIDs){
+            // Keep one full slot for recovery before next match.
+            teamNextAvailableSlot[teamID] = slot + 2
+          }
+
+          selectedGroupState.hasStarted = true
+          selectedGroupState.lastScheduledSlot = slot
+          assignedInThisGroup++
+        }
+
+        if(currentRoundMatches.length < 1){
+          selectedGroupState.roundCursor++
+          selectedGroupState.nextAvailableSlot = slot + 2
+        }
+
+        if(assignedInThisGroup < 1){
+          blockedGroupsInSlot.add(selected.index)
+        }
+      }
+    }
+
+    const knockoutMatches = waitingMatches.filter((match) => match.step === MatchStep.PlayOff || match.step === MatchStep.Consolation)
+    const rounds = [...new Set(knockoutMatches.map((match) => match.round).filter((round): round is number => round !== undefined))].sort((a, b) => b - a)
+
+    let knockoutSlot = 0
+    let knockoutCourt = 1
+
+    for(const roundNumber of rounds){
+      for(const eventID of orderedEventIDs){
+        const eventRoundMatches = knockoutMatches
+          .filter((match) => match.event?.id === eventID && match.round === roundNumber)
+          .sort((a, b) => {
+            if(a.step !== b.step){
+              return a.step === MatchStep.PlayOff ? -1 : 1
+            }
+            if(a.bracketOrder === undefined || b.bracketOrder === undefined) return 0
+            return a.bracketOrder - b.bracketOrder
+          })
+
+        for(const match of eventRoundMatches){
+          const nextPosition = findNextEmptyPosition(dayTwoTable, knockoutSlot, knockoutCourt)
+          if(!nextPosition) break
+
+          dayTwoTable[nextPosition.slot][nextPosition.court] = match
+          knockoutSlot = nextPosition.slot
+          knockoutCourt = nextPosition.court + 1
+          if(knockoutCourt > numCourt){
+            knockoutSlot++
+            knockoutCourt = 1
+          }
+        }
+      }
+    }
+
+    const nextScheduleByDay = days.reduce((acc, day, index) => {
+      if(index === 0){
+        acc[day] = dayOneTable
+      }else if(index === 1){
+        acc[day] = dayTwoTable
+      }else{
+        acc[day] = createEmptyScheduleTable(matchDuration, startTime)
+      }
+      return acc
+    }, {} as Record<string, ScheduleTable>)
+
+    setScheduleByDay(nextScheduleByDay)
+    setSelectedDay(days[0])
+    setTableRowData(nextScheduleByDay[days[0]] ?? [])
+    setTableRowDataHistory([])
   }
 
   const onGenerateMatchNumber = async() => {
@@ -331,6 +616,12 @@ const Organizer = () => {
       }
     }
     setTableRowData(tempTableRowData)
+    if(selectedDay){
+      setScheduleByDay({
+        ...scheduleByDay,
+        [selectedDay]: tempTableRowData,
+      })
+    }
 
     handleClose()
   }
@@ -463,6 +754,12 @@ const Organizer = () => {
     const history = tempHistory.pop()
     if(history === undefined) return
     setTableRowData(history)
+    if(selectedDay){
+      setScheduleByDay({
+        ...scheduleByDay,
+        [selectedDay]: history,
+      })
+    }
     setTableRowDataHistory(tempHistory)
   }
 
@@ -500,10 +797,26 @@ const Organizer = () => {
               label="เวลาต่อแมตช์ (นาที)"
               variant="outlined"
               type='number' />
-            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={() => generateTimeSlots(matchDuration, startTime)}>Reset</Button>
+            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={resetAllDaySchedules}>Reset</Button>
+            <Button sx={{ borderRadius: 10 }} color='secondary' variant='contained' size='large' onClick={onAutoScheduleTwoDays}>Auto 2-Day</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' disabled={tableRowDataHistory.length < 1} onClick={onUndo}>Undo</Button>
             <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' onClick={onSaveSchedule}>Save</Button>
             <Button sx={{ borderRadius: 10 }} color='primary' variant='contained' size='large' onClick={onGenerateMatchNumber}>Gen. Match No.</Button>
+          </Box>
+          <Box sx={{ display:'flex', gap: 1, flexWrap: 'wrap', px: 1, pb: 1 }}>
+            <Typography sx={{ width: '100%', fontWeight: 600 }}>Event order for auto scheduling</Typography>
+            {(eventOrder.length > 0 ? eventOrder : tournament.events.map((event) => event.id)).map((eventID, index, currentOrder) => {
+              const event = tournament.events.find((item) => item.id === eventID)
+              if(!event) return null
+
+              return (
+                <Box key={event.id} sx={{ display:'flex', alignItems:'center', gap: 1, border: '1px solid #ddd', borderRadius: 2, px: 1, py: 0.5 }}>
+                  <Typography sx={{ minWidth: 180 }}>{`${index + 1}. ${event.name?.[language]}`}</Typography>
+                  <Button size='small' variant='outlined' disabled={index === 0} onClick={() => moveEventOrder(event.id, 'up')}>Up</Button>
+                  <Button size='small' variant='outlined' disabled={index === (currentOrder.length - 1)} onClick={() => moveEventOrder(event.id, 'down')}>Down</Button>
+                </Box>
+              )
+            })}
           </Box>
 
           <Tabs
