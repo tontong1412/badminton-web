@@ -80,7 +80,7 @@ export default function CourtAvailabilityTable({
   availabilityByCourt.forEach((avail) => {
     avail.slots.forEach((slot) => {
       const slotStart = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
-      if (slotStart.isAfter(moment()) && !startTimeMap.has(slot.startTime)) {
+      if (slotStart.isSameOrAfter(moment().startOf('hour')) && !startTimeMap.has(slot.startTime)) {
         startTimeMap.set(slot.startTime, slot.endTime)
       }
     })

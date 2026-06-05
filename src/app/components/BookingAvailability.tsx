@@ -65,7 +65,7 @@ export default function BookingAvailabilityComponent({
 
   const handleSlotSelect = (slot: { startTime: string; endTime: string }) => {
     const slotStartAt = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
-    if (slotStartAt.isSameOrBefore(moment())) {
+    if (slotStartAt.isBefore(moment().startOf('hour'))) {
       setError(t('booking.pastTimeNotAllowed'))
       return
     }
@@ -77,7 +77,7 @@ export default function BookingAvailabilityComponent({
 
   const visibleSlots = availability?.slots.filter((slot) => {
     const slotStartAt = moment(`${selectedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm')
-    return slotStartAt.isAfter(moment())
+    return slotStartAt.isSameOrAfter(moment().startOf('hour'))
   }) || []
 
   const minDateStr = minDate || moment().format('YYYY-MM-DD')

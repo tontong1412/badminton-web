@@ -29,7 +29,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/next-auth": "^3.13.0",
     "@vis.gl/react-google-maps": "^1.8.3",
-    "axios": "^1.8.3",
+    "axios": "^1.16.0",
     "browser-image-compression": "^2.0.2",
     "file-saver": "^2.0.5",
     "i18next": "^24.2.3",
