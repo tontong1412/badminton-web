@@ -76,6 +76,8 @@ const Organizer = () => {
   const [group, setGroup] = useState<string | null>(null)
   const [round, setRound] = useState<string | null>(null)
 
+  const [dragSource, setDragSource] = useState<{ slot: number; court: number } | null>(null)
+
   const open = Boolean(anchorEl)
   const handleClose = () => {
     setAnchorEl(null)
@@ -247,16 +249,81 @@ const Organizer = () => {
 
   }
 
+  const onDragStart = (e: React.DragEvent<HTMLButtonElement>, slotIndex: number, courtIndex: number) => {
+    setDragSource({ slot: slotIndex, court: courtIndex })
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const onDragOver = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const onDropMatch = (e: React.DragEvent<HTMLElement>, targetSlot: number, targetCourt: number) => {
+    e.preventDefault()
+    if(!dragSource) return
+
+    const sourceSlot = dragSource.slot
+    const sourceCourt = dragSource.court
+
+    if(sourceSlot === targetSlot && sourceCourt === targetCourt) {
+      setDragSource(null)
+      return
+    }
+
+    const tempHistory = [...tableRowDataHistory]
+    const deepCopyTableRowData = JSON.parse(JSON.stringify(tableRowData))
+    tempHistory.push(deepCopyTableRowData)
+    setTableRowDataHistory(tempHistory)
+
+    const tempTableRowData = [...tableRowData]
+    const sourceMatch = tempTableRowData[sourceSlot][sourceCourt]
+    const targetCell = tempTableRowData[targetSlot][targetCourt]
+
+    if(sourceMatch !== null && typeof sourceMatch !== 'string'){
+      if(targetCell === null){
+        tempTableRowData[targetSlot][targetCourt] = sourceMatch
+        tempTableRowData[sourceSlot][sourceCourt] = null
+      }else if(typeof targetCell !== 'string' && targetCell !== null){
+        tempTableRowData[sourceSlot][sourceCourt] = targetCell
+        tempTableRowData[targetSlot][targetCourt] = sourceMatch
+      }
+
+      setTableRowData(tempTableRowData)
+      if(selectedDay){
+        setScheduleByDay({
+          ...scheduleByDay,
+          [selectedDay]: tempTableRowData,
+        })
+      }
+    }
+
+    setDragSource(null)
+  }
+
   const renderTableCell = (match: (Match | null | string), i: number, j: number) => {
     if (typeof match === 'string'){
       return match
     }else if(match === null){
-      return <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}><AddCircle/></Button>
+      return (
+        <Box
+          onDragOver={onDragOver}
+          onDrop={(e) => onDropMatch(e, i, j)}
+          sx={{ cursor: dragSource ? 'grab' : 'pointer', minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}><AddCircle/></Button>
+        </Box>
+      )
     }else {
       if(match.round === undefined) return
 
       return (
-        <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}>
+        <Button
+          draggable
+          onDragStart={(e) => onDragStart(e, i, j)}
+          onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}
+          sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
+        >
           <Box>
             <Typography>{match.event?.name?.[language]}</Typography>
             {match.groupOrder !== undefined ? <Typography>Group {MAP_GROUP_NAME[match.groupOrder].NAME}</Typography> : null}
@@ -887,7 +954,17 @@ const Organizer = () => {
                     <TableRow key={`timeSlot-${i}`}>
                       {
                         timeSlot.map((match, j) => (
-                          <TableCell key={`match-${j}`} align='center'>
+                          <TableCell
+                            key={`match-${j}`}
+                            align='center'
+                            onDragOver={onDragOver}
+                            onDrop={(e) => onDropMatch(e, i, j)}
+                            sx={{
+                              backgroundColor: dragSource?.slot === i && dragSource?.court === j ? '#e3f2fd' : 'transparent',
+                              cursor: dragSource ? 'grab' : 'default',
+                              transition: 'background-color 0.2s',
+                            }}
+                          >
                             {renderTableCell(match, i, j)}
                           </TableCell>
 
