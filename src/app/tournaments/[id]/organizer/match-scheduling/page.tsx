@@ -44,6 +44,7 @@ interface Playoff {
 interface MatchData {
   group: Group;
   playoff: Playoff;
+  consolation: Playoff;
 }
 const Organizer = () => {
   // const { t } = useTranslation()
@@ -57,7 +58,7 @@ const Organizer = () => {
   const [eventMatches, setEventMatches] = useState([])
   const [selectedDay, setSelectedDay] = useState<string|null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
-  const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({ group:{}, playoff:{} })
+  const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({ group:{}, playoff:{}, consolation:{} })
   const [tableRowData, setTableRowData ] = useState<(Match | null | string)[][]>([])
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(-1)
   const [selectedCourt, setSelectedCourt] = useState(-1)
@@ -109,8 +110,9 @@ const Organizer = () => {
           accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME][match.round] = []
         }
         accumulater[match.step][MAP_GROUP_NAME[match.groupOrder].NAME][match.round].push(match)
-      }else if(match.step === MatchStep.PlayOff){
+      }else if(match.step === MatchStep.PlayOff || match.step === MatchStep.Consolation){
         accumulater[MatchStep.PlayOff] = { ...accumulater[MatchStep.PlayOff] }
+        accumulater[match.step] = { ...accumulater[match.step] }
         if(!accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]]){
           accumulater[match.step][MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]] = []
         }
@@ -168,7 +170,7 @@ const Organizer = () => {
       if (a.round !== b.round) {
         return a.round - b.round
       }
-    } else if (a.step === MatchStep.PlayOff) {
+    } else if (a.step === MatchStep.PlayOff || a.step === MatchStep.Consolation) {
       // Sort 'ko' items by 'round' descending
       if (a.round !== b.round) {
         return b.round - a.round
@@ -389,23 +391,23 @@ const Organizer = () => {
       )
     }
 
-    if(step === MatchStep.PlayOff){
+    if(step === MatchStep.PlayOff || step === MatchStep.Consolation){
       if(round){
         return (
           <Box>
             <Button key={'round-back'} onClick={() => setRound(null)}><ArrowBackIos/></Button>
-            {matchInIterationFormat[MatchStep.PlayOff][round].map((match, i) => {
+            {matchInIterationFormat[step][round].map((match, i) => {
               if(match.round === undefined) return
-              return <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[MatchStep.PlayOff][round].length})`}</Button>
+              return <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[step][round].length})`}</Button>
             })}
-            <Button key={'round-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat[MatchStep.PlayOff][round])}>All</Button>
+            <Button key={'round-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat[step][round])}>All</Button>
           </Box>
         )
       }else{
         return (
           <Box>
             <Button key={'round-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
-            {Object.entries(matchInIterationFormat[MatchStep.PlayOff]).map(([key]) => {
+            {Object.entries(matchInIterationFormat[step]).map(([key]) => {
               return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
             })}
             {/* <Button key={'match-all'} onClick={() => console.log('add')}>All</Button> */}
@@ -538,6 +540,16 @@ const Organizer = () => {
                       <AccordionDetails>
                         <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
                           {eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion>
+                    <Accordion>
+                      <AccordionSummary expandIcon={<ArrowDropDown />}>
+                        <Typography component="span">{`Matches in consolation stage (${eventMatches.filter((a:Match) => a.step === MatchStep.Consolation).length})`}</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
+                          {eventMatches.filter((a:Match) => a.step === MatchStep.Consolation).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
                         </Box>
                       </AccordionDetails>
                     </Accordion></>

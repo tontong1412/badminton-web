@@ -176,6 +176,7 @@ export interface Match {
 export enum MatchStep {
   Group = 'group',
   PlayOff = 'playoff',
+  Consolation = 'consolation',
 }
 
 export type NewMatch = Omit<Match, 'id'>
