@@ -164,6 +164,38 @@ const Organizer = () => {
     return days
   }, [])
 
+  const populateScheduleWithExistingMatches = useCallback((
+    nextScheduleByDay: Record<string, ScheduleTable>,
+    matches: Match[]
+  ): Record<string, ScheduleTable> => {
+    const updatedSchedules = { ...nextScheduleByDay }
+
+    matches.forEach((match) => {
+      if (!match.date) return
+
+      const matchMoment = moment(match.date)
+      const matchDayStr = matchMoment.format('YYYY-MM-DD')
+      const timeStr = matchMoment.format('HH:mm')
+
+      const dayKey = Object.keys(updatedSchedules).find(
+        (key) => moment(key).format('YYYY-MM-DD') === matchDayStr
+      )
+      if (!dayKey) return
+
+      const schedule = updatedSchedules[dayKey]
+      const timeSlotIndex = schedule.findIndex((slot) => slot[0] === timeStr)
+
+      if (timeSlotIndex === -1) return
+
+      const courtIndex = parseInt(match.court || '0')
+      if (courtIndex >= 0 && courtIndex < schedule[timeSlotIndex].length - 1) {
+        schedule[timeSlotIndex][courtIndex + 1] = match
+      }
+    })
+
+    return updatedSchedules
+  }, [])
+
   const onGenerateMatches = async(eventID:string) => {
     await axios.post(`${SERVICE_ENDPOINT}/events/generate-matches`, { eventID }, { withCredentials :true })
     getMatches(eventID)
@@ -171,7 +203,8 @@ const Organizer = () => {
 
   useEffect(() => {
     if(tournament){
-      getMatches(tournament.events[0].id)
+      const eventID = tournament.events[0].id
+      getMatches(eventID)
       const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
       const firstDay = days[0]
       const nextScheduleByDay = days.reduce((acc, day) => {
@@ -179,14 +212,38 @@ const Organizer = () => {
         return acc
       }, {} as Record<string, ScheduleTable>)
 
+      // Load scheduled matches for ALL events
+      const loadScheduledMatches = async(): Promise<void> => {
+        try {
+          const responses = await Promise.all(
+            tournament.events.map((event) =>
+              axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${event.id}`, { withCredentials: true })
+            )
+          )
+          const allMatches = responses.flatMap((res) => res.data || [])
+          const scheduledMatches = allMatches.filter((match: Match) => match.date)
+
+          const populatedSchedule = scheduledMatches.length > 0
+            ? populateScheduleWithExistingMatches(nextScheduleByDay, scheduledMatches)
+            : nextScheduleByDay
+
+          setScheduleByDay(populatedSchedule)
+          setTableRowData(populatedSchedule[firstDay] ?? [])
+        } catch (error) {
+          console.error('Failed to load scheduled matches:', error)
+          setScheduleByDay(nextScheduleByDay)
+          setTableRowData(nextScheduleByDay[firstDay] ?? [])
+        }
+      }
+
       setTabIndex(0)
       setEventOrder(tournament.events.map((event) => event.id))
-      setScheduleByDay(nextScheduleByDay)
       setSelectedDay(firstDay)
-      setTableRowData(nextScheduleByDay[firstDay] ?? [])
       setTableRowDataHistory([])
+
+      loadScheduledMatches()
     }
-  }, [tournament, getMatches, getDaysArray, createEmptyScheduleTable, matchDuration, startTime])
+  }, [tournament, getMatches, getDaysArray, createEmptyScheduleTable, matchDuration, startTime, populateScheduleWithExistingMatches])
 
   useEffect(() => {
     if(!tournament) return
@@ -203,11 +260,34 @@ const Organizer = () => {
       return acc
     }, {} as Record<string, ScheduleTable>)
 
-    setScheduleByDay(nextScheduleByDay)
+    // Load scheduled matches for ALL events
+    const loadScheduledMatches = async(): Promise<void> => {
+      try {
+        const responses = await Promise.all(
+          tournament.events.map((event) =>
+            axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${event.id}`, { withCredentials: true })
+          )
+        )
+        const allMatches = responses.flatMap((res) => res.data || [])
+        const scheduledMatches = allMatches.filter((match: Match) => match.date)
+
+        const populatedSchedule = scheduledMatches.length > 0
+          ? populateScheduleWithExistingMatches(nextScheduleByDay, scheduledMatches)
+          : nextScheduleByDay
+
+        setScheduleByDay(populatedSchedule)
+        setTableRowData(populatedSchedule[firstDay] ?? [])
+      } catch (error) {
+        console.error('Failed to load scheduled matches:', error)
+        setScheduleByDay(nextScheduleByDay)
+        setTableRowData(nextScheduleByDay[firstDay] ?? [])
+      }
+    }
+
     setSelectedDay(firstDay)
-    setTableRowData(nextScheduleByDay[firstDay] ?? [])
     setTableRowDataHistory([])
-  }, [matchDuration, numCourt, startTime, tournament, getDaysArray, createEmptyScheduleTable])
+    loadScheduledMatches()
+  }, [matchDuration, numCourt, startTime, tournament, getDaysArray, createEmptyScheduleTable, populateScheduleWithExistingMatches])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue)
@@ -247,6 +327,23 @@ const Organizer = () => {
 
     return a.groupOrder - b.groupOrder
 
+  }
+
+  const getPlayerDisplayName = (player: Match['teamA']['players'][number]): string => {
+    return (
+      player.officialName?.[language]
+      || player.displayName?.[language]
+      || player.officialName?.th
+      || player.officialName?.en
+      || player.displayName?.th
+      || player.displayName?.en
+      || 'Unknown'
+    )
+  }
+
+  const getTeamDisplayName = (team: Match['teamA']): string => {
+    if(!team?.players || team.players.length < 1) return 'TBD'
+    return team.players.map((player) => getPlayerDisplayName(player).split(' ')[0]).join(' / ')
   }
 
   const onDragStart = (e: React.DragEvent<HTMLButtonElement>, slotIndex: number, courtIndex: number) => {
@@ -301,17 +398,57 @@ const Organizer = () => {
     setDragSource(null)
   }
 
+  const EVENT_COLORS: Record<string, string[]> = {
+    group: [
+      '#a0826d',
+      '#6a9ab0',
+      '#7aaa65',
+      '#a06aaa',
+      '#b08a5a',
+      '#5aacac',
+      '#b05a6a',
+      '#6a9a5a',
+    ],
+    playoff: [
+      '#c0603a',
+      '#3a60c0',
+      '#3aaa3a',
+      '#c03a80',
+      '#c0903a',
+      '#3aaaaa',
+      '#c03a3a',
+      '#3a803a',
+    ],
+    consolation: [
+      '#b8a090',
+      '#90aab8',
+      '#a0c090',
+      '#b890c0',
+      '#c0b090',
+      '#90c0c0',
+      '#c090a0',
+      '#90b090',
+    ],
+  }
+
+  const getEventColor = (eventID: string | undefined, step: string | undefined): string => {
+    const palette = EVENT_COLORS[step ?? 'group'] ?? EVENT_COLORS.group
+    if (!eventID) return palette[0]
+    const index = eventOrder.indexOf(eventID)
+    return palette[index >= 0 ? index % palette.length : 0]
+  }
+
   const renderTableCell = (match: (Match | null | string), i: number, j: number) => {
     if (typeof match === 'string'){
-      return match
+      return <Box sx={{ width: '100%', textAlign: 'center' }}>{match}</Box>
     }else if(match === null){
       return (
         <Box
           onDragOver={onDragOver}
           onDrop={(e) => onDropMatch(e, i, j)}
-          sx={{ cursor: dragSource ? 'grab' : 'pointer', minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          sx={{ width: '100%', cursor: dragSource ? 'grab' : 'pointer', minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <Button onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}><AddCircle/></Button>
+          <Button fullWidth onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}><AddCircle/></Button>
         </Box>
       )
     }else {
@@ -319,16 +456,72 @@ const Organizer = () => {
 
       return (
         <Button
+          fullWidth
           draggable
           onDragStart={(e) => onDragStart(e, i, j)}
           onClick={(e:MouseEvent<HTMLButtonElement>) => onSelectCell(e, i, j)}
-          sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
+          sx={{
+            width: '100%',
+            p: 0,
+            borderRadius: 1,
+            overflow: 'hidden',
+            textTransform: 'none',
+            whiteSpace: 'normal',
+            wordWrap: 'break-word',
+            display: 'block',
+            border: '1px solid #c0c0c8',
+          }}
         >
-          <Box>
-            <Typography>{match.event?.name?.[language]}</Typography>
-            {match.groupOrder !== undefined ? <Typography>Group {MAP_GROUP_NAME[match.groupOrder].NAME}</Typography> : null}
-            <Typography>{match.step === MatchStep.Group ? `Round ${match.round + 1}` : MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}</Typography>
-            {match.bracketOrder !== undefined && <Typography>{`Bracket  ${match.bracketOrder}`}</Typography>}
+          <Box sx={{ width: '100%' }}>
+            <Box
+              sx={{
+                backgroundColor: getEventColor(match.event?.id, match.step),
+                color: 'whitesmoke',
+                px: 1,
+                py: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+              }}
+            >
+              <Typography variant='caption' sx={{ textAlign: 'left', fontWeight: 600, lineHeight: 1.2 }}>
+                {match.event?.name?.[language]}
+              </Typography>
+              <Typography variant='caption' sx={{ whiteSpace: 'nowrap' }}>
+                {match.step === MatchStep.Group
+                  ? `Group ${MAP_GROUP_NAME[match.groupOrder as number].NAME} - R${match.round + 1}`
+                  : match.step === MatchStep.Consolation
+                    ? `Con. ${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}`
+                    : MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]
+                }
+              </Typography>
+            </Box>
+            <Box sx={{ backgroundColor: '#fff' }}>
+              <Box
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderBottom: '1px solid #f0f0f0',
+                  textAlign: 'left',
+                }}
+              >
+                <Typography variant='caption' sx={{ display: 'block', color: '#777', lineHeight: 1.2 }}>
+                  {getTeamDisplayName(match.teamA)}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  textAlign: 'left',
+                }}
+              >
+                <Typography variant='caption' sx={{ display: 'block', color: '#777', lineHeight: 1.2 }}>
+                  {getTeamDisplayName(match.teamB)}
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         </Button>
       )
@@ -338,8 +531,8 @@ const Organizer = () => {
   const onSaveSchedule = async() => {
     const selectedDaySchedule = selectedDay ? { [selectedDay]: tableRowData } : {}
     const schedules = { ...scheduleByDay, ...selectedDaySchedule }
-    const matches = Object.entries(schedules).reduce((allDayAccumulator: {id: string, date: string}[], [day, schedule]) => {
-      const dayMatches = schedule.reduce((accumulator: {id: string, date: string}[], currentTimeSlot: ScheduleCell[]) => {
+    const matches = Object.entries(schedules).reduce((allDayAccumulator: {id: string, date: string, court: string}[], [day, schedule]) => {
+      const dayMatches = schedule.reduce((accumulator: {id: string, date: string, court: string}[], currentTimeSlot: ScheduleCell[]) => {
 
         for(let i = 1;i < currentTimeSlot.length; i++){
           if(typeof currentTimeSlot[i] === 'string' || currentTimeSlot[i] === null) {
@@ -351,8 +544,9 @@ const Organizer = () => {
             .set('minute', Number(currentTimeSlot[0]?.toString().split(':')[1]))
             .toISOString()
           const match: Match = currentTimeSlot[i] as Match
+          const court = (i - 1).toString()
 
-          accumulator.push({ id: match.id, date })
+          accumulator.push({ id: match.id, date, court })
         }
         return accumulator
       }, [])
@@ -940,11 +1134,19 @@ const Organizer = () => {
             }))}
           </Box>
           <TableContainer component={Paper} sx={{ maxWidth: '100%', maxHeight: 500 }} >
-            <Table stickyHeader size="small">
+            <Table stickyHeader size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
               <TableHead>
                 <TableRow>
                   {
-                    ['เวลา/คอร์ด', ...Array.from({ length:numCourt }, (_, i) => `Court ${(i + 1)}`)].map((court) => <TableCell align='center' key={`court-${court}`}>{court}</TableCell>)
+                    ['เวลา/คอร์ด', ...Array.from({ length:numCourt }, (_, i) => `Court ${(i + 1)}`)].map((court, idx) => (
+                      <TableCell
+                        align='center'
+                        key={`court-${court}`}
+                        sx={idx === 0 ? { width: 84 } : { width: `calc((100% - 84px) / ${numCourt})` }}
+                      >
+                        {court}
+                      </TableCell>
+                    ))
                   }
                 </TableRow>
               </TableHead>
@@ -960,9 +1162,11 @@ const Organizer = () => {
                             onDragOver={onDragOver}
                             onDrop={(e) => onDropMatch(e, i, j)}
                             sx={{
+                              width: j === 0 ? 84 : `calc((100% - 84px) / ${numCourt})`,
                               backgroundColor: dragSource?.slot === i && dragSource?.court === j ? '#e3f2fd' : 'transparent',
                               cursor: dragSource ? 'grab' : 'default',
                               transition: 'background-color 0.2s',
+                              p: 0.5,
                             }}
                           >
                             {renderTableCell(match, i, j)}
