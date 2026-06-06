@@ -61,7 +61,7 @@ const TournamentDetails = ({ tournament, isManager, setTournament }: TournamentD
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = async () => {
+  const handleSave = async() => {
     setError(null)
     setSuccess(null)
 

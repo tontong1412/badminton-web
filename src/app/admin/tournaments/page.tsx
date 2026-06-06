@@ -147,7 +147,7 @@ export default function AdminTournamentsPage() {
   const handleDelete = (id: string) => {
     if (!confirm('Are you sure you want to delete this tournament?')) return
     // TODO: Implement delete functionality
-    alert('Delete functionality to be implemented')
+    alert(`Delete functionality to be implemented (Tournament ID: ${id})`)
   }
 
   if (!userReady || loading) {
