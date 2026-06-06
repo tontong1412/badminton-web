@@ -12,10 +12,10 @@ import {
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Button, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Box, Button, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
-import React, { MouseEvent, useCallback, useEffect, useState } from 'react'
+import React, { MouseEvent, useCallback, useEffect, useMemo, useState } from 'react'
 // import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
@@ -44,6 +44,22 @@ type ScheduleCell = Match | null | string
 type ScheduleTable = ScheduleCell[][]
 
 const Organizer = () => {
+  const TIME_ZONE_OPTIONS = [
+    'UTC',
+    'Asia/Bangkok',
+    'Asia/Singapore',
+    'Asia/Tokyo',
+    'Europe/London',
+    'Europe/Paris',
+    'America/New_York',
+    'America/Los_Angeles',
+  ]
+
+  const detectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const availableTimeZones = TIME_ZONE_OPTIONS.includes(detectedTimeZone)
+    ? TIME_ZONE_OPTIONS
+    : [detectedTimeZone, ...TIME_ZONE_OPTIONS]
+
   // const { t } = useTranslation()
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
@@ -68,6 +84,7 @@ const Organizer = () => {
   const [step, setStep] = useState<string | null>(null)
   const [group, setGroup] = useState<string | null>(null)
   const [round, setRound] = useState<string | null>(null)
+  const [selectedTimeZone, setSelectedTimeZone] = useState(detectedTimeZone)
 
   const [dragSource, setDragSource] = useState<{ slot: number; court: number } | null>(null)
 
@@ -173,17 +190,34 @@ const Organizer = () => {
     nextScheduleByDay: Record<string, ScheduleTable>,
     matches: Match[]
   ): Record<string, ScheduleTable> => {
+    const getDateStringInTimeZone = (value: string | Date) => {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: selectedTimeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(value))
+    }
+
+    const getTimeStringInTimeZone = (value: string | Date) => {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: selectedTimeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(value))
+    }
+
     const updatedSchedules = { ...nextScheduleByDay }
 
     matches.forEach((match) => {
       if (!match.date) return
 
-      const matchMoment = moment(match.date)
-      const matchDayStr = matchMoment.format('YYYY-MM-DD')
-      const timeStr = matchMoment.format('HH:mm')
+      const matchDayStr = getDateStringInTimeZone(match.date)
+      const timeStr = getTimeStringInTimeZone(match.date)
 
       const dayKey = Object.keys(updatedSchedules).find(
-        (key) => moment(key).format('YYYY-MM-DD') === matchDayStr
+        (key) => getDateStringInTimeZone(key) === matchDayStr
       )
       if (!dayKey) return
 
@@ -199,7 +233,78 @@ const Organizer = () => {
     })
 
     return updatedSchedules
+  }, [selectedTimeZone])
+
+  const getTimeZoneOffsetMinutes = useCallback((date: Date, timeZone: string): number => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+
+    const parts = formatter.formatToParts(date).reduce((acc, part) => {
+      if(part.type !== 'literal'){
+        acc[part.type] = part.value
+      }
+      return acc
+    }, {} as Record<string, string>)
+
+    const interpretedAsUTC = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second)
+    )
+
+    return (interpretedAsUTC - date.getTime()) / 60000
   }, [])
+
+  const getDatePartsInTimeZone = useCallback((value: string, timeZone: string) => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+
+    const parts = formatter.formatToParts(new Date(value)).reduce((acc, part) => {
+      if(part.type !== 'literal'){
+        acc[part.type] = part.value
+      }
+      return acc
+    }, {} as Record<string, string>)
+
+    return {
+      year: Number(parts.year),
+      month: Number(parts.month),
+      day: Number(parts.day),
+    }
+  }, [])
+
+  const buildISODateForTimeZone = useCallback((dayISO: string, timeText: string, timeZone: string) => {
+    const [hoursText, minutesText] = timeText.split(':')
+    const hour = Number(hoursText)
+    const minute = Number(minutesText)
+    const { year, month, day } = getDatePartsInTimeZone(dayISO, timeZone)
+
+    const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0))
+    const firstOffset = getTimeZoneOffsetMinutes(utcGuess, timeZone)
+    let utcDate = new Date(utcGuess.getTime() - firstOffset * 60000)
+
+    const secondOffset = getTimeZoneOffsetMinutes(utcDate, timeZone)
+    if(secondOffset !== firstOffset){
+      utcDate = new Date(utcGuess.getTime() - secondOffset * 60000)
+    }
+
+    return utcDate.toISOString()
+  }, [getDatePartsInTimeZone, getTimeZoneOffsetMinutes])
 
   const onGenerateMatches = async() => {
     if(!tournament) return
@@ -447,6 +552,94 @@ const Organizer = () => {
     return palette[index >= 0 ? index % palette.length : 0]
   }
 
+  const displayEventOrder = eventOrder.length > 0
+    ? eventOrder
+    : (tournament?.events.map((event) => event.id) ?? [])
+
+  const matchStatistics = useMemo(() => {
+    if(!tournament) return null
+
+    const uniqueMatches = new Map<string, Match>()
+
+    Object.values(scheduleByDay).forEach((daySchedule) => {
+      daySchedule.forEach((timeSlot) => {
+        timeSlot.forEach((cell) => {
+          if(cell && typeof cell !== 'string'){
+            uniqueMatches.set(cell.id, cell)
+          }
+        })
+      })
+    })
+
+    Object.values(manualMatchByEvent).forEach((eventMatchData) => {
+      Object.values(eventMatchData.group).forEach((groupRounds) => {
+        Object.values(groupRounds).forEach((matches) => {
+          matches.forEach((match) => uniqueMatches.set(match.id, match))
+        })
+      })
+
+      Object.values(eventMatchData.playoff).forEach((matches) => {
+        matches.forEach((match) => uniqueMatches.set(match.id, match))
+      })
+
+      Object.values(eventMatchData.consolation).forEach((matches) => {
+        matches.forEach((match) => uniqueMatches.set(match.id, match))
+      })
+    })
+
+    const byStep = {
+      group: 0,
+      playoff: 0,
+      consolation: 0,
+    }
+
+    const byEvent = tournament.events.reduce((acc, event) => {
+      acc[event.id] = {
+        id: event.id,
+        name: event.name?.[language] || event.name?.th || event.name?.en || 'Unknown event',
+        total: 0,
+        group: 0,
+        playoff: 0,
+        consolation: 0,
+      }
+      return acc
+    }, {} as Record<string, { id: string; name: string; total: number; group: number; playoff: number; consolation: number }>)
+
+    uniqueMatches.forEach((match) => {
+      const eventID = match.event?.id
+      if(!eventID) return
+
+      if(!byEvent[eventID]){
+        byEvent[eventID] = {
+          id: eventID,
+          name: match.event?.name?.[language] || match.event?.name?.th || match.event?.name?.en || 'Unknown event',
+          total: 0,
+          group: 0,
+          playoff: 0,
+          consolation: 0,
+        }
+      }
+
+      byEvent[eventID].total += 1
+      if(match.step === MatchStep.Group){
+        byEvent[eventID].group += 1
+        byStep.group += 1
+      }else if(match.step === MatchStep.PlayOff){
+        byEvent[eventID].playoff += 1
+        byStep.playoff += 1
+      }else if(match.step === MatchStep.Consolation){
+        byEvent[eventID].consolation += 1
+        byStep.consolation += 1
+      }
+    })
+
+    return {
+      total: uniqueMatches.size,
+      byStep,
+      byEvent,
+    }
+  }, [language, manualMatchByEvent, scheduleByDay, tournament])
+
   const renderTableCell = (match: (Match | null | string), i: number, j: number) => {
     if (typeof match === 'string'){
       return <Box sx={{ width: '100%', textAlign: 'center' }}>{match}</Box>
@@ -549,13 +742,16 @@ const Organizer = () => {
           }
 
           const date = moment(day)
-            .set('hour', Number(currentTimeSlot[0]?.toString().split(':')[0]))
-            .set('minute', Number(currentTimeSlot[0]?.toString().split(':')[1]))
             .toISOString()
+          const zonedDate = buildISODateForTimeZone(
+            date,
+            currentTimeSlot[0]?.toString() || '00:00',
+            selectedTimeZone
+          )
           const match: Match = currentTimeSlot[i] as Match
           const court = (i - 1).toString()
 
-          accumulator.push({ id: match.id, date, court })
+          accumulator.push({ id: match.id, date: zonedDate, court })
         }
         return accumulator
       }, [])
@@ -568,6 +764,12 @@ const Organizer = () => {
       tournamentID: tournament.id,
       matches,
     }, { withCredentials:true })
+
+    // Generate match numbers after saving schedule
+    await axios.post(`${SERVICE_ENDPOINT}/matches/assign-match-number`,
+      { tournamentID: tournament.id },
+      { withCredentials:true }
+    )
   }
 
   const resetAllDaySchedules = () => {
@@ -831,13 +1033,6 @@ const Organizer = () => {
     setTableRowDataHistory([])
   }
 
-  const onGenerateMatchNumber = async() => {
-    await axios.post(`${SERVICE_ENDPOINT}/matches/assign-match-number`,
-      { tournamentID: tournament.id },
-      { withCredentials:true }
-    )
-  }
-
   const onAddMatchToSchedule = (matches: Match[]) => {
     // save history before modify
     const tempHistory = [...tableRowDataHistory]
@@ -1062,58 +1257,175 @@ const Organizer = () => {
       <Box sx={{ display: 'flex' }}>
         <MenuDrawer tournamentID={tournament.id}/>
         <Box sx={{ width: '100%' }}>
+          {/* Schedule Settings Panel */}
+          <Box sx={{ border: '1px solid #ddd', borderRadius: 2, px: 2, py: 1.5, margin: 1, backgroundColor: '#fafafa' }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1rem', mb: 1.5 }}>Schedule Settings</Typography>
+
+            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              {/* Input Settings */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 280 }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#555', textTransform: 'uppercase' }}>Timing & Layout</Typography>
+                <TextField
+                  autoFocus
+                  value={startTime}
+                  onChange={(e) => setStartTime(Number(e.target.value))}
+                  size='small'
+                  label="Start Time (Hour)"
+                  variant="outlined"
+                  type='number' />
+                <TextField
+                  value={numCourt}
+                  onChange={(e) => setNumCourt(Number(e.target.value))}
+                  size='small'
+                  label="Number of Courts"
+                  variant="outlined"
+                  type='number' />
+                <TextField
+                  value={matchDuration}
+                  onChange={(e) => setMatchDuration(Number(e.target.value))}
+                  size='small'
+                  label="Match Duration (min)"
+                  variant="outlined"
+                  type='number' />
+                <TextField
+                  select
+                  value={selectedTimeZone}
+                  onChange={(e) => setSelectedTimeZone(e.target.value)}
+                  size='small'
+                  label="Timezone"
+                >
+                  {availableTimeZones.map((timeZone) => (
+                    <MenuItem key={timeZone} value={timeZone}>{timeZone}</MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+
+              {/* Action Buttons */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 200 }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#555', textTransform: 'uppercase' }}>Actions</Typography>
+
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    variant='contained'
+                    color='success'
+                    size='small'
+                    onClick={onGenerateMatches}
+                    disabled={isGeneratingMatches}
+                    sx={{ flex: '1 1 100px' }}
+                  >
+                    {isGeneratingMatches ? 'Generating...' : 'Generate'}
+                  </Button>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    variant='contained'
+                    color='secondary'
+                    size='small'
+                    onClick={onAutoScheduleTwoDays}
+                    sx={{ flex: '1 1 100px' }}
+                  >
+                    Auto 2-Day
+                  </Button>
+                  <Button
+                    variant='outlined'
+                    color='error'
+                    size='small'
+                    onClick={resetAllDaySchedules}
+                    sx={{ flex: '1 1 100px' }}
+                  >
+                    Reset All
+                  </Button>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    size='small'
+                    disabled={tableRowDataHistory.length < 1}
+                    onClick={onUndo}
+                    sx={{ flex: '1 1 100px' }}
+                  >
+                    Undo
+                  </Button>
+                  <Button
+                    variant='contained'
+                    color='primary'
+                    size='small'
+                    onClick={onSaveSchedule}
+                    sx={{ flex: '1 1 100px' }}
+                  >
+                    Save
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Event Order */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 200 }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#555', textTransform: 'uppercase' }}>Event Order</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, maxHeight: 250, overflowY: 'auto' }}>
+                  {displayEventOrder.map((eventID, index, currentOrder) => {
+                    const event = tournament.events.find((item) => item.id === eventID)
+                    if(!event) return null
+
+                    return (
+                      <Box key={event.id} sx={{ display:'flex', alignItems:'center', gap: 0.75, border: '1px solid #ddd', borderRadius: 1.5, px: 0.75, py: 0.4, justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#222' }}>{`${index + 1}. ${event.name?.[language]}`}</Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Button size='small' variant='outlined' disabled={index === 0} onClick={() => moveEventOrder(event.id, 'up')} sx={{ minWidth: 28, p: 0.5 }}>↑</Button>
+                          <Button size='small' variant='outlined' disabled={index === (currentOrder.length - 1)} onClick={() => moveEventOrder(event.id, 'down')} sx={{ minWidth: 28, p: 0.5 }}>↓</Button>
+                        </Box>
+                      </Box>
+                    )
+                  })}
+                </Box>
+              </Box>
+
+              {/* Match Statistics */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 280 }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#555', textTransform: 'uppercase' }}>Match Statistics</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, maxHeight: 250, overflowY: 'auto', fontSize: '0.9rem' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0.5, borderBottom: '1px solid #ddd' }}>
+                    <Typography sx={{ fontWeight: 600 }}>Total:</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{matchStatistics?.total ?? 0}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0.5, borderBottom: '1px solid #ddd' }}>
+                    <Typography sx={{ fontSize: '0.85rem' }}>Group</Typography>
+                    <Typography sx={{ fontWeight: 600 }}>{matchStatistics?.byStep.group ?? 0}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0.5, borderBottom: '1px solid #ddd' }}>
+                    <Typography sx={{ fontSize: '0.85rem' }}>KO</Typography>
+                    <Typography sx={{ fontWeight: 600 }}>{matchStatistics?.byStep.playoff ?? 0}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0.5, borderBottom: '1px solid #ddd' }}>
+                    <Typography sx={{ fontSize: '0.85rem' }}>Consolation</Typography>
+                    <Typography sx={{ fontWeight: 600 }}>{matchStatistics?.byStep.consolation ?? 0}</Typography>
+                  </Box>
+                  {displayEventOrder.map((eventID) => {
+                    const stats = matchStatistics?.byEvent[eventID]
+                    if(!stats) return null
+
+                    return (
+                      <Box key={`stats-${eventID}`} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, borderBottom: '1px solid #eee', pb: 0.4 }}>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#222' }}>
+                          {stats.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#555', textAlign: 'right' }}>
+                          {stats.total}
+                        </Typography>
+                      </Box>
+                    )
+                  })}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Date Toggle */}
           <ToggleButtonGroup aria-label="Basic button group" sx={{ m:1 }} value={selectedDay} onChange={onChangeDay} exclusive>
             {getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d, i) => <ToggleButton key={`day-${i}`} value={d.toISOString()}>{moment(d).format('ddd, DD.MM')}</ToggleButton>)}
           </ToggleButtonGroup>
-          <Box sx={{ display:'flex', gap:2, margin: 1, pt:2 }}>
-            <TextField
-              autoFocus
-              value={startTime}
-              onChange={(e) => setStartTime(Number(e.target.value))}
-              size='small'
-              label="เวลาเริ่ม"
-              variant="outlined"
-              type='number' />
-            <TextField
-              autoFocus
-              value={numCourt}
-              onChange={(e) => setNumCourt(Number(e.target.value))}
-              size='small'
-              label="จำนวนคอร์ด"
-              variant="outlined"
-              type='number' />
-            <TextField
-              value={matchDuration}
-              onChange={(e) => setMatchDuration(Number(e.target.value))}
-              size='small'
-              label="เวลาต่อแมตช์ (นาที)"
-              variant="outlined"
-              type='number' />
-            <Button sx={{ borderRadius: 10, width:'100px' }} color='error' variant='contained' size='large' onClick={resetAllDaySchedules}>Reset</Button>
-            <Button sx={{ borderRadius: 10 }} color='secondary' variant='contained' size='large' onClick={onAutoScheduleTwoDays}>Auto 2-Day</Button>
-            <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' disabled={tableRowDataHistory.length < 1} onClick={onUndo}>Undo</Button>
-            <Button sx={{ borderRadius: 10, width:'100px'  }} color='primary' variant='contained' size='large' onClick={onSaveSchedule}>Save</Button>
-            <Button sx={{ borderRadius: 10 }} color='primary' variant='contained' size='large' onClick={onGenerateMatchNumber}>Gen. Match No.</Button>
-          </Box>
-          <Box sx={{ display:'flex', gap: 1, flexWrap: 'wrap', px: 1, pb: 1 }}>
-            <Typography sx={{ width: '100%', fontWeight: 600 }}>Event order for auto scheduling</Typography>
-            {(eventOrder.length > 0 ? eventOrder : tournament.events.map((event) => event.id)).map((eventID, index, currentOrder) => {
-              const event = tournament.events.find((item) => item.id === eventID)
-              if(!event) return null
-
-              return (
-                <Box key={event.id} sx={{ display:'flex', alignItems:'center', gap: 1, border: '1px solid #ddd', borderRadius: 2, px: 1, py: 0.5 }}>
-                  <Typography sx={{ minWidth: 180 }}>{`${index + 1}. ${event.name?.[language]}`}</Typography>
-                  <Button size='small' variant='outlined' disabled={index === 0} onClick={() => moveEventOrder(event.id, 'up')}>Up</Button>
-                  <Button size='small' variant='outlined' disabled={index === (currentOrder.length - 1)} onClick={() => moveEventOrder(event.id, 'down')}>Down</Button>
-                </Box>
-              )
-            })}
-          </Box>
-
-          <Button variant='contained' onClick={onGenerateMatches} disabled={isGeneratingMatches} sx={{ mb: 2 }}>
-            {isGeneratingMatches ? 'Generating...' : 'Generate All Matches'}
-          </Button>
 
           <TableContainer component={Paper} sx={{ maxWidth: '100%', maxHeight: 500 }} >
             <Table stickyHeader size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
