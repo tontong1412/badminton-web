@@ -12,7 +12,7 @@ import {
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Box, Button, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
 import React, { MouseEvent, useCallback, useEffect, useMemo, useState } from 'react'
@@ -87,6 +87,12 @@ const Organizer = () => {
   const [selectedTimeZone, setSelectedTimeZone] = useState(detectedTimeZone)
 
   const [dragSource, setDragSource] = useState<{ slot: number; court: number } | null>(null)
+  const [pendingDrop, setPendingDrop] = useState<{
+    sourceSlot: number
+    sourceCourt: number
+    targetSlot: number
+    targetCourt: number
+  } | null>(null)
 
   const open = Boolean(anchorEl)
   const handleClose = () => {
@@ -470,6 +476,65 @@ const Organizer = () => {
     e.dataTransfer.dropEffect = 'move'
   }
 
+  const applyDropAction = useCallback((
+    sourceSlot: number,
+    sourceCourt: number,
+    targetSlot: number,
+    targetCourt: number,
+    action: 'swap' | 'insert'
+  ) => {
+    const tempHistory = [...tableRowDataHistory]
+    const deepCopyTableRowData = JSON.parse(JSON.stringify(tableRowData))
+    tempHistory.push(deepCopyTableRowData)
+    setTableRowDataHistory(tempHistory)
+
+    const tempTableRowData = tableRowData.map((row) => [...row])
+    const sourceMatch = tempTableRowData[sourceSlot][sourceCourt]
+    const targetCell = tempTableRowData[targetSlot][targetCourt]
+
+    if(sourceMatch === null || typeof sourceMatch === 'string') return
+
+    if(targetCell === null){
+      tempTableRowData[targetSlot][targetCourt] = sourceMatch
+      tempTableRowData[sourceSlot][sourceCourt] = null
+    }else if(typeof targetCell !== 'string'){
+      if(action === 'swap'){
+        tempTableRowData[sourceSlot][sourceCourt] = targetCell
+        tempTableRowData[targetSlot][targetCourt] = sourceMatch
+      }else{
+        const schedulePositions: Array<{ slot: number, court: number }> = []
+        for(let slot = 0; slot < tempTableRowData.length; slot++){
+          for(let court = 1; court < tempTableRowData[slot].length; court++){
+            schedulePositions.push({ slot, court })
+          }
+        }
+
+        const linearValues = schedulePositions.map(({ slot, court }) => tempTableRowData[slot][court])
+        const sourceLinearIndex = schedulePositions.findIndex(({ slot, court }) => slot === sourceSlot && court === sourceCourt)
+        const targetLinearIndex = schedulePositions.findIndex(({ slot, court }) => slot === targetSlot && court === targetCourt)
+
+        if(sourceLinearIndex !== -1 && targetLinearIndex !== -1){
+          const valuesWithoutSource = [...linearValues]
+          const [removedValue] = valuesWithoutSource.splice(sourceLinearIndex, 1)
+          const adjustedTargetIndex = sourceLinearIndex < targetLinearIndex ? targetLinearIndex - 1 : targetLinearIndex
+          valuesWithoutSource.splice(adjustedTargetIndex, 0, removedValue)
+
+          schedulePositions.forEach(({ slot, court }, index) => {
+            tempTableRowData[slot][court] = valuesWithoutSource[index] ?? null
+          })
+        }
+      }
+    }
+
+    setTableRowData(tempTableRowData)
+    if(selectedDay){
+      setScheduleByDay({
+        ...scheduleByDay,
+        [selectedDay]: tempTableRowData,
+      })
+    }
+  }, [scheduleByDay, selectedDay, tableRowData, tableRowDataHistory])
+
   const onDropMatch = (e: React.DragEvent<HTMLElement>, targetSlot: number, targetCourt: number) => {
     e.preventDefault()
     if(!dragSource) return
@@ -482,34 +547,35 @@ const Organizer = () => {
       return
     }
 
-    const tempHistory = [...tableRowDataHistory]
-    const deepCopyTableRowData = JSON.parse(JSON.stringify(tableRowData))
-    tempHistory.push(deepCopyTableRowData)
-    setTableRowDataHistory(tempHistory)
-
-    const tempTableRowData = [...tableRowData]
-    const sourceMatch = tempTableRowData[sourceSlot][sourceCourt]
-    const targetCell = tempTableRowData[targetSlot][targetCourt]
+    const sourceMatch = tableRowData[sourceSlot][sourceCourt]
+    const targetCell = tableRowData[targetSlot][targetCourt]
 
     if(sourceMatch !== null && typeof sourceMatch !== 'string'){
-      if(targetCell === null){
-        tempTableRowData[targetSlot][targetCourt] = sourceMatch
-        tempTableRowData[sourceSlot][sourceCourt] = null
-      }else if(typeof targetCell !== 'string' && targetCell !== null){
-        tempTableRowData[sourceSlot][sourceCourt] = targetCell
-        tempTableRowData[targetSlot][targetCourt] = sourceMatch
-      }
-
-      setTableRowData(tempTableRowData)
-      if(selectedDay){
-        setScheduleByDay({
-          ...scheduleByDay,
-          [selectedDay]: tempTableRowData,
-        })
+      if(targetCell !== null && typeof targetCell !== 'string'){
+        setPendingDrop({ sourceSlot, sourceCourt, targetSlot, targetCourt })
+      }else{
+        applyDropAction(sourceSlot, sourceCourt, targetSlot, targetCourt, 'swap')
       }
     }
 
     setDragSource(null)
+  }
+
+  const onCloseDropActionDialog = () => {
+    setPendingDrop(null)
+  }
+
+  const onSelectDropAction = (action: 'swap' | 'insert') => {
+    if(!pendingDrop) return
+
+    applyDropAction(
+      pendingDrop.sourceSlot,
+      pendingDrop.sourceCourt,
+      pendingDrop.targetSlot,
+      pendingDrop.targetCourt,
+      action
+    )
+    setPendingDrop(null)
   }
 
   const EVENT_COLORS: Record<string, string[]> = {
@@ -1489,6 +1555,17 @@ const Organizer = () => {
           {renderPopOver()}
         </Box>
       </Popover>
+      <Dialog open={Boolean(pendingDrop)} onClose={onCloseDropActionDialog}>
+        <DialogTitle>Choose Drop Action</DialogTitle>
+        <DialogContent>
+          <Typography variant='body2'>This slot already has a match. Do you want to swap or insert?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onCloseDropActionDialog} color='inherit'>Cancel</Button>
+          <Button onClick={() => onSelectDropAction('swap')} variant='outlined'>Swap</Button>
+          <Button onClick={() => onSelectDropAction('insert')} variant='contained'>Insert</Button>
+        </DialogActions>
+      </Dialog>
     </TournamentLayout>
   )
 
