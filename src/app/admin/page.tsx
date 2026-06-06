@@ -137,6 +137,12 @@ export default function AdminHubPage() {
                 >
                   Manage Banners
                 </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => router.push('/admin/tournaments')}
+                >
+                  Manage Tournaments
+                </Button>
               </Box>
             )}
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
