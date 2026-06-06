@@ -99,6 +99,7 @@
       "payment": "Payment",
       "uploadSlip": "Upload Slip",
       "total": "Registration Completed",
+      "totalBreakdownTooltip": "Total registrations / Completed registrations / Limit",
       "noRegistration": "ํYou have not registered to this tournament",
       "note": "Note",
       "shuttlecockCredit": "Shuttlecock Credit"

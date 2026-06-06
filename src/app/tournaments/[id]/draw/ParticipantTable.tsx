@@ -4,7 +4,7 @@ import { MAP_DECISION_STATUS, MAP_PAYMENT_STATUS, SERVICE_ENDPOINT } from '@/app
 import { RootState } from '@/app/libs/redux/store'
 import { PaymentStatus, TeamStatus, EventTeam, Player, Language } from '@/type'
 import {  FilterList } from '@mui/icons-material'
-import { Button, Chip,  CircularProgress,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip,  CircularProgress,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
 import { MouseEvent, useState } from 'react'
@@ -102,11 +102,18 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
     return team.paymentStatus === PaymentStatus.Paid || team.paymentStatus === PaymentStatus.Pending
   }
 
+  const totalRegistrations = event?.teams.length ?? 0
+  const completedRegistrations = event?.teams.filter(filterTotal).length ?? 0
+
 
   if (!event) return <CircularProgress />
   return (
     <>
-      <Typography sx={{ textAlign:'right' }}>{`${t('tournament.registration.total')} ${event?.teams.filter(filterTotal).length}/${event?.limit}`}</Typography>
+      <Box sx={{ textAlign: 'right' }}>
+        <Tooltip title={t('tournament.registration.totalBreakdownTooltip')} arrow>
+          <Typography component="span" sx={{ display: 'inline-block', cursor: 'help' }}>{`${totalRegistrations}/${completedRegistrations}/${event?.limit ?? 0}`}</Typography>
+        </Tooltip>
+      </Box>
       <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
         <Table size="small">
           <TableHead>
