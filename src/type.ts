@@ -261,6 +261,7 @@ export interface Tournament {
   },
   status: TournamentStatus
   useHandicap: boolean
+  showParticipantList?: boolean
 }
 
 export interface displayData {
