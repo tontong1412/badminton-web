@@ -12,7 +12,7 @@ import {
   TournamentEvent,
   TournamentMenu
 } from '@/type'
-import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Paper, Popover, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Box, Button, Paper, Popover, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import axios from 'axios'
 import { useParams } from 'next/navigation'
 import React, { MouseEvent, useCallback, useEffect, useState } from 'react'
@@ -20,17 +20,10 @@ import React, { MouseEvent, useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import MenuDrawer from '../MenuDrawer'
 import moment from 'moment'
-import MatchCard from './MatchCard'
-import { AddCircle, ArrowBackIos, ArrowDropDown } from '@mui/icons-material'
 import { useTournament } from '@/app/libs/data'
+import { AddCircle, ArrowBackIos } from '@mui/icons-material'
 
-const TabPanel = ({ children, value, index }: { children: React.ReactNode; value: number; index: number }) => {
-  return (
-    <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
-    </div>
-  )
-}
+
 
 
 interface Group {
@@ -55,15 +48,12 @@ const Organizer = () => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
   const dispatch = useAppDispatch()
-  const [tabIndex, setTabIndex] = useState(0)
   const [numCourt, setNumCourt] = useState(8)
   const [startTime, setStartTime] = useState(9)
   const [matchDuration, setMatchDuration] = useState(25)
-  const [eventMatches, setEventMatches] = useState<Match[]>([])
   const [selectedDay, setSelectedDay] = useState<string|null>(null)
   const [eventOrder, setEventOrder] = useState<string[]>([])
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
-  const [matchInIterationFormat, setMatchInIterationFormat] = useState<MatchData>({ group:{}, playoff:{}, consolation:{} })
   const [tableRowData, setTableRowData ] = useState<ScheduleTable>([])
   const [scheduleByDay, setScheduleByDay] = useState<Record<string, ScheduleTable>>({})
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(-1)
@@ -71,6 +61,9 @@ const Organizer = () => {
   const { tournament } = useTournament(params.id as string)
 
   const [tableRowDataHistory, setTableRowDataHistory] = useState<ScheduleTable[]>([])
+  const [isGeneratingMatches, setIsGeneratingMatches] = useState(false)
+  const [manualMatchByEvent, setManualMatchByEvent] = useState<Record<string, MatchData>>({})
+  const [selectedManualEventID, setSelectedManualEventID] = useState<string | null>(null)
 
   const [step, setStep] = useState<string | null>(null)
   const [group, setGroup] = useState<string | null>(null)
@@ -81,6 +74,7 @@ const Organizer = () => {
   const open = Boolean(anchorEl)
   const handleClose = () => {
     setAnchorEl(null)
+    setSelectedManualEventID(null)
     setStep(null)
     setGroup(null)
     setRound(null)
@@ -114,10 +108,8 @@ const Organizer = () => {
     return slots
   }, [numCourt])
 
-  const getMatches = useCallback(async(eventID: string) => {
-    const response = await axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${eventID}&status=waiting`)
-    setEventMatches(response.data)
-    const iteratableMatch: MatchData = response.data.reduce((prev: MatchData, match:Match) => {
+  const formatMatchIteration = useCallback((matches: Match[]) => {
+    return matches.reduce((prev: MatchData, match:Match) => {
       const accumulater = { ...prev }
       if(!match.step) return accumulater
       if(!accumulater[match.step]){
@@ -149,8 +141,21 @@ const Organizer = () => {
       return accumulater
 
     }, { group: {}, playoff: {}, consolation: {} })
-    setMatchInIterationFormat(iteratableMatch)
   }, [])
+
+  const getManualMatchesByEvent = useCallback(async(events: TournamentEvent[]) => {
+    const responses = await Promise.all(
+      events.map((event) => axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${event.id}&status=waiting`))
+    )
+
+    const nextManualMatchByEvent = events.reduce((acc, event, index) => {
+      const waitingMatches = responses[index]?.data ?? []
+      acc[event.id] = formatMatchIteration(waitingMatches)
+      return acc
+    }, {} as Record<string, MatchData>)
+
+    setManualMatchByEvent(nextManualMatchByEvent)
+  }, [formatMatchIteration])
 
   const getDaysArray = useCallback((startDate: Date, endDate: Date): Date[] => {
     const days: Date[] = []
@@ -196,15 +201,26 @@ const Organizer = () => {
     return updatedSchedules
   }, [])
 
-  const onGenerateMatches = async(eventID:string) => {
-    await axios.post(`${SERVICE_ENDPOINT}/events/generate-matches`, { eventID }, { withCredentials :true })
-    getMatches(eventID)
+  const onGenerateMatches = async() => {
+    if(!tournament) return
+
+    setIsGeneratingMatches(true)
+    try {
+      await axios.post(
+        `${SERVICE_ENDPOINT}/events/generate-matches`,
+        { tournamentID: tournament.id },
+        { withCredentials: true }
+      )
+
+      await getManualMatchesByEvent(tournament.events)
+    } finally {
+      setIsGeneratingMatches(false)
+    }
   }
 
   useEffect(() => {
     if(tournament){
-      const eventID = tournament.events[0].id
-      getMatches(eventID)
+      getManualMatchesByEvent(tournament.events)
       const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
       const firstDay = days[0]
       const nextScheduleByDay = days.reduce((acc, day) => {
@@ -236,20 +252,13 @@ const Organizer = () => {
         }
       }
 
-      setTabIndex(0)
       setEventOrder(tournament.events.map((event) => event.id))
       setSelectedDay(firstDay)
       setTableRowDataHistory([])
 
       loadScheduledMatches()
     }
-  }, [tournament, getMatches, getDaysArray, createEmptyScheduleTable, matchDuration, startTime, populateScheduleWithExistingMatches])
-
-  useEffect(() => {
-    if(!tournament) return
-    const eventID = tournament.events[tabIndex].id
-    getMatches(eventID)
-  }, [tabIndex, tournament, getMatches])
+  }, [tournament, getManualMatchesByEvent, getDaysArray, createEmptyScheduleTable, matchDuration, startTime, populateScheduleWithExistingMatches])
 
   useEffect(() => {
     if(!tournament) return
@@ -289,12 +298,12 @@ const Organizer = () => {
     loadScheduledMatches()
   }, [matchDuration, numCourt, startTime, tournament, getDaysArray, createEmptyScheduleTable, populateScheduleWithExistingMatches])
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabIndex(newValue)
-  }
-
   const onSelectCell = (e:MouseEvent<HTMLButtonElement>, timeSlot:number, court:number) => {
     setAnchorEl(e.currentTarget)
+    setSelectedManualEventID(null)
+    setStep(null)
+    setGroup(null)
+    setRound(null)
     setSelectedCourt(court)
     setSelectedTimeSlot(timeSlot)
   }
@@ -931,14 +940,37 @@ const Organizer = () => {
   }
 
   const renderPopOver = () => {
-    if(!step && !group && !round){
-      if(Object.keys(matchInIterationFormat).length < 1) return <Typography>Please generate match first</Typography>
+    if(!tournament) return null
+
+    if(!selectedManualEventID){
       return (
         <Box>
-          {Object.entries(matchInIterationFormat).map(([key]) => {
+          <Typography sx={{ mb: 1, fontWeight: 600 }}>Select Event</Typography>
+          {tournament.events.map((event) => {
+            const eventName = event.name?.[language] || event.name?.th || event.name?.en || event.id
+            return <Button key={`event-${event.id}`} onClick={() => setSelectedManualEventID(event.id)}>{eventName}</Button>
+          })}
+        </Box>
+      )
+    }
+
+    const selectedEventMatches = manualMatchByEvent[selectedManualEventID]
+    if(!selectedEventMatches || Object.values(selectedEventMatches).every((stage) => Object.keys(stage ?? {}).length < 1)){
+      return (
+        <Box>
+          <Button key={'event-back'} onClick={() => setSelectedManualEventID(null)}><ArrowBackIos/></Button>
+          <Typography>No waiting matches in this event</Typography>
+        </Box>
+      )
+    }
+
+    if(!step && !group && !round){
+      return (
+        <Box>
+          <Button key={'event-back'} onClick={() => setSelectedManualEventID(null)}><ArrowBackIos/></Button>
+          {Object.entries(selectedEventMatches).map(([key]) => {
             return <Button key={`step-${key}`} onClick={() => setStep(key)}>{key}</Button>
           })}
-          {/* <Button key={'step-all'} onClick={() => console.log('add')}>All</Button> */}
         </Box>
       )
     }
@@ -948,21 +980,20 @@ const Organizer = () => {
         return (
           <Box>
             <Button key={'round-back'} onClick={() => setRound(null)}><ArrowBackIos/></Button>
-            {matchInIterationFormat[step][round].map((match, i) => {
+            {selectedEventMatches[step][round].map((match, i) => {
               if(match.round === undefined) return
-              return <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${matchInIterationFormat[step][round].length})`}</Button>
+              return <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>{`${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]} (${i + 1}/${selectedEventMatches[step][round].length})`}</Button>
             })}
-            <Button key={'round-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat[step][round])}>All</Button>
+            <Button key={'round-all'} onClick={() => onAddMatchToSchedule(selectedEventMatches[step][round])}>All</Button>
           </Box>
         )
       }else{
         return (
           <Box>
             <Button key={'round-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
-            {Object.entries(matchInIterationFormat[step]).map(([key]) => {
+            {Object.entries(selectedEventMatches[step]).map(([key]) => {
               return <Button key={`round-${key}`} onClick={() => setRound(key)}>{key}</Button>
             })}
-            {/* <Button key={'match-all'} onClick={() => console.log('add')}>All</Button> */}
           </Box>
         )
       }
@@ -971,12 +1002,12 @@ const Organizer = () => {
         return (
           <Box>
             <Button key={'step-back'} onClick={() => setStep(null)}><ArrowBackIos/></Button>
-            {Object.entries(matchInIterationFormat['group']).map(([key]) => {
+            {Object.entries(selectedEventMatches['group']).map(([key]) => {
               return (
                 <Button key={`group-${key}`} onClick={() => setGroup(key)}>{key}</Button>
               )
             })}
-            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(getAllGroupMatches(matchInIterationFormat['group']))}>All</Button>
+            <Button key={'step-all'} onClick={() => onAddMatchToSchedule(getAllGroupMatches(selectedEventMatches['group']))}>All</Button>
           </Box>
         )
       }else{
@@ -984,25 +1015,25 @@ const Organizer = () => {
           return (
             <Box>
               <Button key={'round-back'} onClick={() => setGroup(null)}><ArrowBackIos/></Button>
-              {Object.entries(matchInIterationFormat[MatchStep.Group][group]).map(([key]) => {
+              {Object.entries(selectedEventMatches[MatchStep.Group][group]).map(([key]) => {
                 return <Button key={`round-${key}`} onClick={() => setRound(key)}>{`Round ${Number(key) + 1}`}</Button>
               })}
-              <Button key={'round-all'} onClick={() => onAddMatchToSchedule(getAllMatchesFromGroup(matchInIterationFormat['group'][group]))}>All</Button>
+              <Button key={'round-all'} onClick={() => onAddMatchToSchedule(getAllMatchesFromGroup(selectedEventMatches['group'][group]))}>All</Button>
             </Box>
           )
         }
         return (
           <Box>
             <Button key={'match-back'} onClick={() => setRound(null)}><ArrowBackIos/></Button>
-            {matchInIterationFormat['group'][group][round].map((match, i) => {
+            {selectedEventMatches['group'][group][round].map((match, i) => {
               if(match.round === undefined) return
               return (
                 <Button key={`match-${match.id}`} onClick={() => onAddMatchToSchedule([match])}>
-                  {`Round ${match.round + 1} (${i + 1}/${matchInIterationFormat['group'][group][round].length})`}
+                  {`Round ${match.round + 1} (${i + 1}/${selectedEventMatches['group'][group][round].length})`}
                 </Button>
               )
             })}
-            <Button key={'match-all'} onClick={() => onAddMatchToSchedule(matchInIterationFormat['group'][group][round])}>All</Button>
+            <Button key={'match-all'} onClick={() => onAddMatchToSchedule(selectedEventMatches['group'][group][round])}>All</Button>
           </Box>
         )
 
@@ -1080,59 +1111,10 @@ const Organizer = () => {
             })}
           </Box>
 
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="basic tabs example"
-          >
-            {tournament.events.map((e: TournamentEvent, idx) => (
-              <Tab key={idx} label={e.name?.[language]} />
-            ))}
-          </Tabs>
-          <Box component="main" sx={{ flexGrow: 1, p: 1, pt:0 }}>
-            {tournament.events.map(((event, idx) => {
-              return (
-                <TabPanel value={tabIndex} index={idx} key={event.id} >
-                  {<>
-                    <Button variant='contained' onClick={() => onGenerateMatches(event.id)}>Generate Matches</Button>
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ArrowDropDown />}>
-                        <Typography component="span">{`Matches in group stage (${eventMatches.filter((a:Match) => a.step === MatchStep.Group).length})`}</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
-                          {eventMatches.filter((a:Match) => a.step === MatchStep.Group).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
-                        </Box>
-                      </AccordionDetails>
-                    </Accordion>
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ArrowDropDown />}>
-                        <Typography component="span">{`Matches in play off stage (${eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).length})`}</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
-                          {eventMatches.filter((a:Match) => a.step === MatchStep.PlayOff).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
-                        </Box>
-                      </AccordionDetails>
-                    </Accordion>
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ArrowDropDown />}>
-                        <Typography component="span">{`Matches in consolation stage (${eventMatches.filter((a:Match) => a.step === MatchStep.Consolation).length})`}</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Box sx={{ display:'flex', gap: 1, flexWrap:'wrap' }}>
-                          {eventMatches.filter((a:Match) => a.step === MatchStep.Consolation).sort(sortMatch).map((match: Match) => <MatchCard key={match.id} match={match}/>)}
-                        </Box>
-                      </AccordionDetails>
-                    </Accordion></>
-                  }
+          <Button variant='contained' onClick={onGenerateMatches} disabled={isGeneratingMatches} sx={{ mb: 2 }}>
+            {isGeneratingMatches ? 'Generating...' : 'Generate All Matches'}
+          </Button>
 
-                </TabPanel>
-              )
-            }))}
-          </Box>
           <TableContainer component={Paper} sx={{ maxWidth: '100%', maxHeight: 500 }} >
             <Table stickyHeader size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
               <TableHead>
