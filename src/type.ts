@@ -199,7 +199,7 @@ export interface Session {
 
 export enum TournamentQuery {
   Recent = 'recent',
-  ThisWeek = 'thisWeek',
+  UpComing = 'upComing',
   RegistrationOpen = 'registrationOpen'
 }
 

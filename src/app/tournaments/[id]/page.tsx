@@ -27,7 +27,7 @@ const getTournament = async(id: string) => {
 
 export const generateStaticParams = async() => {
   try {
-    const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments?tab=thisWeek`)
+    const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments?tab=upComing`)
     const tournaments = response.data
 
     return tournaments.map((tournament: { id: string }) => ({

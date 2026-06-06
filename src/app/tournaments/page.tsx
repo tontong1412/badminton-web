@@ -18,8 +18,8 @@ const Tournaments = () => {
   return (
     <Layout>
       <Container maxWidth="xl" sx={{ mt:2 }}>
-        <Typography gutterBottom variant="h5" component="div">{t('tournament.thisWeek')}</Typography>
-        <TournamentList query={TournamentQuery.ThisWeek} />
+        <Typography gutterBottom variant="h5" component="div">{t('tournament.upComing')}</Typography>
+        <TournamentList query={TournamentQuery.UpComing} />
         <Typography gutterBottom variant="h5" component="div">{t('tournament.registrationOpen')}</Typography>
         <TournamentList query={TournamentQuery.RegistrationOpen}  />
         <Typography gutterBottom variant="h5" component="div">{t('tournament.recent')}</Typography>
