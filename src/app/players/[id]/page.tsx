@@ -21,20 +21,6 @@ const getPlayerHistory = async(id: string) => {
 
 }
 
-export const generateStaticParams = async() => {
-  try {
-    const response = await axios.get(`${SERVICE_ENDPOINT}/tournaments?tab=thisWeek`)
-    const tournaments = response.data
-
-    return tournaments.map((tournament: { id: string }) => ({
-      id: tournament.id.toString(), // Ensure ID is a string
-    }))
-  } catch (error) {
-    console.error('Error fetching tournaments for static paths:', error)
-    return [] // Return empty array as fallback
-  }
-}
-
 const Page = async({ params }: Props) => {
   const { id } = await params
   const playerHistory = await getPlayerHistory(id)

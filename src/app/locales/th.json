@@ -48,7 +48,7 @@
     "numberOfHours": "จำนวนชั่วโมง",
     "time": "เวลา",
     "location": "สนาม",
-    "thisWeek": "สัปดาห์นี้",
+    "upComing": "เร็วๆนี้",
     "registrationOpen": "เปิดรับสมัคร",
     "recent": "ล่าสุด",
     "notfound": "ไม่มีรายการแข่งขัน",
@@ -99,6 +99,7 @@
       "payment": "ชำระค่าสมัคร",
       "uploadSlip": "อัพโหลดสลิป",
       "total": "สมัครเสร็จสิ้น",
+      "totalBreakdownTooltip": "จำนวนสมัครทั้งหมด / สมัครเสร็จสิ้น / จำนวนเปิดรับสมัคร",
       "noRegistration": "คุณยังไม่ได้สมัครแข่งขันรายการนี้",
       "note": "หมายเหตุ",
       "shuttlecockCredit": "คูปองลูกแบด"

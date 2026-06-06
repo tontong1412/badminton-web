@@ -9,6 +9,10 @@ const collapsedDrawerWidth = 72
 
 const organizerMenu = [
   {
+    title: 'รายละเอียด',
+    action: '/details'
+  },
+  {
     title: 'รายการแข่ง',
     action: '/event-management'
   },

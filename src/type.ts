@@ -176,6 +176,7 @@ export interface Match {
 export enum MatchStep {
   Group = 'group',
   PlayOff = 'playoff',
+  Consolation = 'consolation',
 }
 
 export type NewMatch = Omit<Match, 'id'>
@@ -198,7 +199,7 @@ export interface Session {
 
 export enum TournamentQuery {
   Recent = 'recent',
-  ThisWeek = 'thisWeek',
+  UpComing = 'upComing',
   RegistrationOpen = 'registrationOpen'
 }
 
@@ -260,6 +261,7 @@ export interface Tournament {
   },
   status: TournamentStatus
   useHandicap: boolean
+  showParticipantList?: boolean
 }
 
 export interface displayData {
