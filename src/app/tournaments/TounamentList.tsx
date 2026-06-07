@@ -1,5 +1,5 @@
 'use client'
-import { Language, Tournament, TournamentQuery } from '@/type'
+import { Language, Tournament, TournamentQuery, TournamentStatus } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
 import { Box, Card, CardActionArea, CardContent, CardMedia, CircularProgress, Typography } from '@mui/material'
 import moment from 'moment'
@@ -11,24 +11,39 @@ import { RootState } from '../libs/redux/store'
 import { SERVICE_ENDPOINT } from '../constants'
 
 interface TournamentListProps {
-  query: TournamentQuery
+  query: TournamentQuery | TournamentQuery[]
   label?: string
+  statuses?: TournamentStatus[]
 }
 
-const TournamentList = ({ query, label }: TournamentListProps) => {
-  const [tournaments, setTournaments] = useState([])
+const TournamentList = ({ query, label, statuses }: TournamentListProps) => {
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { t } = useTranslation()
   const language: Language = useSelector((state: RootState) => state.app.language)
+  const queryList = Array.isArray(query) ? query : [query]
+  const queryKey = queryList.join(',')
 
   useEffect(() => {
     const fetchTournaments = async() => {
       try {
-        const response = await fetch(`${SERVICE_ENDPOINT}/tournaments?tab=${query}`)
-        const data = await response.json()
-        setTournaments(data)
+        const responses = await Promise.all(
+          queryList.map((tab) => fetch(`${SERVICE_ENDPOINT}/tournaments?tab=${tab}`))
+        )
+        const payloads = await Promise.all(responses.map((response) => response.json()))
+        const merged = payloads.flat() as Tournament[]
+        const deduplicated = Array.from(
+          new Map(merged.map((tournament) => [String(tournament.id), tournament])).values()
+        )
+        const sorted = deduplicated.sort((a, b) => moment(a.startDate).valueOf() - moment(b.startDate).valueOf())
+        const filtered = statuses?.length
+          ? sorted.filter((tournament) => tournament.status && statuses.includes(tournament.status))
+          : sorted
+
+        setTournaments(filtered)
+        setError(null)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(err.message)
@@ -37,8 +52,9 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
       }
     }
 
+    setLoading(true)
     fetchTournaments()
-  }, [])
+  }, [queryKey, statuses])
 
   if (loading) return <CircularProgress/>
   if (error) return <p>Error: {error}</p>
