@@ -317,13 +317,48 @@ const Organizer = () => {
 
     setIsGeneratingMatches(true)
     try {
-      await axios.post(
+      const generatedResponse = await axios.post(
         `${SERVICE_ENDPOINT}/events/generate-matches`,
         { tournamentID: tournament.id },
         { withCredentials: true }
       )
+      let generatedMatchList = Array.isArray(generatedResponse.data) ? generatedResponse.data as Match[] : []
 
+      // Fallback: if response is empty, fetch freshly created matches
+      if(generatedMatchList.length < 1){
+        const responses = await Promise.all(
+          tournament.events.map((event) =>
+            axios.get(`${SERVICE_ENDPOINT}/matches?eventID=${event.id}`, { withCredentials: true })
+          )
+        )
+        generatedMatchList = responses.flatMap((response) => response.data ?? []) as Match[]
+      }
+
+      // Populate manual match picker with generated matches
       await getManualMatchesByEvent(tournament.events)
+
+      // Populate schedule grid with any pre-dated matches
+      const days = getDaysArray(new Date(tournament.startDate), new Date(tournament.endDate)).map((d) => d.toISOString())
+      const firstDay = days[0]
+      const nextScheduleByDay = days.reduce((acc, day) => {
+        acc[day] = createEmptyScheduleTable(matchDuration, startTime)
+        return acc
+      }, {} as Record<string, ScheduleTable>)
+      const populatedScheduleByDay = populateScheduleWithExistingMatches(
+        nextScheduleByDay,
+        generatedMatchList.filter((match) => Boolean(match.date))
+      )
+      setScheduleByDay(populatedScheduleByDay)
+      setSelectedDay(firstDay)
+      setTableRowData(populatedScheduleByDay[firstDay] ?? [])
+      setTableRowDataHistory([])
+    } catch (error) {
+      if(axios.isAxiosError(error)){
+        const message = (error.response?.data as { message?: string } | undefined)?.message
+        window.alert(message || 'Failed to generate matches')
+      } else {
+        window.alert('Failed to generate matches')
+      }
     } finally {
       setIsGeneratingMatches(false)
     }
