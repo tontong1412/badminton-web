@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import MatchUp from './MatchUp'
 import { Match, MatchStep } from '@/type'
-import { useMatchesEvent } from '@/app/libs/data'
+import { useEvent, useMatchesEvent } from '@/app/libs/data'
 import { CircularProgress } from '@mui/material'
 import styles from './Bracket.module.scss'
 
@@ -11,12 +11,28 @@ const Connector = () => (
     <div className={styles.line}></div>
   </div>
 )
-const Winner = ({ matches }: { matches: Match[] }) => {
+const Winner = ({
+  matches,
+  getPlaceholder
+}: {
+  matches: Match[]
+  getPlaceholder: (match: Match, side: 'teamA' | 'teamB') => string | undefined
+}) => {
   return (
     <div className={styles.winners}>
       <div className={styles.matchups}>
-        <MatchUp match={matches[0]} style='bracket' />
-        <MatchUp match={matches[1]} style='bracket' />
+        <MatchUp
+          match={matches[0]}
+          style='bracket'
+          placeholderTeamA={getPlaceholder(matches[0], 'teamA')}
+          placeholderTeamB={getPlaceholder(matches[0], 'teamB')}
+        />
+        <MatchUp
+          match={matches[1]}
+          style='bracket'
+          placeholderTeamA={getPlaceholder(matches[1], 'teamA')}
+          placeholderTeamB={getPlaceholder(matches[1], 'teamB')}
+        />
       </div>
       <Connector />
     </div>
@@ -52,14 +68,38 @@ interface BracketProps {
 }
 const Bracket = ({ eventID, step }: BracketProps) => {
   const [bracket, setBracket] = useState<{ [key: string]: Match[] }>()
+  const [entryRound, setEntryRound] = useState(0)
+  const { event } = useEvent(eventID)
   const { matches, isLoading, isError } = useMatchesEvent(eventID)
 
   useEffect(() => {
     if (matches) {
       const bracketData = matches.filter((m: Match) => m.step === step)
+      setEntryRound(Math.max(...bracketData.map((m) => m.round ?? 0), 0))
       setBracket(processBracketData(bracketData))
     }
   }, [matches, step])
+
+  const getPlaceholder = (match: Match, side: 'teamA' | 'teamB') => {
+    if (!event || match.round !== entryRound || match.bracketOrder === undefined) {
+      return undefined
+    }
+
+    const drawOrder = match.bracketOrder * 2 + (side === 'teamA' ? 0 : 1)
+    const drawSlots = step === MatchStep.Consolation ? event.draw?.consolation : event.draw?.ko
+    const slot = drawSlots?.[drawOrder]
+
+    if (typeof slot !== 'string') {
+      return undefined
+    }
+
+    const value = slot.trim()
+    if (!value || value.toLowerCase() === 'bye') {
+      return undefined
+    }
+
+    return value
+  }
 
   const renderBracket = (roundArray: string[], bracket: { [key: string]: Match[] }) => {
     if(bracket === undefined) return
@@ -73,12 +113,17 @@ const Bracket = ({ eventID, step }: BracketProps) => {
                   bracket[round].map((matches: Match, index: number) => {
                     if (round !== 'finals' && index % 2 === 1) {
                       const matchArray = [bracket[round][index - 1], matches]
-                      return <Winner key={index + 1} matches={matchArray} />
+                      return <Winner key={index + 1} matches={matchArray} getPlaceholder={getPlaceholder} />
                     } else if (round === 'finals') {
                       return (
                         <div key={index + 1} className={styles.winners}>
                           <div className={styles.matchups}>
-                            <MatchUp match={matches} style='bracket'/>
+                            <MatchUp
+                              match={matches}
+                              style='bracket'
+                              placeholderTeamA={getPlaceholder(matches, 'teamA')}
+                              placeholderTeamB={getPlaceholder(matches, 'teamB')}
+                            />
                           </div>
                         </div>
                       )

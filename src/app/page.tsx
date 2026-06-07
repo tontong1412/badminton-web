@@ -8,7 +8,7 @@ import { RootState } from './libs/redux/store'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 import { setActiveMenu } from './libs/redux/slices/appSlice'
-import { AppMenu, Language, TournamentQuery } from '@/type'
+import { AppMenu, Language, TournamentQuery, TournamentStatus } from '@/type'
 import { useAppDispatch } from './providers'
 import Layout from './components/Layout'
 import HomeBanner from './components/HomeBanner'
@@ -33,7 +33,16 @@ const Home = () => {
           {t('greeting')}, {user?.player?.displayName?.[language] || user?.player?.officialName[language]}
         </Typography>
 
-        <TournamentList query={TournamentQuery.RegistrationOpen} label={t('tournament.title')} />
+        <TournamentList
+          query={[TournamentQuery.UpComing, TournamentQuery.RegistrationOpen]}
+          statuses={[
+            TournamentStatus.RegistrationOpen,
+            TournamentStatus.RegistrationClose,
+            TournamentStatus.SchedulePublished,
+            TournamentStatus.Ongoing
+          ]}
+          label={t('tournament.title')}
+        />
 
         {user && <UpcomingBookings />}
       </Container>

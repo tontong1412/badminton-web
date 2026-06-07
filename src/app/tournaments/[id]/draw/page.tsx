@@ -62,7 +62,7 @@ const DrawPage = () => {
 
   const handleContent = (
     event: React.MouseEvent<HTMLElement>,
-    newContent: MatchStep,
+    newContent: MatchStep | 'list',
   ) => {
     if(newContent !== null){
       setContent(newContent)
@@ -83,6 +83,8 @@ const DrawPage = () => {
       return <GroupTable eventID={eventID} />
     }else if(content === MatchStep.PlayOff && (canPublishDraw || isManager)){
       return <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
+    }else if(content === MatchStep.Consolation && (canPublishDraw || isManager)){
+      return <Bracket eventID={eventID} step={MatchStep.Consolation}/>
     } else if (content === 'list'){
       return (
         <>
@@ -146,6 +148,9 @@ const DrawPage = () => {
                       <ToggleButton value="playoff" aria-label="centered">
                         {event.format !== EventFormat.SingleElimination ? 'Play off' : 'Draw'}
                       </ToggleButton>
+                      {event.format === EventFormat.GroupPlayoffConsolation && <ToggleButton value="consolation" aria-label="right aligned">
+                        <Typography>Consolation</Typography>
+                      </ToggleButton>}
                     </ToggleButtonGroup>
                     {renderContent(event.id)}
                   </TabPanel>
