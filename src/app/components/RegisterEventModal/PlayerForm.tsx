@@ -86,7 +86,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
         // Suggest the creation of a new value
         const isExisting = options.some((option) => inputValue === option.officialName)
         if (inputValue !== '' && !isExisting) {
-          filtered.push({
+          filtered.unshift({
             inputValue,
             officialName: `Add "${inputValue}"`,
             officialNameEn: '',
