@@ -205,6 +205,14 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
+    if(!player1.photoPreview){
+      player1UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    if(!player2.photoPreview && events.find((ev) => ev.id === event)?.type === 'double'){
+      player2UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     setButtonLoading(true)
 
     try{
@@ -436,6 +444,13 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
               />
             )
           }
+          {
+            !player1.photoPreview && (
+              <Typography color="error" variant="caption">
+                Photo is required.
+              </Typography>
+            )
+          }
           <div ref={player1UploadRef}>
             <Button
               variant="contained"
@@ -546,6 +561,13 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
                       style={{ width: 150, height: 150, objectFit: 'cover', borderRadius: 8 }}
                       loading='lazy'
                     />
+                  )
+                }
+                {
+                  !player2.photoPreview && (
+                    <Typography color="error" variant="caption">
+                      Photo is required.
+                    </Typography>
                   )
                 }
                 <div ref={player2UploadRef}>
