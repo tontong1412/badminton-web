@@ -38,6 +38,7 @@ export interface Player {
   id?: string;
   officialName: string;
   officialNameEn?: string;
+  officialNameTournament?: string;
   pronunciation?: string;
   displayName: string;
   club: string;
@@ -130,8 +131,9 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedPlayerList = players?.map((p: any) => ({
         ...p,
-        officialName: p.officialName?.[language] || p.officialName?.['en'],
-        displayName: p.displayName?.[language] || p.displayName?.['en'],
+        officialName: p.officialName?.[language] || p.officialName?.['th'] || p.officialName?.['en'],
+        officialNameTournament: p.officialName?.[tournamentLanguage] || p.officialName?.['th'] || p.officialName?.['en'],
+        displayName: p.displayName?.[language] || p.displayName?.['th'] || p.displayName?.['en'],
         officialNameEn: p.officialName?.['en'],
         pronunciation: p.officialName?.pronunciation || '',
       }))
@@ -139,7 +141,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
       setFilteredPlayerList(formattedPlayerList)
     }
 
-  }, [language, players])
+  }, [language, players, tournamentLanguage])
 
   useEffect(() => {
     if(user){
@@ -203,26 +205,13 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
-    if(!player1.photoPreview){
-      player1UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
-    }
-    if(!player2.photoPreview && events.find((ev) => ev.id === event)?.type === 'double'){
-      player2UploadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
-    }
     setButtonLoading(true)
 
     try{
       const playersArray = []
       if(player1.officialName){
-        playersArray.push({
+          const playerObj: any = {
           id: player1.id === 'none' ? undefined : player1.id,
-          officialName: {
-            [language]: player1.officialName,
-            en: player1.officialNameEn,
-            pronunciation: player1.pronunciation,
-          },
           displayName: {
             [language]: player1.displayName,
           },
@@ -230,16 +219,23 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
           club: player1.club,
           level: player1.level,
           photo: player1.photo,
-        })
+          }
+          // Only set officialName for new players (not existing users)
+          if(player1.id === 'none' || !player1.id) {
+            const officialNameObj: any = {
+              [tournamentLanguage]: player1.officialName,
+              en: player1.officialNameEn || player1.officialName,
+            }
+            if(player1.pronunciation) {
+              officialNameObj.pronunciation = player1.pronunciation
+            }
+            playerObj.officialName = officialNameObj
+          }
+          playersArray.push(playerObj)
       }
       if(player2.officialName){
-        playersArray.push({
+          const playerObj: any = {
           id: player2.id === 'none' ? undefined : player2.id,
-          officialName: {
-            [language]: player2.officialName,
-            en: player2.officialNameEn,
-            pronunciation: player2.pronunciation,
-          },
           displayName: {
             [language]: player2.displayName,
           },
@@ -247,7 +243,19 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
           club: player2.club,
           level:player2.level,
           photo: player2.photo,
-        })
+          }
+          // Only set officialName for new players (not existing users)
+          if(player2.id === 'none' || !player2.id) {
+            const officialNameObj: any = {
+              [tournamentLanguage]: player2.officialName,
+              en: player2.officialNameEn || player2.officialName,
+            }
+            if(player2.pronunciation) {
+              officialNameObj.pronunciation = player2.pronunciation
+            }
+            playerObj.officialName = officialNameObj
+          }
+          playersArray.push(playerObj)
       }
       const registerPayload = {
         eventID: event,
@@ -287,7 +295,8 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
     if (checked) {
       setPlayer1({
         id: user?.player.id || '',
-        officialName: user?.player.officialName?.[language] || '',
+        officialName: user?.player.officialName?.[tournamentLanguage] || user?.player.officialName?.['th'] || user?.player.officialName?.['en'] || '',
+        officialNameTournament: user?.player.officialName?.[tournamentLanguage] || user?.player.officialName?.['th'] || user?.player.officialName?.['en'] || '',
         officialNameEn: user?.player.officialName?.['en'] || '',
         displayName: user?.player.displayName?.[language] || '',
         club: user?.player.club || '',
@@ -350,7 +359,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
             setPlayer={setPlayer1}
             disabled={lockOfficialNameWhenUseMeCheckBox}
           />
-          {tournamentLanguage !== 'en' && language !== 'en' && (
+          {tournamentLanguage !== 'en' && (
             <TextField
               label={t('tournament.registration.fullnameEN')}
               value={player1.officialNameEn}
@@ -427,13 +436,6 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
               />
             )
           }
-          {
-            !player1.photoPreview && (
-              <Typography color="error" variant="caption">
-                Photo is required.
-              </Typography>
-            )
-          }
           <div ref={player1UploadRef}>
             <Button
               variant="contained"
@@ -469,7 +471,7 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
                   disabled={false}
                 />
 
-                {tournamentLanguage !== 'en' && language !== 'en' && (
+                {tournamentLanguage !== 'en' && (
                   <TextField
                     label={t('tournament.registration.fullnameEN')}
                     value={player2.officialNameEn}
@@ -544,14 +546,6 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
                       style={{ width: 150, height: 150, objectFit: 'cover', borderRadius: 8 }}
                       loading='lazy'
                     />
-                  )
-                }
-
-                {
-                  !player2.photoPreview && (
-                    <Typography color="error" variant="caption">
-                      Photo is required.
-                    </Typography>
                   )
                 }
                 <div ref={player2UploadRef}>

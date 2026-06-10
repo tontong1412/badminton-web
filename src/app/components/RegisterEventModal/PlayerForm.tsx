@@ -30,8 +30,8 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
         if (option.inputValue) {
           return option.inputValue
         }
-        // Regular option
-        return option.officialName
+        // Show tournament language name in the input after selection
+        return option.officialNameTournament || option.officialName
       }}
       onChange={(event, newValue) => {
         if (typeof newValue === 'string') {
@@ -55,7 +55,7 @@ const AutocompletePlayer = ({ playerValue, playerList, handlePlayerChange, setPl
             newValue
               ? {
                 id: newValue.id || '',
-                officialName: newValue.officialName || '',
+                officialName: newValue.officialNameTournament || newValue.officialName || '',
                 officialNameEn: newValue.officialNameEn || '',
                 displayName: newValue.displayName || '',
                 pronunciation: newValue.pronunciation || '',
