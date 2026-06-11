@@ -218,7 +218,14 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
     try{
       const playersArray = []
       if(player1.officialName){
-          const playerObj: any = {
+        const officialNameObj: Record<string, string> = {
+          [tournamentLanguage]: player1.officialName,
+          en: player1.officialNameEn || player1.officialName,
+        }
+        if(player1.pronunciation) {
+          officialNameObj.pronunciation = player1.pronunciation
+        }
+        const playerObj: Record<string, unknown> = {
           id: player1.id === 'none' ? undefined : player1.id,
           displayName: {
             [language]: player1.displayName,
@@ -227,43 +234,36 @@ const RegisterEventForm = ({ events, visible, setVisible, tournamentLanguage, on
           club: player1.club,
           level: player1.level,
           photo: player1.photo,
-          }
-          // Only set officialName for new players (not existing users)
-          if(player1.id === 'none' || !player1.id) {
-            const officialNameObj: any = {
-              [tournamentLanguage]: player1.officialName,
-              en: player1.officialNameEn || player1.officialName,
-            }
-            if(player1.pronunciation) {
-              officialNameObj.pronunciation = player1.pronunciation
-            }
-            playerObj.officialName = officialNameObj
-          }
-          playersArray.push(playerObj)
+        }
+        // Only set officialName for new players (not existing users)
+        if(player1.id === 'none' || !player1.id) {
+          playerObj.officialName = officialNameObj
+        }
+        playersArray.push(playerObj)
       }
       if(player2.officialName){
-          const playerObj: any = {
+        const officialNameObj: Record<string, string> = {
+          [tournamentLanguage]: player2.officialName,
+          en: player2.officialNameEn || player2.officialName,
+        }
+        if(player2.pronunciation) {
+          officialNameObj.pronunciation = player2.pronunciation
+        }
+        const playerObj: Record<string, unknown> = {
           id: player2.id === 'none' ? undefined : player2.id,
           displayName: {
             [language]: player2.displayName,
           },
           gender: player2.gender,
           club: player2.club,
-          level:player2.level,
+          level: player2.level,
           photo: player2.photo,
-          }
-          // Only set officialName for new players (not existing users)
-          if(player2.id === 'none' || !player2.id) {
-            const officialNameObj: any = {
-              [tournamentLanguage]: player2.officialName,
-              en: player2.officialNameEn || player2.officialName,
-            }
-            if(player2.pronunciation) {
-              officialNameObj.pronunciation = player2.pronunciation
-            }
-            playerObj.officialName = officialNameObj
-          }
-          playersArray.push(playerObj)
+        }
+        // Only set officialName for new players (not existing users)
+        if(player2.id === 'none' || !player2.id) {
+          playerObj.officialName = officialNameObj
+        }
+        playersArray.push(playerObj)
       }
       const registerPayload = {
         eventID: event,

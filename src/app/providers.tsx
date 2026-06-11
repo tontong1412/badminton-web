@@ -35,7 +35,7 @@ const AxiosAuthInterceptor = () => {
 
     const interceptorId = axios.interceptors.response.use(
       (response) => response,
-      async (error) => {
+      async(error) => {
         const originalRequest = error.config
 
         const isRefreshEndpoint = (originalRequest?.url as string | undefined)?.includes('/users/refresh-token')

@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux'
 import TabPanel from '@/app/components/TabPanel'
 import GroupTable from './GroupTable'
 import Bracket from './Bracket'
+import DownloadDraw from './Bracket/DownloadDraw'
 import theme from '@/theme'
 import ParticipantMobile from './ParticipantMobile'
 import ParticipantTable from './ParticipantTable'
@@ -82,9 +83,19 @@ const DrawPage = () => {
     if(content === MatchStep.Group && (canPublishDraw || isManager)){
       return <GroupTable eventID={eventID} />
     }else if(content === MatchStep.PlayOff && (canPublishDraw || isManager)){
-      return <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {isManager && <Box><DownloadDraw eventID={eventID} step={MatchStep.PlayOff} /></Box>}
+          <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
+        </Box>
+      )
     }else if(content === MatchStep.Consolation && (canPublishDraw || isManager)){
-      return <Bracket eventID={eventID} step={MatchStep.Consolation}/>
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {isManager && <Box><DownloadDraw eventID={eventID} step={MatchStep.Consolation} /></Box>}
+          <Bracket eventID={eventID} step={MatchStep.Consolation}/>
+        </Box>
+      )
     } else if (content === 'list'){
       return (
         <>
