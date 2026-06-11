@@ -12,7 +12,7 @@ import { useAppDispatch } from '@/app/providers'
 import { Event, EventTeam, Language, Match, MatchStatus, Player, TeamStatus, TournamentMenu, TournamentStatus } from '@/type'
 import { Avatar, Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Container, Divider, Typography } from '@mui/material'
 import Image from 'next/image'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
@@ -26,6 +26,7 @@ const Me = () => {
   const user = useSelector((state: RootState) => state.app.user)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const params = useParams()
+  const router = useRouter()
   const dispatch = useAppDispatch()
   const [isManager, setIsManager] = useState(false)
   const [paymentModalVisible, setPaymentModalVisible] = useState(false)
@@ -69,6 +70,17 @@ const Me = () => {
     }
     return a.matchNumber - b.matchNumber
   }
+
+  const canOpenMatchAsUmpire = (match: Match) => {
+    return match.status === MatchStatus.Playing && match.umpire?.id === user?.player.id
+  }
+
+  const handleOpenMatch = (match: Match) => {
+    if(canOpenMatchAsUmpire(match)){
+      router.push(`/matches/${match.id}`)
+    }
+  }
+
   useEffect(() => {
     if(matches){
       const lastMatch = matches.filter((m) => m.status === MatchStatus.Playing).sort((a, b) => sortMatch(b, a))
@@ -230,7 +242,11 @@ const Me = () => {
           <Divider sx={{ pt:2, pb:2 }}><Typography>แมตช์ต่อไป</Typography></Divider>
           <Box >
             {getNextMatchText()}
-            <div key={myNextMatch.id} className={`${styles['match-list']} ${styles.matchups}`}>
+            <div
+              key={myNextMatch.id}
+              className={`${styles['match-list']} ${styles.matchups}`}
+              onClick={() => handleOpenMatch(myNextMatch)}
+              style={{ cursor: canOpenMatchAsUmpire(myNextMatch) ? 'pointer' : 'default' }}>
               <div style={{
                 backgroundColor: '#80644f',
                 borderTopLeftRadius: '0.25rem',
@@ -256,7 +272,11 @@ const Me = () => {
           <Divider sx={{ pt:2, pb:2 }}><Typography >แมตช์ทั้งหมดของฉัน</Typography></Divider>
           <Box sx={{ height: '290px', overflow: 'scroll' }}>
             {myMatches.filter((m) => !m.skip).map((match) =>
-              <div key={match.id} className={`${styles['match-list']} ${styles.matchups}`}>
+              <div
+                key={match.id}
+                className={`${styles['match-list']} ${styles.matchups}`}
+                onClick={() => handleOpenMatch(match)}
+                style={{ cursor: canOpenMatchAsUmpire(match) ? 'pointer' : 'default' }}>
                 <div style={{
                   backgroundColor: '#80644f',
                   borderTopLeftRadius: '0.25rem',
