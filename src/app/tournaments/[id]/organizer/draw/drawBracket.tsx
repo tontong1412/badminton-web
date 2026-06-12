@@ -14,9 +14,10 @@ interface Props {
   order: (EventTeam|string)[]
   blockWidth?: number
   setDraw?: Dispatch<SetStateAction<Event['draw']>>
+  drawKey?: 'ko' | 'consolation'
 }
 
-const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
+const DrawBracket = ({ draw, order, blockWidth = 400, setDraw, drawKey = 'ko' }: Props) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<number>(-1)
@@ -37,12 +38,13 @@ const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
     setSelectedOrder(-1)
   }
 
-  const onUpdateKODraw = () => {
+  const onUpdateBracketDraw = () => {
     const newOrderText = `ที่ ${place} กลุ่ม ${group}`
-    if(!draw.ko || selectedOrder < 0 || !setDraw) return
-    const tempDrawKO = [...draw.ko]
-    tempDrawKO[selectedOrder] = newOrderText
-    setDraw({ ...draw, ko: tempDrawKO })
+    const selectedDraw = draw[drawKey]
+    if(!selectedDraw || selectedOrder < 0 || !setDraw) return
+    const tempSelectedDraw = [...selectedDraw]
+    tempSelectedDraw[selectedOrder] = newOrderText
+    setDraw({ ...draw, [drawKey]: tempSelectedDraw })
     onCloseModal()
   }
 
@@ -135,7 +137,7 @@ const DrawBracket = ({ draw, order, blockWidth = 400, setDraw }: Props) => {
             <Button variant='outlined' onClick={onCloseModal}>
               {t('action.close')}
             </Button>
-            <Button variant='contained' onClick={onUpdateKODraw}>
+            <Button variant='contained' onClick={onUpdateBracketDraw}>
               {t('action.save')}
             </Button>
           </DialogActions>

@@ -795,7 +795,7 @@ const Organizer = () => {
                 {match.step === MatchStep.Group
                   ? `Group ${MAP_GROUP_NAME[match.groupOrder as number].NAME} - R${match.round + 1}`
                   : match.step === MatchStep.Consolation
-                    ? `Con. ${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}`
+                    ? `${language === 'th' ? 'สายล่าง' : 'Con.'} - ${MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]}`
                     : MAP_ROUND_NAME[match.round.toString() as keyof typeof MAP_ROUND_NAME]
                 }
               </Typography>
