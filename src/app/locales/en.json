@@ -313,6 +313,8 @@
     "courtTypeLabel": "Type",
     "venuesAvailable_one": "{{count}} venue available",
     "venuesAvailable_other": "{{count}} venues available",
-    "courtBookingTitle": "Court Booking"
+    "courtBookingTitle": "Court Booking",
+    "paymentSuccess": "Payment Successful",
+    "done": "Done"
   }
 }
