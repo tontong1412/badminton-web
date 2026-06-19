@@ -46,6 +46,7 @@ import axios from 'axios'
 import QRCode from 'react-qr-code'
 import generatePayload from 'promptpay-qr'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { deriveGroupedPaymentStatus } from './grouping'
 
 const EXPIRY_MINUTES = 10
 
@@ -243,8 +244,7 @@ function MyBookingsPage() {
       const totalPrice = nonCancelledItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
       const allCancelled = sortedItems.every((item) => item.status === 'cancelled')
       const allConfirmed = nonCancelledItems.length > 0 && nonCancelledItems.every((item) => item.status === 'confirmed')
-      const allPaid = nonCancelledItems.every((item) => item.paymentStatus === 'paid')
-      const anyUnpaid = nonCancelledItems.some((item) => item.paymentStatus === 'unpaid')
+      const paymentStatus = deriveGroupedPaymentStatus(sortedItems)
 
       return {
         groupKey,
@@ -257,7 +257,7 @@ function MyBookingsPage() {
         currency: first.currency,
         totalPrice,
         status: allCancelled ? 'cancelled' : (allConfirmed ? 'confirmed' : 'pending'),
-        paymentStatus: allPaid ? 'paid' : (anyUnpaid ? 'unpaid' : 'pending'),
+        paymentStatus,
       }
     })
 
