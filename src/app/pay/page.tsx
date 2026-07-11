@@ -27,6 +27,7 @@ function GuestPayContent() {
   const searchParams = useSearchParams()
   const bundleID = searchParams.get('bundleID')
   const guestEmail = searchParams.get('email')
+  const isGuestPaymentLink = Boolean(guestEmail)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,21 +43,25 @@ function GuestPayContent() {
   const [success, setSuccess] = useState(false)
 
   const loadBundle = useCallback(async() => {
-    if (!bundleID || !guestEmail) {
-      setError('Invalid payment link. Please check your email for the correct link.')
+    if (!bundleID) {
+      setError('Invalid payment link. Missing booking bundle ID.')
       setLoading(false)
       return
     }
     try {
       setLoading(true)
-      const data = await bookingsService.getBundle(bundleID, guestEmail)
+      const data = await bookingsService.getBundle(bundleID, guestEmail ?? undefined)
       setBookings(data.bookings)
       setVenue(data.venue)
       setCourt(data.court)
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setError(msg ?? 'Failed to load booking details.')
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setError('You are not allowed to access this payment page. Please sign in with the booking account or use a valid guest payment link.')
+        } else {
+          setError(msg ?? 'Failed to load booking details.')
+        }
       } else {
         setError('Failed to load booking details.')
       }
@@ -82,11 +87,11 @@ function GuestPayContent() {
   }
 
   const handleSubmit = async() => {
-    if (!bundleID || !guestEmail || !slipPreview) return
+    if (!bundleID || !slipPreview) return
     try {
       setSubmitting(true)
       setSubmitError(null)
-      await bookingsService.payBooking(bundleID, { slip: slipPreview, note: slipNote || undefined }, guestEmail)
+      await bookingsService.payBooking(bundleID, { slip: slipPreview, note: slipNote || undefined }, guestEmail ?? undefined)
       setSuccess(true)
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -104,6 +109,11 @@ function GuestPayContent() {
   const currency = bookings[0]?.currency ?? ''
   const bookingRef = bookings[0]?.bookingRef
   const isCancelled = bookings.some((b) => b.status === BookingStatus.Cancelled)
+  const isResalePay = bookings.some((b) => Boolean(b.resaleSourceListingID))
+  const systemPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
+  const systemBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
+  const systemAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
+  const systemAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
 
   if (loading) {
     return (
@@ -149,6 +159,9 @@ function GuestPayContent() {
           <Typography variant="h5" fontWeight={700}>
             Complete Payment
           </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {isGuestPaymentLink ? 'Guest payment' : 'Account payment'}
+          </Typography>
           {bookingRef && (
             <Typography
               variant="caption"
@@ -189,7 +202,49 @@ function GuestPayContent() {
         </Box>
 
         {/* Payment info */}
-        {venue?.payment ? (
+        {isResalePay ? (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+              Payment Method
+            </Typography>
+            <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box>
+                {systemBankName && (
+                  <Typography variant="body2">
+                    <strong>Bank:</strong> {systemBankName}
+                  </Typography>
+                )}
+                {systemAccountName && (
+                  <Typography variant="body2">
+                    <strong>Account Name:</strong> {systemAccountName}
+                  </Typography>
+                )}
+                {systemAccountNumber && (
+                  <Typography variant="body2">
+                    <strong>Account Number:</strong> {systemAccountNumber}
+                  </Typography>
+                )}
+                {systemPromptPayID && (
+                  <Typography variant="body2">
+                    <strong>PromptPay ID:</strong> {systemPromptPayID}
+                  </Typography>
+                )}
+              </Box>
+              {systemPromptPayID && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ml: 2, flexShrink: 0 }}>
+                  <QRCode
+                    value={generatePayload(systemPromptPayID, { amount: totalPrice })}
+                    size={80}
+                    style={{ borderRadius: 4, border: '1px solid #e0e0e0', padding: 4, background: 'white' }}
+                  />
+                  <Typography variant="caption" sx={{ mt: 0.5, fontWeight: 600, color: 'text.secondary' }}>
+                    Scan to Pay
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        ) : venue?.payment ? (
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
               Payment Method

@@ -40,10 +40,6 @@ import moment from 'moment'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 import { useRouter } from 'next/navigation'
-import QRCode from 'react-qr-code'
-import DownloadIcon from '@mui/icons-material/Download'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const generatePayload = require('promptpay-qr') as (id: string, options?: { amount?: number }) => string
 
 interface BookingItemInput {
   courtID: string;
@@ -76,7 +72,7 @@ export default function CourtBookingModal({
   onBookingComplete,
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
-  const steps = [t('booking.step2'), t('booking.step3'), t('booking.step4')]
+  const steps = [t('booking.step2'), t('booking.step3')]
   const dispatch = useAppDispatch()
   const router = useRouter()
   const currentUser = useAppSelector((state) => state.app.user)
@@ -97,15 +93,8 @@ export default function CourtBookingModal({
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [termsError, setTermsError] = useState(false)
   const termsRef = useRef<HTMLLabelElement>(null)
-  const qrRef = useRef<HTMLDivElement>(null)
   const errorRef = useRef<HTMLDivElement>(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
-  const [bookingResult, setBookingResult] = useState<{ bookingRef?: string; totalPrice?: number; currency?: string; highlightKey?: string; isGuest?: boolean; bundleID?: string } | null>(null)
-  const [slipPreview, setSlipPreview] = useState<string | null>(null)
-  const [slipNote, setSlipNote] = useState('')
-  const [slipSubmitting, setSlipSubmitting] = useState(false)
-  const [slipError, setSlipError] = useState<string | null>(null)
-  const [slipSuccess, setSlipSuccess] = useState(false)
 
   const [bookingType, setBookingType] = useState<'single' | 'recurring'>('single')
   const [recurringCourtID, setRecurringCourtID] = useState('')
@@ -242,6 +231,55 @@ export default function CourtBookingModal({
     setErrorState(null)
   }
 
+  const resetModalState = () => {
+    setActiveStep(0)
+    setSelectedDate('')
+    setStartTime('')
+    setEndTime('')
+    setGuestName('')
+    setGuestPhone('')
+    setGuestEmail('')
+    setGuestFieldErrors({ name: false, phone: false, email: false })
+    setUserPhone('')
+    setNote('')
+    setAgreeTerms(false)
+    setErrorState(null)
+    setBookingType('single')
+    setRecurringCourtID(courts[0]?.id ?? '')
+    setRecurringStartTime('08:00')
+    setRecurringEndTime('10:00')
+    setRecurringPattern('weekly')
+    setRecurringDays([1])
+    setRangeStart(moment().format('YYYY-MM-DD'))
+    setRangeEnd(moment().add(1, 'month').format('YYYY-MM-DD'))
+    setRecurringConflicts([])
+    setCouponCode('')
+    setCouponResult(null)
+    setCouponError(null)
+  }
+
+  const navigateAfterBooking = (bundleID?: string, email?: string) => {
+    const isLoggedIn = Boolean(currentUser?.id)
+    resetModalState()
+    onClose()
+
+    if (bundleID) {
+      if (email) {
+        router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
+        return
+      }
+      router.push(`/pay?bundleID=${bundleID}`)
+      return
+    }
+
+    if (isLoggedIn) {
+      router.push('/bookings')
+      return
+    }
+
+    onBookingComplete(true)
+  }
+
   const handleSubmit = async() => {
     if (!agreeTerms) {
       setTermsError(true)
@@ -253,7 +291,7 @@ export default function CourtBookingModal({
       try {
         setLoading(true)
         setRecurringConflicts([])
-        await axios.post(
+        const response = await axios.post(
           `${SERVICE_ENDPOINT}/bookings/recurring`,
           {
             courtID: recurringCourtID,
@@ -268,13 +306,10 @@ export default function CourtBookingModal({
           { withCredentials: true },
         )
         setErrorState(null)
-        setAgreeTerms(false)
-        setNote('')
-        setBookingType('single')
-        setRecurringConflicts([])
-        const currency = recurringCourt?.currency ?? 'THB'
-        setBookingResult({ totalPrice: recurringTotalPrice, currency })
-        setActiveStep(2)
+        const recurringBundleID = typeof (response.data as { bookingBundleID?: unknown } | undefined)?.bookingBundleID === 'string'
+          ? (response.data as { bookingBundleID: string }).bookingBundleID
+          : undefined
+        navigateAfterBooking(recurringBundleID)
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
           const data = err.response?.data as { message?: string; conflicts?: { date: string; reason: string }[] }
@@ -371,25 +406,10 @@ export default function CourtBookingModal({
 
       setErrorState(null)
 
-      const totalPrice = 'bookings' in result
-        ? result.totalPrice
-        : result.totalPrice
-      const currency = 'bookings' in result
-        ? (result.bookings?.[0]?.currency ?? courts[0]?.currency ?? 'THB')
-        : (result.currency ?? courts[0]?.currency ?? 'THB')
-      const highlightKey = 'bookings' in result
-        ? result.bookingBundleID
-        : (result.bookingBundleID || `single-${result.id}`)
-      const bookingRef = 'bookingRef' in result ? result.bookingRef : undefined
-      setBookingResult({
-        bookingRef,
-        totalPrice,
-        currency,
-        highlightKey,
-        isGuest: !currentUser?.id,
-        bundleID: 'bookings' in result ? result.bookingBundleID : result.bookingBundleID,
-      })
-      setActiveStep(2)
+      const isGuest = !currentUser?.id
+      const email = isGuest ? guestEmail : undefined
+      const bundleID = 'bookings' in result ? result.bookingBundleID : result.bookingBundleID
+      navigateAfterBooking(bundleID, email)
     } catch (err) {
       let message = 'Booking failed. Please try again.'
       if (axios.isAxiosError(err)) {
@@ -403,136 +423,6 @@ export default function CourtBookingModal({
       setTimeout(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSaveQR = async() => {
-    if (!qrRef.current) return
-    const svg = qrRef.current.querySelector('svg')
-    if (!svg) return
-
-    const promptPayTotal = Number(bookingResult?.totalPrice ?? 0)
-    const payCurrency = bookingResult?.currency ?? 'THB'
-    const frameWidth = 320
-    const svgSize = 224
-    const textAreaHeight = 72
-
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const svgUrl = URL.createObjectURL(svgBlob)
-
-    const headerImg = new window.Image()
-    const qrImg = new window.Image()
-    let loaded = 0
-
-    const draw = async() => {
-      loaded++
-      if (loaded < 2) return
-
-      const scaledHeaderH = Math.round(frameWidth * headerImg.naturalHeight / headerImg.naturalWidth)
-      const canvasH = scaledHeaderH + svgSize + textAreaHeight + 24
-
-      const canvas = document.createElement('canvas')
-      canvas.width = frameWidth
-      canvas.height = canvasH
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
-      // White background frame
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, frameWidth, canvasH)
-
-      // Thai QR payment header
-      ctx.drawImage(headerImg, 0, 0, frameWidth, scaledHeaderH)
-
-      // QR code
-      const qrX = (frameWidth - svgSize) / 2
-      ctx.drawImage(qrImg, qrX, scaledHeaderH + 12, svgSize, svgSize)
-
-      // Amount
-      ctx.fillStyle = '#1a237e'
-      ctx.font = 'bold 22px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText(`${promptPayTotal.toFixed(2)} ${payCurrency}`, frameWidth / 2, scaledHeaderH + svgSize + 44)
-
-      // Scan label
-      ctx.fillStyle = '#666666'
-      ctx.font = '13px sans-serif'
-      ctx.fillText('สแกนเพื่อชำระเงิน', frameWidth / 2, scaledHeaderH + svgSize + 66)
-
-      URL.revokeObjectURL(svgUrl)
-
-      const pngBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/png')
-      })
-      if (!pngBlob) return
-
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-
-      if (isIOS && navigator.share) {
-        const qrFile = new File([pngBlob], 'payment-qr.png', { type: 'image/png' })
-        const canShareFiles = typeof navigator.canShare === 'function'
-          ? navigator.canShare({ files: [qrFile] })
-          : false
-        if (canShareFiles) {
-          try {
-            await navigator.share({
-              files: [qrFile],
-              title: 'PromptPay QR',
-              text: 'Save this QR image to Photos',
-            })
-            return
-          } catch {
-            // User cancelled or share failed; continue with regular download fallback.
-          }
-        }
-      }
-
-      const a = document.createElement('a')
-      a.download = 'payment-qr.png'
-      a.href = URL.createObjectURL(pngBlob)
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-    }
-
-    headerImg.onload = draw
-    qrImg.onload = draw
-    headerImg.src = '/thai-qr-payment.webp'
-    qrImg.src = svgUrl
-  }
-
-  const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setSlipPreview(reader.result as string)
-      reader.readAsDataURL(file)
-    } else {
-      setSlipPreview(null)
-    }
-  }
-
-  const handleSlipSubmit = async() => {
-    if (!bookingResult?.bundleID || !slipPreview) return
-    try {
-      setSlipSubmitting(true)
-      setSlipError(null)
-      await bookingsService.payBooking(
-        bookingResult.bundleID,
-        { slip: slipPreview, note: slipNote || undefined },
-        bookingResult.isGuest ? guestEmail : undefined,
-      )
-      setSlipSuccess(true)
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setSlipError(msg ?? 'Failed to submit slip. Please try again.')
-      } else {
-        setSlipError('Failed to submit slip. Please try again.')
-      }
-    } finally {
-      setSlipSubmitting(false)
     }
   }
 
@@ -558,62 +448,8 @@ export default function CourtBookingModal({
   }
 
   const handleClose = () => {
-    const isLoggedIn = Boolean(currentUser?.id)
-    const bundleID = bookingResult?.bundleID
-    const email = guestEmail
-    const hasUploadedSlip = slipSuccess
-
-    setActiveStep(0)
-    setSelectedDate('')
-    setStartTime('')
-    setEndTime('')
-    setGuestName('')
-    setGuestPhone('')
-    setGuestEmail('')
-    setGuestFieldErrors({ name: false, phone: false, email: false })
-    setUserPhone('')
-    setNote('')
-    setAgreeTerms(false)
-    setErrorState(null)
-    setBookingType('single')
-    setRecurringCourtID(courts[0]?.id ?? '')
-    setRecurringStartTime('08:00')
-    setRecurringEndTime('10:00')
-    setRecurringPattern('weekly')
-    setRecurringDays([1])
-    setRangeStart(moment().format('YYYY-MM-DD'))
-    setRangeEnd(moment().add(1, 'month').format('YYYY-MM-DD'))
-    setRecurringConflicts([])
-    setCouponCode('')
-    setCouponResult(null)
-    setCouponError(null)
-    setBookingResult(null)
-    setSlipPreview(null)
-    setSlipNote('')
-    setSlipSubmitting(false)
-    setSlipError(null)
-    setSlipSuccess(false)
+    resetModalState()
     onClose()
-
-    // Redirect guests to pay page only if they didn't upload slip
-    if (!isLoggedIn && !hasUploadedSlip && bundleID && email) {
-      router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
-    }
-  }
-
-  const handleCloseAfterBooking = () => {
-    const targetHighlight = bookingResult?.highlightKey
-    const isLoggedIn = Boolean(currentUser?.id)
-    handleClose()
-    if (isLoggedIn) {
-      if (targetHighlight) {
-        router.push(`/bookings?highlight=${targetHighlight}`)
-      } else {
-        router.push('/bookings')
-      }
-    } else {
-      onBookingComplete(true)
-    }
   }
 
   useEffect(() => {
@@ -637,9 +473,6 @@ export default function CourtBookingModal({
     if (seedCourtID) setRecurringCourtID(seedCourtID)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, preselectedSlot, bookingItems])
-
-  const isGuestBooking = Boolean(bookingResult?.isGuest)
-  const isGuestPaid = isGuestBooking && slipSuccess
 
   return (
     <>
@@ -1097,151 +930,6 @@ export default function CourtBookingModal({
               </Box>
             )}
 
-            {activeStep === 2 && (
-              <Box sx={{ textAlign: 'center' }}>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" color="warning.main" fontWeight={700} sx={{ mb: 0.5 }}>
-                    {t('booking.bookingPending')}
-                  </Typography>
-                  {bookingResult?.bookingRef && (
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', display: 'inline-block', px: 1.5, py: 0.5, borderRadius: 1, fontWeight: 700, letterSpacing: 1 }}>
-                      #{bookingResult.bookingRef}
-                    </Typography>
-                  )}
-                  {bookingResult?.totalPrice !== undefined && (
-                    <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
-                      {t('booking.total')}: {Number(bookingResult.totalPrice).toFixed(2)} {bookingResult.currency}
-                    </Typography>
-                  )}
-                </Box>
-
-                {isGuestPaid ? (
-                  <Alert severity="success" sx={{ textAlign: 'left' }}>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                      {t('booking.guestSuccessTrackTitle')}
-                    </Typography>
-                    <Typography variant="body2">
-                      {t('booking.guestSuccessTrackDesc')}
-                    </Typography>
-                  </Alert>
-                ) : (
-                  <>
-                    {venue.payment && (venue.payment.bankName || venue.payment.accountNumber || venue.payment.promptPayID) && (
-                      <Box sx={{ mb: 2, textAlign: 'left' }}>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                          {t('booking.paymentMethod')}
-                        </Typography>
-                        <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <Box>
-                            {venue.payment.bankName && (
-                              <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {venue.payment.bankName}</Typography>
-                            )}
-                            {venue.payment.accountName && (
-                              <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {venue.payment.accountName}</Typography>
-                            )}
-                            {venue.payment.accountNumber && (
-                              <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {venue.payment.accountNumber}</Typography>
-                            )}
-                            {venue.payment.promptPayID && (
-                              <Typography variant="body2"><strong>{t('booking.promptPayID')}:</strong> {venue.payment.promptPayID}</Typography>
-                            )}
-                          </Box>
-                          {venue.payment.promptPayID && bookingResult?.totalPrice !== undefined && (
-                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                              <Box
-                                ref={qrRef}
-                                sx={{
-                                  width: 240,
-                                  borderRadius: 3,
-                                  overflow: 'hidden',
-                                  border: '1.5px solid #e0e0e0',
-                                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                                }}
-                              >
-                                <Box
-                                  component="img"
-                                  src="/thai-qr-payment.webp"
-                                  alt="Thai QR Payment"
-                                  sx={{ width: '100%', display: 'block' }}
-                                />
-                                <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                                  <QRCode
-                                    value={generatePayload(venue.payment.promptPayID, { amount: Number(bookingResult.totalPrice) })}
-                                    size={168}
-                                    style={{ display: 'block' }}
-                                  />
-                                  <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                    {Number(bookingResult.totalPrice).toFixed(2)}{' '}
-                                    <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>
-                                      {bookingResult.currency}
-                                    </Box>
-                                  </Typography>
-                                  <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
-                                    สแกนเพื่อชำระเงิน
-                                  </Typography>
-                                </Box>
-                              </Box>
-                              <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={handleSaveQR}>
-                                บันทึก QR
-                              </Button>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-
-                    <Alert severity="warning" sx={{ textAlign: 'left' }}>
-                      {t('booking.uploadSlipWarning')}
-                    </Alert>
-
-                    {/* Slip upload section */}
-                    {!slipSuccess ? (
-                      <Box sx={{ mt: 2, textAlign: 'left' }}>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                          {t('booking.uploadSlip')}
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          component="label"
-                          size="small"
-                          fullWidth
-                          sx={{ mb: 1.5 }}
-                        >
-                          {slipPreview ? t('booking.fileSelected') : t('booking.chooseFile')}
-                          <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
-                        </Button>
-                        {slipPreview && (
-                          <Box sx={{ mb: 1.5 }}>
-                            <img
-                              src={slipPreview}
-                              alt="slip preview"
-                              style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 4, border: '1px solid #e0e0e0' }}
-                            />
-                          </Box>
-                        )}
-                        <TextField
-                          size="small"
-                          fullWidth
-                          label={t('booking.note')}
-                          value={slipNote}
-                          onChange={(e) => setSlipNote(e.target.value)}
-                          multiline
-                          rows={2}
-                          sx={{ mb: 1.5 }}
-                        />
-                        {slipError && (
-                          <Alert severity="error" sx={{ mb: 1 }}>{slipError}</Alert>
-                        )}
-                      </Box>
-                    ) : (
-                      <Alert severity="success" sx={{ mt: 2, textAlign: 'left' }}>
-                        {t('booking.uploadSlipSubmitted')}
-                      </Alert>
-                    )}
-                  </>
-                )}
-              </Box>
-            )}
           </Box>
         </DialogContent>
 
@@ -1250,12 +938,12 @@ export default function CourtBookingModal({
           {activeStep > 0 && activeStep < 2 && (
             <Button onClick={handleBack}>{t('booking.back')}</Button>
           )}
-          {activeStep < steps.length - 2 && (
+          {activeStep < steps.length - 1 && (
             <Button onClick={handleNext} variant="contained" color="primary">
               {t('booking.next')}
             </Button>
           )}
-          {activeStep === steps.length - 2 && (
+          {activeStep === steps.length - 1 && (
             <Button
               onClick={handleSubmit}
               variant="contained"
@@ -1264,37 +952,6 @@ export default function CourtBookingModal({
             >
               {loading ? <CircularProgress size={24} /> : bookingType === 'recurring' ? `Book (${recurringDatesPreview.length} session${recurringDatesPreview.length !== 1 ? 's' : ''})` : t('booking.confirmBooking')}
             </Button>
-          )}
-          {activeStep === steps.length - 1 && (
-            <>
-              <Button onClick={handleCloseAfterBooking} color="inherit">
-                {t('action.close')}
-              </Button>
-              {isGuestPaid ? (
-                <Button
-                  onClick={() => router.push('/register')}
-                  variant="contained"
-                  sx={{
-                    bgcolor: '#80644f',
-                    '&:hover': { bgcolor: '#6e5542' },
-                  }}
-                >
-                  {t('booking.createAccount')}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSlipSubmit}
-                  variant="contained"
-                  sx={{
-                    bgcolor: '#80644f',
-                    '&:hover': { bgcolor: '#6e5542' },
-                  }}
-                  disabled={!bookingResult?.bundleID || !slipPreview || slipSubmitting || slipSuccess}
-                >
-                  {slipSubmitting ? <CircularProgress size={20} /> : t('booking.uploadSlip')}
-                </Button>
-              )}
-            </>
           )}
         </DialogActions>
       </Dialog>
