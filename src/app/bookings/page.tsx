@@ -46,6 +46,7 @@ import axios from 'axios'
 import QRCode from 'react-qr-code'
 import generatePayload from 'promptpay-qr'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { deriveGroupedPaymentStatus } from './grouping'
 
 const EXPIRY_MINUTES = 10
 
@@ -118,7 +119,7 @@ function MyBookingsPage() {
         el.style.outlineColor = ''
       }, 3000)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [loading, highlightKey, courtDetails])
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
@@ -204,6 +205,7 @@ function MyBookingsPage() {
   const [slipNote, setSlipNote] = useState('')
   const [paySubmitting, setPaySubmitting] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
+  const [paymentSuccessResult, setPaymentSuccessResult] = useState<{ message: string; paymentStatus: PaymentStatus } | null>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
   const [resellDialogOpen, setResellDialogOpen] = useState(false)
   const [resellBooking, setResellBooking] = useState<Booking | null>(null)
@@ -242,8 +244,7 @@ function MyBookingsPage() {
       const totalPrice = nonCancelledItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
       const allCancelled = sortedItems.every((item) => item.status === 'cancelled')
       const allConfirmed = nonCancelledItems.length > 0 && nonCancelledItems.every((item) => item.status === 'confirmed')
-      const allPaid = nonCancelledItems.every((item) => item.paymentStatus === 'paid')
-      const anyUnpaid = nonCancelledItems.some((item) => item.paymentStatus === 'unpaid')
+      const paymentStatus = deriveGroupedPaymentStatus(sortedItems)
 
       return {
         groupKey,
@@ -256,7 +257,7 @@ function MyBookingsPage() {
         currency: first.currency,
         totalPrice,
         status: allCancelled ? 'cancelled' : (allConfirmed ? 'confirmed' : 'pending'),
-        paymentStatus: allPaid ? 'paid' : (anyUnpaid ? 'unpaid' : 'pending'),
+        paymentStatus,
       }
     })
 
@@ -359,6 +360,7 @@ function MyBookingsPage() {
     setSlipPreview(null)
     setSlipNote('')
     setPayError(null)
+    setPaymentSuccessResult(null)
     setPayDialogOpen(true)
   }
 
@@ -379,9 +381,25 @@ function MyBookingsPage() {
     try {
       setPaySubmitting(true)
       setPayError(null)
-      await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
-      setPayDialogOpen(false)
-      mutateBookings()
+      const response = await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
+
+      // Update Redux with the updated bookings from response to ensure payment status is immediately reflected
+      dispatch(setBookings(response.bookings))
+
+      // Determine payment status from response bookings
+      const firstBooking = response.bookings[0]
+      if (!firstBooking) {
+        setPayError('No booking data in response')
+        return
+      }
+
+      const paymentStatus = firstBooking.paymentStatus
+      const statusMessage = paymentStatus === PaymentStatus.Paid
+        ? 'Payment verified successfully! Your booking is confirmed.'
+        : 'Payment received. Awaiting venue approval.'
+
+      // Show success screen
+      setPaymentSuccessResult({ message: statusMessage, paymentStatus })
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const msg = (err.response?.data as { message?: string } | undefined)?.message
@@ -1040,193 +1058,251 @@ function MyBookingsPage() {
 
         <Dialog
           open={payDialogOpen}
-          onClose={() => !paySubmitting && setPayDialogOpen(false)}
+          onClose={() => {
+            if (!paySubmitting && !paymentSuccessResult) setPayDialogOpen(false)
+          }}
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle>{t('booking.uploadSlip')}</DialogTitle>
+          <DialogTitle>
+            {paymentSuccessResult ? t('booking.paymentSuccess') : t('booking.uploadSlip')}
+          </DialogTitle>
           <DialogContent>
-            {/* Booking details */}
-            <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                {t('booking.bookingDetails')}
-              </Typography>
-              {payTargetVenue && (
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.venue')}:</strong> {payTargetVenue.name?.en || payTargetVenue.name?.th}
+            {paymentSuccessResult ? (
+              // Success screen
+              <Box sx={{ py: 2, textAlign: 'center' }}>
+                <Box sx={{ mb: 3, fontSize: '3rem' }}>
+                  {paymentSuccessResult.paymentStatus === PaymentStatus.Paid ? '✓' : '⏳'}
+                </Box>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                  {paymentSuccessResult.paymentStatus === PaymentStatus.Paid
+                    ? 'Payment Verified'
+                    : 'Payment Received'}
                 </Typography>
-              )}
-              {payTargetBookings.map((b) => {
-                const court = courtDetails[b.courtID]
-                return (
-                  <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                    <Typography variant="body2">
-                      {court?.name ?? b.courtID} &nbsp;·&nbsp; {moment(b.date).format('DD/MM/YYYY')} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  {paymentSuccessResult.message}
+                </Typography>
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                    Status:
+                  </Typography>
+                  <Chip
+                    label={paymentSuccessResult.paymentStatus === PaymentStatus.Paid ? 'Paid' : 'Pending Review'}
+                    color={paymentSuccessResult.paymentStatus === PaymentStatus.Paid ? 'success' : 'warning'}
+                    size="small"
+                    sx={{ ml: 1 }}
+                  />
+                </Box>
+                {paymentSuccessResult.paymentStatus === PaymentStatus.Pending && (
+                  <Alert severity="info">
+                    The venue manager will review your payment and confirm within 24 hours.
+                  </Alert>
+                )}
+              </Box>
+            ) : (
+              // Upload slip screen
+              <>
+                {/* Booking details */}
+                <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+                    {t('booking.bookingDetails')}
+                  </Typography>
+                  {payTargetVenue && (
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> {payTargetVenue.name?.en || payTargetVenue.name?.th}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
-                      {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
+                  )}
+                  {payTargetBookings.map((b) => {
+                    const court = courtDetails[b.courtID]
+                    return (
+                      <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                        <Typography variant="body2">
+                          {court?.name ?? b.courtID} &nbsp;·&nbsp; {moment(b.date).format('DD/MM/YYYY')} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
+                          {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
+                        </Typography>
+                      </Box>
+                    )
+                  })}
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle2">{t('booking.total')}</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                      {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
                     </Typography>
                   </Box>
-                )
-              })}
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle2">{t('booking.total')}</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                  {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
-                </Typography>
-              </Box>
-            </Box>
+                </Box>
 
-            {/* Payment method */}
-            {isResalePay ? (
-              (() => {
-                const sysPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
-                const sysBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
-                const sysAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
-                const sysAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
-                const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-                return (
+                {/* Payment method */}
+                {isResalePay ? (
+                  (() => {
+                    const sysPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
+                    const sysBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
+                    const sysAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
+                    const sysAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
+                    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
+                    return (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+                          {t('booking.paymentMethod')}
+                        </Typography>
+                        <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                          {sysBankName && <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {sysBankName}</Typography>}
+                          {sysAccountName && <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {sysAccountName}</Typography>}
+                          {sysAccountNumber && <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {sysAccountNumber}</Typography>}
+                          {sysPromptPayID && (
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                              <Box ref={qrFrameRef} sx={{ width: 240, borderRadius: 3, overflow: 'hidden', border: '1.5px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                                <Box component="img" src="/thai-qr-payment.webp" alt="Thai QR Payment" sx={{ width: '100%', display: 'block' }} />
+                                <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                                  <QRCode value={generatePayload(sysPromptPayID, { amount: promptPayTotal })} size={168} style={{ display: 'block' }} />
+                                  <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
+                                    {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>สแกนเพื่อชำระเงิน</Typography>
+                                </Box>
+                              </Box>
+                              <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>บันทึก QR</Button>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+                    )
+                  })()
+                ) : payTargetVenue?.payment ? (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
                       {t('booking.paymentMethod')}
                     </Typography>
                     <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                      {sysBankName && <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {sysBankName}</Typography>}
-                      {sysAccountName && <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {sysAccountName}</Typography>}
-                      {sysAccountNumber && <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {sysAccountNumber}</Typography>}
-                      {sysPromptPayID && (
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box ref={qrFrameRef} sx={{ width: 240, borderRadius: 3, overflow: 'hidden', border: '1.5px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                            <Box component="img" src="/thai-qr-payment.webp" alt="Thai QR Payment" sx={{ width: '100%', display: 'block' }} />
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode value={generatePayload(sysPromptPayID, { amount: promptPayTotal })} size={168} style={{ display: 'block' }} />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>สแกนเพื่อชำระเงิน</Typography>
+                      <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {payTargetVenue.payment.bankName}</Typography>
+                      <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
+                      <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
+                      {payTargetVenue.payment.promptPayID && (() => {
+                        const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
+                        return (
+                          <>
+                            {/* PromptPay QR Frame */}
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                              <Box ref={qrFrameRef} sx={{
+                                width: 240,
+                                borderRadius: 3,
+                                overflow: 'hidden',
+                                border: '1.5px solid #e0e0e0',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                              }}>
+                                {/* Header image */}
+                                <Box
+                                  component="img"
+                                  src="/thai-qr-payment.webp"
+                                  alt="Thai QR Payment"
+                                  sx={{ width: '100%', display: 'block' }}
+                                />
+
+                                {/* QR Code area */}
+                                <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                                  <QRCode
+                                    value={generatePayload(payTargetVenue.payment.promptPayID, { amount: promptPayTotal })}
+                                    size={168}
+                                    style={{ display: 'block' }}
+                                  />
+                                  <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
+                                    {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
+                                    สแกนเพื่อชำระเงิน
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>
+                                บันทึก QR
+                              </Button>
                             </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>บันทึก QR</Button>
-                        </Box>
+                          </>
+                        )
+                      })()}
+                      {payTargetVenue.payment.qrCodeUrl && (
+                        <img
+                          src={payTargetVenue.payment.qrCodeUrl}
+                          alt="QR Code"
+                          style={{ marginTop: 8, maxWidth: 160, display: 'block' }}
+                        />
                       )}
                     </Box>
                   </Box>
-                )
-              })()
-            ) : payTargetVenue?.payment ? (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                  {t('booking.paymentMethod')}
+                ) : null}
+
+                <Divider sx={{ my: 2 }} />
+
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  {t('booking.uploadSlipInstruction')}
                 </Typography>
-                <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {payTargetVenue.payment.bankName}</Typography>
-                  <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
-                  <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
-                  {payTargetVenue.payment.promptPayID && (() => {
-                    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-                    return (
-                      <>
-                        {/* PromptPay QR Frame */}
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box ref={qrFrameRef} sx={{
-                            width: 240,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            border: '1.5px solid #e0e0e0',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                          }}>
-                            {/* Header image */}
-                            <Box
-                              component="img"
-                              src="/thai-qr-payment.webp"
-                              alt="Thai QR Payment"
-                              sx={{ width: '100%', display: 'block' }}
-                            />
-
-                            {/* QR Code area */}
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode
-                                value={generatePayload(payTargetVenue.payment.promptPayID, { amount: promptPayTotal })}
-                                size={168}
-                                style={{ display: 'block' }}
-                              />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
-                                สแกนเพื่อชำระเงิน
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>
-                            บันทึก QR
-                          </Button>
-                        </Box>
-                      </>
-                    )
-                  })()}
-                  {payTargetVenue.payment.qrCodeUrl && (
-                    <img
-                      src={payTargetVenue.payment.qrCodeUrl}
-                      alt="QR Code"
-                      style={{ marginTop: 8, maxWidth: 160, display: 'block' }}
-                    />
-                  )}
-                </Box>
-              </Box>
-            ) : null}
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('booking.uploadSlipInstruction')}
-            </Typography>
-            <Button
-              variant="contained"
-              component="label"
-              fullWidth
-              sx={{ mb: 2 }}
-            >
-              {slipFile ? t('booking.fileSelected') : t('booking.chooseFile')}
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={handleSlipFileChange}
-              />
-            </Button>
-            {payError && (
-              <Alert severity="error" sx={{ mb: 2 }}>{payError}</Alert>
+                <Button
+                  variant="contained"
+                  component="label"
+                  fullWidth
+                  sx={{ mb: 2 }}
+                >
+                  {slipFile ? t('booking.fileSelected') : t('booking.chooseFile')}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleSlipFileChange}
+                  />
+                </Button>
+                {payError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>{payError}</Alert>
+                )}
+                {slipPreview && (
+                  <img
+                    src={slipPreview}
+                    alt="slip preview"
+                    style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
+                  />
+                )}
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={t('booking.note')}
+                  value={slipNote}
+                  onChange={(e) => setSlipNote(e.target.value)}
+                  multiline
+                  rows={2}
+                />
+              </>
             )}
-            {slipPreview && (
-              <img
-                src={slipPreview}
-                alt="slip preview"
-                style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
-              />
-            )}
-            <TextField
-              size="small"
-              fullWidth
-              label={t('booking.note')}
-              value={slipNote}
-              onChange={(e) => setSlipNote(e.target.value)}
-              multiline
-              rows={2}
-            />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPayDialogOpen(false)} disabled={paySubmitting}>
-              {t('booking.cancel')}
-            </Button>
-            <Button
-              onClick={handleConfirmPay}
-              variant="contained"
-              disabled={!slipPreview || paySubmitting}
-            >
-              {paySubmitting ? <CircularProgress size={20} /> : t('booking.confirmBooking')}
-            </Button>
+            {paymentSuccessResult ? (
+              <Button
+                onClick={() => {
+                  setPayDialogOpen(false)
+                  setPaymentSuccessResult(null)
+                  setSlipFile(null)
+                  setSlipPreview(null)
+                  setSlipNote('')
+                  mutateBookings()
+                }}
+                variant="contained"
+              >
+                {t('booking.done')}
+              </Button>
+            ) : (
+              <>
+                <Button onClick={() => setPayDialogOpen(false)} disabled={paySubmitting}>
+                  {t('booking.cancel')}
+                </Button>
+                <Button
+                  onClick={handleConfirmPay}
+                  variant="contained"
+                  disabled={!slipPreview || paySubmitting}
+                >
+                  {paySubmitting ? <CircularProgress size={20} /> : t('booking.confirmBooking')}
+                </Button>
+              </>
+            )}
           </DialogActions>
         </Dialog>
 

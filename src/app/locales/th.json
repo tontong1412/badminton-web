@@ -315,6 +315,8 @@
     "all": "ทั้งหมด",
     "courtTypeLabel": "ประเภท",
     "venuesAvailable": "มี {{count}} สนาม",
-    "courtBookingTitle": "จองสนาม"
+    "courtBookingTitle": "จองสนาม",
+    "paymentSuccess": "การชำระเงินสำเร็จ",
+    "done": "เสร็จสิ้น"
   }
 }

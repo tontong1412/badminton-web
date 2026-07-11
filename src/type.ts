@@ -449,7 +449,8 @@ export interface Booking {
   durationMinutes: number;
   totalPrice: number;
   currency: string;
-  bookerType: 'guest' | 'user';
+  bookerType: 'guest' | 'user' | 'admin';
+  createdByUserID?: string;
   userID?: string;
   guestName?: string;
   guestPhone?: string;
