@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Box,
@@ -41,6 +41,7 @@ function GuestPayContent() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const loadBundle = useCallback(async() => {
     if (!bundleID) {
@@ -73,6 +74,11 @@ function GuestPayContent() {
   useEffect(() => {
     loadBundle()
   }, [loadBundle])
+
+  useEffect(() => {
+    if (!slipPreview || submitting) return
+    submitButtonRef.current?.focus()
+  }, [slipPreview, submitting])
 
   const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
@@ -334,6 +340,7 @@ function GuestPayContent() {
             )}
 
             <Button
+              ref={submitButtonRef}
               variant="contained"
               fullWidth
               size="large"
