@@ -315,6 +315,33 @@
     "venuesAvailable_other": "{{count}} venues available",
     "courtBookingTitle": "Court Booking",
     "paymentSuccess": "Payment Successful",
+    "payPage": {
+      "title": "Complete Payment",
+      "guestPayment": "Guest payment",
+      "accountPayment": "Account payment",
+      "bookingDetails": "Booking Details",
+      "bookingRef": "Booking ref",
+      "scanToPay": "Scan to Pay",
+      "bookingCancelled": "This booking has been cancelled. Payment is no longer accepted.",
+      "transferInstruction": "Transfer the amount above and upload your payment slip to confirm the booking.",
+      "selectedSlip": "Selected: {{fileName}}",
+      "noteOptional": "Note (optional)",
+      "submitPayment": "Submit Payment",
+      "copy": "Copy",
+      "copied": "Copied",
+      "slipPreviewAlt": "payment slip preview",
+      "thaiQrPaymentFrameAlt": "Thai QR Payment frame",
+      "success": {
+        "title": "Payment Submitted!",
+        "description": "Your payment slip has been submitted successfully. The venue will verify it shortly."
+      },
+      "errors": {
+        "invalidPaymentLink": "Invalid payment link. Missing booking bundle ID.",
+        "unauthorizedPaymentPage": "You are not allowed to access this payment page. Please sign in with the booking account or use a valid guest payment link.",
+        "loadBookingDetailsFailed": "Failed to load booking details.",
+        "submitPaymentFailed": "Failed to submit payment. Please try again."
+      }
+    },
     "done": "Done"
   }
 }
