@@ -39,7 +39,7 @@ import { useSelector } from 'react-redux'
 import { RootState } from '../../../../libs/redux/store'
 import { useTranslation } from 'react-i18next'
 
-type DateRange = '7d' | '30d' | '90d' | 'year' | 'custom'
+type DateRange = 'thisMonth' | 'lastMonth' | 'thisYear' | 'custom'
 
 function timeToMinutes(t: string) {
   const [h, m] = t.split(':').map(Number)
@@ -81,6 +81,8 @@ interface TopCustomerRow {
 }
 
 type ExportMode = 'full' | 'accounting'
+type PdfVatMode = 'withVat' | 'withoutVat'
+type PdfExportMode = 'fullWithVat' | 'fullWithoutVat' | 'accountingWithVat' | 'accountingWithoutVat'
 
 interface ReportPdfText {
   title: string;
@@ -100,6 +102,34 @@ interface ReportPdfText {
   topDemandHour: string;
   forecast: string;
   topCourtsByRevenue: string;
+  taxWorksheetTitle: string;
+  generatedAt: string;
+  sellerName: string;
+  sellerAddress: string;
+  sellerTaxId: string;
+  sellerTaxIdUnavailable: string;
+  vatRate: string;
+  netAmountExVat: string;
+  vatAmount: string;
+  grossAmountIncVat: string;
+  amountNoVat: string;
+  vatNotApplied: string;
+  paidTransactions: string;
+  docNo: string;
+  serviceDate: string;
+  customer: string;
+  gross: string;
+  net: string;
+  vat: string;
+}
+
+interface TaxWorksheetRow {
+  docNo: string;
+  serviceDate: string;
+  customer: string;
+  grossAmount: number;
+  netAmount: number;
+  vatAmount: number;
 }
 
 Font.register({
@@ -149,10 +179,16 @@ const reportPdfStyles = StyleSheet.create({
   cCount: { width: '16%', textAlign: 'right' },
   cRev: { width: '24%', textAlign: 'right' },
   cUtil: { width: '16%', textAlign: 'right' },
+  cDocNo: { width: '16%' },
+  cDate: { width: '16%' },
+  cCustomer: { width: '24%' },
+  cAmt: { width: '14%', textAlign: 'right' },
+  cAmtWide: { width: '42%', textAlign: 'right' },
 })
 
 function ReportPdfDocument(props: {
   venueName: string;
+  venueAddress: string;
   periodText: string;
   currency: string;
   paidRevenue: number;
@@ -167,10 +203,17 @@ function ReportPdfDocument(props: {
   forecastRevenue: number;
   forecastBookings: number;
   courtRanking: CourtRankingRow[];
+  taxRows: TaxWorksheetRow[];
+  netAmountExVat: number;
+  vatAmount: number;
+  grossAmountIncVat: number;
+  pdfVatMode: PdfVatMode;
+  generatedAtText: string;
   text: ReportPdfText;
 }) {
   const {
     venueName,
+    venueAddress,
     periodText,
     currency,
     paidRevenue,
@@ -185,9 +228,16 @@ function ReportPdfDocument(props: {
     forecastRevenue,
     forecastBookings,
     courtRanking,
+    taxRows,
+    netAmountExVat,
+    vatAmount,
+    grossAmountIncVat,
+    pdfVatMode,
+    generatedAtText,
     text,
   } = props
   const fmtPrice = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2))
+  const withVat = pdfVatMode === 'withVat'
   return (
     <Document>
       <Page size="A4" style={reportPdfStyles.page}>
@@ -219,6 +269,48 @@ function ReportPdfDocument(props: {
             <Text style={reportPdfStyles.cRev}>{fmtPrice(row.paidRevenue)} {currency}</Text>
             <Text style={reportPdfStyles.cRev}>{fmtPrice(row.discountTotal)} {currency}</Text>
             <Text style={reportPdfStyles.cUtil}>{row.utilisationPct}%</Text>
+          </View>
+        ))}
+
+        <Text style={reportPdfStyles.sectionTitle}>{text.taxWorksheetTitle}</Text>
+        <View style={reportPdfStyles.row}><Text>{text.generatedAt}</Text><Text>{generatedAtText}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{text.sellerName}</Text><Text>{venueName}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{text.sellerAddress}</Text><Text>{venueAddress}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{text.sellerTaxId}</Text><Text>{text.sellerTaxIdUnavailable}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{text.vatRate}</Text><Text>{withVat ? '7%' : text.vatNotApplied}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{withVat ? text.netAmountExVat : text.amountNoVat}</Text><Text>{fmtPrice(netAmountExVat)} {currency}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{text.vatAmount}</Text><Text>{fmtPrice(vatAmount)} {currency}</Text></View>
+        <View style={reportPdfStyles.row}><Text>{withVat ? text.grossAmountIncVat : text.amountNoVat}</Text><Text>{fmtPrice(grossAmountIncVat)} {currency}</Text></View>
+
+        <Text style={reportPdfStyles.sectionTitle}>{text.paidTransactions}</Text>
+        <View style={reportPdfStyles.tableHeader}>
+          <Text style={reportPdfStyles.cDocNo}>{text.docNo}</Text>
+          <Text style={reportPdfStyles.cDate}>{text.serviceDate}</Text>
+          <Text style={reportPdfStyles.cCustomer}>{text.customer}</Text>
+          {withVat ? (
+            <>
+              <Text style={reportPdfStyles.cAmt}>{text.gross}</Text>
+              <Text style={reportPdfStyles.cAmt}>{text.net}</Text>
+              <Text style={reportPdfStyles.cAmt}>{text.vat}</Text>
+            </>
+          ) : (
+            <Text style={reportPdfStyles.cAmtWide}>{text.amountNoVat}</Text>
+          )}
+        </View>
+        {taxRows.map((row, idx) => (
+          <View style={reportPdfStyles.tableRow} key={`${row.docNo}-${row.serviceDate}-${idx}`}>
+            <Text style={reportPdfStyles.cDocNo}>{row.docNo}</Text>
+            <Text style={reportPdfStyles.cDate}>{row.serviceDate}</Text>
+            <Text style={reportPdfStyles.cCustomer}>{row.customer}</Text>
+            {withVat ? (
+              <>
+                <Text style={reportPdfStyles.cAmt}>{fmtPrice(row.grossAmount)}</Text>
+                <Text style={reportPdfStyles.cAmt}>{fmtPrice(row.netAmount)}</Text>
+                <Text style={reportPdfStyles.cAmt}>{fmtPrice(row.vatAmount)}</Text>
+              </>
+            ) : (
+              <Text style={reportPdfStyles.cAmtWide}>{fmtPrice(row.grossAmount)}</Text>
+            )}
           </View>
         ))}
 
@@ -264,7 +356,7 @@ export default function VenueDashboardPage() {
   const [range, setRange] = useState<DateRange>('custom')
   const [dateFrom, setDateFrom] = useState(moment().startOf('month').format('YYYY-MM-DD'))
   const [dateTo, setDateTo] = useState(moment().endOf('month').format('YYYY-MM-DD'))
-  const [exportMode, setExportMode] = useState<ExportMode>('full')
+  const [pdfExportMode, setPdfExportMode] = useState<PdfExportMode>('fullWithVat')
 
   const { venue, isLoading: venueLoading, isError: venueError } = useVenue(venueID)
   const { courts: allCourts, isLoading: courtsLoading } = useCourts()
@@ -297,15 +389,21 @@ export default function VenueDashboardPage() {
 
   useEffect(() => {
     if (range === 'custom') return
-    const map: Record<DateRange, moment.Moment> = {
-      '7d': moment().subtract(7, 'days').startOf('day'),
-      '30d': moment().subtract(30, 'days').startOf('day'),
-      '90d': moment().subtract(90, 'days').startOf('day'),
-      'year': moment().subtract(1, 'year').startOf('day'),
-      'custom': moment().startOf('day'),
+    if (range === 'thisMonth') {
+      setDateFrom(moment().startOf('month').format('YYYY-MM-DD'))
+      setDateTo(moment().endOf('month').format('YYYY-MM-DD'))
+      return
     }
-    setDateFrom(map[range].format('YYYY-MM-DD'))
-    setDateTo(moment().format('YYYY-MM-DD'))
+    if (range === 'lastMonth') {
+      const lastMonth = moment().subtract(1, 'month')
+      setDateFrom(lastMonth.startOf('month').format('YYYY-MM-DD'))
+      setDateTo(lastMonth.endOf('month').format('YYYY-MM-DD'))
+      return
+    }
+    if (range === 'thisYear') {
+      setDateFrom(moment().startOf('year').format('YYYY-MM-DD'))
+      setDateTo(moment().endOf('year').format('YYYY-MM-DD'))
+    }
   }, [range])
 
   const activeCourts = useMemo(
@@ -827,38 +925,49 @@ export default function VenueDashboardPage() {
   const maxBarRev = Math.max(...revenueByDay.map((d) => d.rev), 1)
   const periodText = `${moment(rangeStart).format('DD MMM YYYY')} - ${moment(rangeEnd).format('DD MMM YYYY')}`
 
-  const exportCSV = () => {
-    const lines: string[] = []
-    lines.push('Venue,Period From,Period To,Currency')
-    lines.push(`"${(venue?.name?.en || venue?.name?.th || '').replaceAll('"', '""')}",${moment(rangeStart).format('YYYY-MM-DD')},${moment(rangeEnd).format('YYYY-MM-DD')},${currency}`)
-    lines.push('')
-    lines.push('Accounting Summary')
-    lines.push('Paid Revenue,Discount Total,Cancelled Bookings,MoM Growth %')
-    lines.push(`${fmtPrice(reportPaidRevenue)},${fmtPrice(accountingDiscountTotal)},${accountingCancelledCount},${accountingGrowthPct ?? ''}`)
-    lines.push('')
-    lines.push('Monthly Breakdown')
-    lines.push('Month,Bookings,Paid Bookings,Cancelled,Paid Revenue,Discount Total,Booked Hours,Utilisation %')
-    monthlyRowsView.forEach((r) => {
-      lines.push(`${r.monthLabel},${r.totalBookings},${r.paidBookings},${r.cancelledBookings},${fmtPrice(r.paidRevenue)},${fmtPrice(r.discountTotal)},${Math.round(r.bookedMinutes / 60)},${r.utilisationPct}`)
-    })
-    if (exportMode === 'full') {
-      lines.push('')
-      lines.push('Court Ranking')
-      lines.push('Court,Paid Revenue,Booked Hours,Utilisation %')
-      courtRankingView.forEach((r) => {
-        lines.push(`"${r.courtName.replaceAll('"', '""')}",${fmtPrice(r.paidRevenue)},${Math.round(r.bookedMinutes / 60)},${r.utilisationPct}`)
-      })
-      lines.push('')
-      lines.push('Strategic Highlights')
-      lines.push('Top Demand Day,Top Hour,Forecast Month,Forecast Bookings,Forecast Revenue')
-      lines.push(`"${peakWeekdaysView[0] ? `${peakWeekdaysView[0].day} (${peakWeekdaysView[0].count})` : 'N/A'}","${peakHours[0] ? `${peakHours[0].hour} (${peakHours[0].count})` : 'N/A'}",${forecastView.label},${forecastView.bookings},${fmtPrice(forecastView.revenue)}`)
-    }
-    const csv = `\uFEFF${lines.join('\n')}`
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    saveAs(blob, `venue-${exportMode}-report-${venueID}-${moment().format('YYYYMMDD-HHmm')}.csv`)
-  }
-
   const exportPDF = async() => {
+    const exportConfig: Record<PdfExportMode, { exportMode: ExportMode; pdfVatMode: PdfVatMode; fileLabel: string }> = {
+      fullWithVat: { exportMode: 'full', pdfVatMode: 'withVat', fileLabel: 'full-with-vat' },
+      fullWithoutVat: { exportMode: 'full', pdfVatMode: 'withoutVat', fileLabel: 'full-without-vat' },
+      accountingWithVat: { exportMode: 'accounting', pdfVatMode: 'withVat', fileLabel: 'accounting-with-vat' },
+      accountingWithoutVat: { exportMode: 'accounting', pdfVatMode: 'withoutVat', fileLabel: 'accounting-without-vat' },
+    }
+    const selectedExportConfig = exportConfig[pdfExportMode]
+
+    const toTwo = (value: number) => Math.round(value * 100) / 100
+    const withVat = selectedExportConfig.pdfVatMode === 'withVat'
+    const taxRows: TaxWorksheetRow[] = paidBookings
+      .filter((b) => !b.resaleSourceListingID)
+      .sort((a, b) => {
+        const av = moment(`${a.date} ${a.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
+        const bv = moment(`${b.date} ${b.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
+        return av - bv
+      })
+      .map((b) => {
+        const grossAmount = toTwo(b.totalPrice)
+        const netAmount = withVat ? toTwo(grossAmount / 1.07) : grossAmount
+        const vatAmount = withVat ? toTwo(grossAmount - netAmount) : 0
+        const docNo = b.bookingRef ?? `BK-${b.id.slice(-8).toUpperCase()}`
+        const customer = b.bookerType === 'user'
+          ? `${t('venueReport.customerUser')} ${b.userID?.slice(0, 6) ?? ''}`.trim()
+          : b.guestName || b.guestPhone || b.guestEmail || t('venueReport.customerUnknown')
+        return {
+          docNo,
+          serviceDate: moment(b.date).format('YYYY-MM-DD'),
+          customer,
+          grossAmount,
+          netAmount,
+          vatAmount,
+        }
+      })
+
+    const taxTotals = taxRows.reduce((sum, row) => {
+      sum.gross += row.grossAmount
+      sum.net += row.netAmount
+      sum.vat += row.vatAmount
+      return sum
+    }, { gross: 0, net: 0, vat: 0 })
+
     const reportPdfText: ReportPdfText = {
       title: t('venueReport.pdfTitle'),
       period: t('venueReport.period'),
@@ -877,11 +986,31 @@ export default function VenueDashboardPage() {
       topDemandHour: t('venueReport.topHour'),
       forecast: t('venueReport.pdfForecast'),
       topCourtsByRevenue: t('venueReport.pdfTopCourtsByRevenue'),
+      taxWorksheetTitle: t('venueReport.taxWorksheetTitle'),
+      generatedAt: t('venueReport.generatedAt'),
+      sellerName: t('venueReport.sellerName'),
+      sellerAddress: t('venueReport.sellerAddress'),
+      sellerTaxId: t('venueReport.sellerTaxId'),
+      sellerTaxIdUnavailable: t('venueReport.sellerTaxIdUnavailable'),
+      vatRate: t('venueReport.vatRate'),
+      netAmountExVat: t('venueReport.netAmountExVat'),
+      vatAmount: t('venueReport.vatAmount'),
+      grossAmountIncVat: t('venueReport.grossAmountIncVat'),
+      amountNoVat: t('venueReport.amountNoVat'),
+      vatNotApplied: t('venueReport.vatNotApplied'),
+      paidTransactions: t('venueReport.paidTransactions'),
+      docNo: t('venueReport.docNo'),
+      serviceDate: t('venueReport.serviceDate'),
+      customer: t('venueReport.customer'),
+      gross: t('venueReport.gross'),
+      net: t('venueReport.net'),
+      vat: t('venueReport.vat'),
     }
 
     const doc = (
       <ReportPdfDocument
         venueName={venue?.name?.en || venue?.name?.th || 'Venue'}
+        venueAddress={venue?.address || '-'}
         periodText={periodText}
         currency={currency}
         paidRevenue={reportPaidRevenue}
@@ -889,18 +1018,24 @@ export default function VenueDashboardPage() {
         cancelledCount={accountingCancelledCount}
         growthPct={accountingGrowthPct}
         monthlyRows={monthlyRowsView}
-        exportMode={exportMode}
+        exportMode={selectedExportConfig.exportMode}
         topDemandDay={peakWeekdaysView[0] ? `${peakWeekdaysView[0].day} (${peakWeekdaysView[0].count})` : 'N/A'}
         topDemandHour={peakHours[0] ? `${peakHours[0].hour} (${peakHours[0].count})` : 'N/A'}
         forecastLabel={forecastView.label}
         forecastRevenue={forecastView.revenue}
         forecastBookings={forecastView.bookings}
         courtRanking={courtRankingView}
+        taxRows={taxRows}
+        netAmountExVat={toTwo(taxTotals.net)}
+        vatAmount={toTwo(taxTotals.vat)}
+        grossAmountIncVat={toTwo(taxTotals.gross)}
+        pdfVatMode={selectedExportConfig.pdfVatMode}
+        generatedAtText={moment().format('YYYY-MM-DD HH:mm')}
         text={reportPdfText}
       />
     )
     const blob = await pdf(doc).toBlob()
-    saveAs(blob, `venue-${exportMode}-report-${venueID}-${moment().format('YYYYMMDD-HHmm')}.pdf`)
+    saveAs(blob, `venue-${selectedExportConfig.fileLabel}-report-${venueID}-${moment().format('YYYYMMDD-HHmm')}.pdf`)
   }
 
   return (
@@ -946,26 +1081,41 @@ export default function VenueDashboardPage() {
             onChange={(_, v) => { if (v) setRange(v) }}
             size="small"
           >
-            <ToggleButton value="7d">{t('venueReport.range7d')}</ToggleButton>
-            <ToggleButton value="30d">{t('venueReport.range30d')}</ToggleButton>
-            <ToggleButton value="90d">{t('venueReport.range90d')}</ToggleButton>
-            <ToggleButton value="year">{t('venueReport.rangeYear')}</ToggleButton>
+            <ToggleButton value="thisMonth">{t('venueReport.rangeThisMonth')}</ToggleButton>
+            <ToggleButton value="lastMonth">{t('venueReport.rangeLastMonth')}</ToggleButton>
+            <ToggleButton value="thisYear">{t('venueReport.rangeThisYear')}</ToggleButton>
           </ToggleButtonGroup>
 
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            sx={{
+              alignItems: { xs: 'stretch', sm: 'center' },
+              width: { xs: '100%', md: 'auto' },
+              flexWrap: 'wrap',
+            }}
+          >
             <TextField
               select
               size="small"
-              label={t('venueReport.exportMode')}
-              value={exportMode}
-              onChange={(e) => setExportMode(e.target.value as ExportMode)}
-              sx={{ minWidth: 150 }}
+              label={t('venueReport.pdfExportMode')}
+              value={pdfExportMode}
+              onChange={(e) => setPdfExportMode(e.target.value as PdfExportMode)}
+              fullWidth
+              sx={{ minWidth: { sm: 240 }, width: { xs: '100%', sm: 'auto' }, order: { xs: 3, sm: 1 }, mt: { xs: 1.5, sm: 0 } }}
             >
-              <MenuItem value="full">{t('venueReport.exportModeFull')}</MenuItem>
-              <MenuItem value="accounting">{t('venueReport.exportModeAccounting')}</MenuItem>
+              <MenuItem value="fullWithVat">{t('venueReport.pdfModeFullWithVat')}</MenuItem>
+              <MenuItem value="fullWithoutVat">{t('venueReport.pdfModeFullWithoutVat')}</MenuItem>
+              <MenuItem value="accountingWithVat">{t('venueReport.pdfModeAccountingWithVat')}</MenuItem>
+              <MenuItem value="accountingWithoutVat">{t('venueReport.pdfModeAccountingWithoutVat')}</MenuItem>
             </TextField>
-            <Button variant="outlined" onClick={exportCSV}>{t('venueReport.exportCSV')}</Button>
-            <Button variant="outlined" onClick={exportPDF}>{t('venueReport.exportPDF')}</Button>
+            <Button
+              variant="outlined"
+              onClick={exportPDF}
+              sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 4, sm: 2 } }}
+            >
+              {t('venueReport.exportPDF')}
+            </Button>
             <TextField
               type="date"
               size="small"
@@ -976,7 +1126,8 @@ export default function VenueDashboardPage() {
                 setRange('custom')
               }}
               InputLabelProps={{ shrink: true }}
-              sx={{ minWidth: 160 }}
+              fullWidth
+              sx={{ minWidth: { sm: 160 }, width: { xs: '100%', sm: 'auto' }, order: { xs: 1, sm: 3 } }}
             />
             <TextField
               type="date"
@@ -988,7 +1139,8 @@ export default function VenueDashboardPage() {
                 setRange('custom')
               }}
               InputLabelProps={{ shrink: true }}
-              sx={{ minWidth: 160 }}
+              fullWidth
+              sx={{ minWidth: { sm: 160 }, width: { xs: '100%', sm: 'auto' }, order: { xs: 2, sm: 4 }, mb: { xs: 1.5, sm: 0 } }}
             />
           </Stack>
         </Stack>
