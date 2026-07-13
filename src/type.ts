@@ -502,6 +502,55 @@ export interface BookingAvailability {
   }[];
 }
 
+export interface VenueAnalyticsMonthRow {
+  monthKey: string;
+  monthLabel: string;
+  totalBookings: number;
+  paidBookings: number;
+  cancelledBookings: number;
+  paidRevenue: number;
+  discountTotal: number;
+  bookedMinutes: number;
+  utilisationPct: number;
+}
+
+export interface VenueAnalyticsSummary {
+  totalBookings: number;
+  paidBookings: number;
+  cancelledBookings: number;
+  paidRevenue: number;
+  pendingRevenue: number;
+  unpaidRevenue: number;
+  discountTotal: number;
+  bookedMinutes: number;
+  utilisationPct: number;
+  monthOverMonthGrowthPct: number | null;
+}
+
+export interface VenueAnalyticsResponse {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: VenueAnalyticsSummary;
+  monthlyRows: VenueAnalyticsMonthRow[];
+  weekdayDemand: Array<{ day: string; count: number }>;
+  hourDemand: Array<{ hour: string; count: number }>;
+  courtRanking: Array<{
+    courtID: string;
+    courtName: string;
+    paidRevenue: number;
+    bookedMinutes: number;
+    utilisationPct: number;
+  }>;
+  forecastNextMonth: {
+    monthLabel: string;
+    bookings: number;
+    paidRevenue: number;
+    basisMonths: number;
+  };
+}
+
 export enum ResaleStatus {
   Active = 'active',
   Sold = 'sold',

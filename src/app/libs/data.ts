@@ -1,7 +1,7 @@
 import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
-import { Booking, BookingAvailability, Court, Event, Match, Player, ResaleListing, ResalePayoutItem, Tournament, Venue } from '@/type'
+import { Booking, BookingAvailability, Court, Event, Match, Player, ResaleListing, ResalePayoutItem, Tournament, Venue, VenueAnalyticsResponse } from '@/type'
 import { useSelector } from 'react-redux'
 import { RootState } from './redux/store'
 
@@ -285,6 +285,12 @@ export interface VenueBookingsParams {
   venueID?: string
 }
 
+export interface VenueAnalyticsParams {
+  venueID?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
 export interface ResaleListingsResponse {
   listings: ResaleListing[]
   isLoading: boolean
@@ -316,6 +322,28 @@ export const useVenueBookings = (params: VenueBookingsParams): BookingsResponse 
     (url) => fetcher(url, true)
   )
   return { bookings: data ?? [], isLoading: !error && !data, isError: error, mutate }
+}
+
+export interface VenueAnalyticsHookResponse {
+  analytics: VenueAnalyticsResponse | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<VenueAnalyticsResponse | undefined>
+}
+
+export const useVenueAnalytics = (params: VenueAnalyticsParams): VenueAnalyticsHookResponse => {
+  const searchParams = new URLSearchParams()
+  if (params.venueID) searchParams.set('venueID', params.venueID)
+  if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom)
+  if (params.dateTo) searchParams.set('dateTo', params.dateTo)
+  const key = params.venueID && params.dateFrom && params.dateTo
+    ? `${SERVICE_ENDPOINT}/bookings/venue-admin/analytics?${searchParams.toString()}`
+    : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true)
+  )
+  return { analytics: data, isLoading, isError: !!error, mutate }
 }
 
 export interface ResalePayoutsResponse {
