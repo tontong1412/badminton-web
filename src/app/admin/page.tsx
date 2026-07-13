@@ -198,7 +198,7 @@ export default function AdminHubPage() {
                   )}
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Transfer the net amount (after 10% fee) to each seller. Grouped by seller and booking date.
+                  Transfer the net amount (after 7% fee) to each seller. Grouped by seller and booking date.
                 </Typography>
                 {payoutError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPayoutError(null)}>{payoutError}</Alert>}
                 {payoutsLoading ? (
@@ -230,7 +230,7 @@ export default function AdminHubPage() {
                             <Box sx={{ textAlign: 'right' }}>
                               <Typography variant="caption" color="text.secondary">Gross</Typography>
                               <Typography variant="body2">{total.toFixed(2)} {currency}</Typography>
-                              <Typography variant="caption" color="text.secondary">Transfer (−10%)</Typography>
+                              <Typography variant="caption" color="text.secondary">Transfer (−7%)</Typography>
                               <Typography fontWeight={700} color="success.main" fontSize="1.1rem">
                                 {netAmount.toFixed(2)} {currency}
                               </Typography>
