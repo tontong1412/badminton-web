@@ -920,7 +920,7 @@ function MyBookingsPage() {
 
             {/* Fee notice */}
             <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-              A <strong>10% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>3 business days</strong> after the buyer pays.
+              A <strong>7% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>7 business days</strong> after the buyer pays.
             </Alert>
 
             {Object.keys(resellSlotConfig).length > 0 ? (
