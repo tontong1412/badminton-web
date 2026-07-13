@@ -211,7 +211,7 @@ export default function AdminHubPage() {
                       const first = group[0]
                       const groupKey = first.sellerID
                       const total = group.reduce((sum, p) => sum + p.askingPrice, 0)
-                      const netAmount = total * 0.9
+                      const netAmount = total * 0.93
                       const currency = first.currency
                       const pi = first.sellerPaymentInfo
                       const isGroupMarking = markingPaid === groupKey
@@ -289,7 +289,7 @@ export default function AdminHubPage() {
                                   <TableCell>{payout.soldAt ? moment(payout.soldAt).format('DD MMM HH:mm') : '—'}</TableCell>
                                   <TableCell align="right">{payout.askingPrice.toFixed(2)}</TableCell>
                                   <TableCell align="right" sx={{ fontWeight: 600, color: 'success.main' }}>
-                                    {(payout.askingPrice * 0.9).toFixed(2)}
+                                    {(payout.askingPrice * 0.93).toFixed(2)}
                                   </TableCell>
                                 </TableRow>
                               ))}
