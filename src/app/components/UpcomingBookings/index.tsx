@@ -10,6 +10,7 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import courtsService from '@/app/services/courts'
 import venueService from '@/app/services/venues'
+import { getBookingDateBundleGroupKey } from '@/app/bookings/grouping'
 
 const paymentChipProps = (status: PaymentStatus) => {
   if (status === PaymentStatus.Paid) return { label: 'Paid', color: 'success' as const }
@@ -36,11 +37,11 @@ const UpcomingBookings = () => {
         const tb = `${b.date} ${b.startTime}`
         return ta < tb ? -1 : ta > tb ? 1 : 0
       })
-    const seenBundles = new Set<string>()
+    const seenGroups = new Set<string>()
     const deduped = filtered.filter((b) => {
-      const key = b.bookingBundleID || b.id
-      if (seenBundles.has(key)) return false
-      seenBundles.add(key)
+      const key = getBookingDateBundleGroupKey(b)
+      if (seenGroups.has(key)) return false
+      seenGroups.add(key)
       return true
     })
     return deduped.slice(0, 1)
