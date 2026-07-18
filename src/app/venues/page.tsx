@@ -151,14 +151,6 @@ export default function VenuesPage() {
                         >
                           {venue.name.en || venue.name.th}
                         </Typography>
-                        {venue.name.th && venue.name.en && (
-                          <Typography variant="caption" sx={{ color: '#94A3B8', mb: 1.5, display: 'block' }}>
-                            {venue.name.th}
-                          </Typography>
-                        )}
-
-                        {/* Divider */}
-                        <Box sx={{ height: '1px', bgcolor: '#F5EDE4', mb: 1.5 }} />
 
                         {/* Address */}
                         <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start', mb: 2 }}>
