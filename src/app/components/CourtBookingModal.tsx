@@ -69,7 +69,6 @@ export default function CourtBookingModal({
   venue,
   preselectedSlot,
   bookingItems,
-  onBookingComplete,
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
   const steps = [t('booking.step2'), t('booking.step3')]
@@ -265,26 +264,15 @@ export default function CourtBookingModal({
     setCouponError(null)
   }
 
-  const navigateAfterBooking = (bundleID?: string, email?: string) => {
-    const isLoggedIn = Boolean(currentUser?.id)
+  const navigateAfterBooking = (bundleID: string, email?: string) => {
     resetModalState()
     onClose()
 
-    if (bundleID) {
-      if (email) {
-        router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
-        return
-      }
-      router.push(`/pay?bundleID=${bundleID}`)
+    if (email) {
+      router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
       return
     }
-
-    if (isLoggedIn) {
-      router.push('/bookings')
-      return
-    }
-
-    onBookingComplete(true)
+    router.push(`/pay?bundleID=${bundleID}`)
   }
 
   const handleSubmit = async() => {
@@ -322,9 +310,17 @@ export default function CourtBookingModal({
           { withCredentials: true },
         )
         setErrorState(null)
-        const recurringBundleID = typeof (response.data as { bookingBundleID?: unknown } | undefined)?.bookingBundleID === 'string'
-          ? (response.data as { bookingBundleID: string }).bookingBundleID
-          : undefined
+        const recurringResponse = response.data as {
+          bookingBundleID?: unknown;
+          bookings?: Array<{ bookingBundleID?: string }>;
+        } | undefined
+        const recurringBundleID = typeof recurringResponse?.bookingBundleID === 'string'
+          ? recurringResponse.bookingBundleID
+          : recurringResponse?.bookings?.[0]?.bookingBundleID
+        if (!recurringBundleID) {
+          setErrorState('Could not determine payment bundle. Please contact support.')
+          return
+        }
         navigateAfterBooking(recurringBundleID)
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
@@ -441,7 +437,11 @@ export default function CourtBookingModal({
 
       const isGuest = !currentUser?.id
       const email = isGuest ? guestEmail : undefined
-      const bundleID = 'bookings' in result ? result.bookingBundleID : result.bookingBundleID
+      const bundleID = result.bookingBundleID
+      if (!bundleID) {
+        setErrorState('Could not determine payment bundle. Please contact support.')
+        return
+      }
       navigateAfterBooking(bundleID, email)
     } catch (err) {
       let message = 'Booking failed. Please try again.'

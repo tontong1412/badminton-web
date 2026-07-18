@@ -138,6 +138,7 @@ const payBooking = (bookingBundleID: string, payload: PayBookingPayload, guestEm
 export interface BundleResponse {
   bookings: import('@/type').Booking[];
   venue: import('@/type').Venue | null;
+  courts?: import('@/type').Court[];
   court: import('@/type').Court | null;
 }
 
