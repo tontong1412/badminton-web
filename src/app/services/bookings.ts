@@ -71,25 +71,40 @@ const createBundle = (payload: CreateBundlePayload): Promise<Booking | BookingBu
   return request.then((response) => response.data as Booking | BookingBundleResponse)
 }
 
-interface CreateRecurringBookingPayload extends NewBooking {
-  courtID: string;
-  startDate: string;
-  endDate: string;
+export interface CreateRecurringBookingPayload {
+  courtID?: string;
+  courtIDs?: string[];
+  rangeStart: string;
+  rangeEnd: string;
   startTime: string;
   endTime: string;
-  durationMinutes: number;
-  totalPrice: number;
-  currency: string;
-  dayOfWeek: number[];
-  bookerType: 'guest' | 'user';
-  bookingType: BookingType.Recurring;
+  pattern: 'daily' | 'weekly';
+  daysOfWeek?: number[];
+  slip?: string;
+  note?: string;
+  bookedAsAdmin?: boolean;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
 }
 
-const createRecurring = (booking: CreateRecurringBookingPayload): Promise<Booking> => {
-  const request = axios.post(`${baseUrl}/recurring`, booking, {
+interface CreateRecurringBookingResponse {
+  recurringGroups: {
+    id: string;
+    courtID: string;
+  }[];
+  recurringGroup?: {
+    id: string;
+    courtID: string;
+  };
+  bookings: Booking[];
+}
+
+const createRecurring = (payload: CreateRecurringBookingPayload): Promise<CreateRecurringBookingResponse> => {
+  const request = axios.post(`${baseUrl}/recurring`, payload, {
     withCredentials: true,
   })
-  return request.then((response) => response.data as Booking)
+  return request.then((response) => response.data as CreateRecurringBookingResponse)
 }
 
 const cancel = (id: string): Promise<void> => {
