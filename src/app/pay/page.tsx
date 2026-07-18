@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Box,
@@ -34,6 +34,7 @@ function GuestPayContent() {
   const [error, setError] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [venue, setVenue] = useState<Venue | null>(null)
+  const [courtsByID, setCourtsByID] = useState<Record<string, Court>>({})
   const [court, setCourt] = useState<Court | null>(null)
 
   const [slipFile, setSlipFile] = useState<File | null>(null)
@@ -56,6 +57,14 @@ function GuestPayContent() {
       setBookings(data.bookings)
       setVenue(data.venue)
       setCourt(data.court)
+      const courtMap: Record<string, Court> = {}
+      for (const courtItem of data.courts ?? []) {
+        courtMap[courtItem.id] = courtItem
+      }
+      if (data.court) {
+        courtMap[data.court.id] = data.court
+      }
+      setCourtsByID(courtMap)
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const msg = (err.response?.data as { message?: string } | undefined)?.message
@@ -128,6 +137,25 @@ function GuestPayContent() {
   }
   const isCancelled = bookings.some((b) => b.status === BookingStatus.Cancelled)
   const isResalePay = bookings.some((b) => Boolean(b.resaleSourceListingID))
+  const sortedBookings = useMemo(() => {
+    return [...bookings].sort((a, b) => {
+      const dateCmp = new Date(a.date).getTime() - new Date(b.date).getTime()
+      if (dateCmp !== 0) return dateCmp
+
+      const courtNameA = courtsByID[a.courtID]?.name ?? court?.name ?? ''
+      const courtNameB = courtsByID[b.courtID]?.name ?? court?.name ?? ''
+      const courtCmp = courtNameA.localeCompare(courtNameB, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+      if (courtCmp !== 0) return courtCmp
+
+      const startCmp = a.startTime.localeCompare(b.startTime)
+      if (startCmp !== 0) return startCmp
+
+      return a.endTime.localeCompare(b.endTime)
+    })
+  }, [bookings, courtsByID, court?.name])
   const systemPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
   const systemBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
   const systemAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
@@ -193,27 +221,44 @@ function GuestPayContent() {
             {t('booking.payPage.bookingDetails')}
           </Typography>
           {venue && (
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, lineHeight: 1.25 }}>
+              {venue.name?.en || venue.name?.th}
             </Typography>
           )}
-          {bookings.map((b) => (
-            <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="body2">
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  {court?.name ?? '—'} &nbsp;·&nbsp; {formatBookingDate(b.date)} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
+          {sortedBookings.map((b, index) => {
+            const bookingCourt = courtsByID[b.courtID]
+            const bookingCourtName = bookingCourt?.name ?? court?.name ?? '—'
+            const currentDayKey = new Date(b.date).toDateString()
+            const previousDayKey = index > 0 ? new Date(sortedBookings[index - 1].date).toDateString() : ''
+            const showDayDivider = index === 0 || currentDayKey !== previousDayKey
+            return (
+              <Box key={b.id}>
+                {showDayDivider && (
+                  <Box sx={{ mt: index === 0 ? 0.5 : 1.5, mb: 0.5 }}>
+                    <Divider sx={{ mb: 0.5 }} />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                      {formatBookingDate(b.date)}
+                    </Typography>
+                  </Box>
+                )}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                  <Typography variant="body2">
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {bookingCourtName} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      {bookingCourtName}
+                      <br />
+                      {b.startTime}–{b.endTime}
+                    </Box>
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
+                    {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
+                  </Typography>
                 </Box>
-                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                  {court?.name ?? '—'}
-                  <br />
-                  {formatBookingDate(b.date)} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
-                </Box>
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
-                {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
-              </Typography>
-            </Box>
-          ))}
+              </Box>
+            )
+          })}
           <Divider sx={{ my: 1 }} />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle2">{t('booking.total')}</Typography>

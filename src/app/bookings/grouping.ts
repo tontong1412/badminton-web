@@ -5,6 +5,17 @@ interface BookingPaymentSnapshot {
   paymentStatus: PaymentStatus | string;
 }
 
+interface BookingGroupSnapshot {
+  id: string;
+  date: string;
+  bookingBundleID?: string;
+}
+
+export const getBookingDateBundleGroupKey = (booking: BookingGroupSnapshot): string => {
+  const bundlePart = booking.bookingBundleID || `single-${booking.id}`
+  return `${booking.date}::${bundlePart}`
+}
+
 export const deriveGroupedPaymentStatus = (items: BookingPaymentSnapshot[]): PaymentStatus => {
   const nonCancelledItems = items.filter((item) => item.status !== BookingStatus.Cancelled)
   const paymentSourceItems = nonCancelledItems.length > 0 ? nonCancelledItems : items

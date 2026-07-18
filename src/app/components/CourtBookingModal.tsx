@@ -38,7 +38,6 @@ import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingS
 import { login } from '../libs/redux/slices/appSlice'
 import moment from 'moment'
 import axios from 'axios'
-import { SERVICE_ENDPOINT } from '../constants'
 import { useRouter } from 'next/navigation'
 
 interface BookingItemInput {
@@ -69,7 +68,6 @@ export default function CourtBookingModal({
   venue,
   preselectedSlot,
   bookingItems,
-  onBookingComplete,
 }: CourtBookingModalProps) {
   const { t } = useTranslation()
   const steps = [t('booking.step2'), t('booking.step3')]
@@ -97,14 +95,14 @@ export default function CourtBookingModal({
   const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   const [bookingType, setBookingType] = useState<'single' | 'recurring'>('single')
-  const [recurringCourtID, setRecurringCourtID] = useState('')
+  const [recurringCourtIDs, setRecurringCourtIDs] = useState<string[]>([])
   const [recurringStartTime, setRecurringStartTime] = useState('08:00')
   const [recurringEndTime, setRecurringEndTime] = useState('10:00')
   const [recurringPattern, setRecurringPattern] = useState<'daily' | 'weekly'>('weekly')
   const [recurringDays, setRecurringDays] = useState<number[]>([1])
   const [rangeStart, setRangeStart] = useState(moment().format('YYYY-MM-DD'))
   const [rangeEnd, setRangeEnd] = useState(moment().add(1, 'month').format('YYYY-MM-DD'))
-  const [recurringConflicts, setRecurringConflicts] = useState<{ date: string; reason: string }[]>([])
+  const [recurringConflicts, setRecurringConflicts] = useState<{ courtID: string; date: string; reason: string }[]>([])
 
   const [couponCode, setCouponCode] = useState('')
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
@@ -184,10 +182,17 @@ export default function CourtBookingModal({
     return dates
   }
 
-  const recurringCourt = courts.find((c) => c.id === recurringCourtID)
-  const recurringPricePerSession = recurringCourt ? getPriceForRange(recurringCourt, recurringStartTime, recurringEndTime) : 0
+  const selectedRecurringCourts = courts.filter((c) => recurringCourtIDs.includes(c.id))
+  const recurringCurrency = selectedRecurringCourts[0]?.currency ?? courts[0]?.currency ?? 'THB'
+  const recurringPricePerSession = selectedRecurringCourts.reduce((sum, court) => {
+    return sum + getPriceForRange(court, recurringStartTime, recurringEndTime)
+  }, 0)
   const recurringDatesPreview = calcRecurringDates()
   const recurringTotalPrice = recurringPricePerSession * recurringDatesPreview.length
+
+  const getCourtNameByID = (courtID: string): string => {
+    return courts.find((court) => court.id === courtID)?.name ?? courtID
+  }
 
   const handleNext = () => {
     if (activeStep === 0) {
@@ -203,7 +208,7 @@ export default function CourtBookingModal({
         return
       }
       if (bookingType === 'recurring') {
-        if (!recurringCourtID) { setErrorState('Please select a court.'); return }
+        if (recurringCourtIDs.length === 0) { setErrorState(t('booking.selectAtLeastOneCourt')); return }
         if (moment(recurringStartTime, 'HH:mm').isSameOrAfter(moment(recurringEndTime, 'HH:mm'))) {
           setErrorState('End time must be after start time.'); return
         }
@@ -245,7 +250,7 @@ export default function CourtBookingModal({
     setAgreeTerms(false)
     setErrorState(null)
     setBookingType('single')
-    setRecurringCourtID(courts[0]?.id ?? '')
+    setRecurringCourtIDs(courts[0]?.id ? [courts[0].id] : [])
     setRecurringStartTime('08:00')
     setRecurringEndTime('10:00')
     setRecurringPattern('weekly')
@@ -258,26 +263,15 @@ export default function CourtBookingModal({
     setCouponError(null)
   }
 
-  const navigateAfterBooking = (bundleID?: string, email?: string) => {
-    const isLoggedIn = Boolean(currentUser?.id)
+  const navigateAfterBooking = (bundleID: string, email?: string) => {
     resetModalState()
     onClose()
 
-    if (bundleID) {
-      if (email) {
-        router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
-        return
-      }
-      router.push(`/pay?bundleID=${bundleID}`)
+    if (email) {
+      router.push(`/pay?bundleID=${bundleID}&email=${encodeURIComponent(email)}`)
       return
     }
-
-    if (isLoggedIn) {
-      router.push('/bookings')
-      return
-    }
-
-    onBookingComplete(true)
+    router.push(`/pay?bundleID=${bundleID}`)
   }
 
   const handleSubmit = async() => {
@@ -288,36 +282,66 @@ export default function CourtBookingModal({
     }
 
     if (bookingType === 'recurring') {
+      const selectedCourtIDs = Array.from(new Set(recurringCourtIDs.filter((courtID) => courtID.trim().length > 0)))
+      const primaryCourtID = selectedCourtIDs[0]
+      if (!primaryCourtID) {
+        setErrorState(t('booking.selectAtLeastOneCourt'))
+        return
+      }
+
       try {
         setLoading(true)
         setRecurringConflicts([])
-        const response = await axios.post(
-          `${SERVICE_ENDPOINT}/bookings/recurring`,
-          {
-            courtID: recurringCourtID,
-            startTime: recurringStartTime,
-            endTime: recurringEndTime,
-            pattern: recurringPattern,
-            rangeStart,
-            rangeEnd,
-            daysOfWeek: recurringPattern === 'weekly' ? recurringDays : undefined,
-            note: note || undefined,
-          },
-          { withCredentials: true },
-        )
+        const response = await bookingsService.createRecurring({
+          // Keep compatibility with both API shapes across branches.
+          courtID: primaryCourtID,
+          courtIDs: selectedCourtIDs,
+          startTime: recurringStartTime,
+          endTime: recurringEndTime,
+          pattern: recurringPattern,
+          rangeStart,
+          rangeEnd,
+          daysOfWeek: recurringPattern === 'weekly' ? recurringDays : undefined,
+          note: note || undefined,
+        })
         setErrorState(null)
-        const recurringBundleID = typeof (response.data as { bookingBundleID?: unknown } | undefined)?.bookingBundleID === 'string'
-          ? (response.data as { bookingBundleID: string }).bookingBundleID
-          : undefined
+        const recurringResponse = response as {
+          bookingBundleID?: unknown;
+          bookings?: Array<{ bookingBundleID?: string }>;
+        } | undefined
+        const recurringBundleID = typeof recurringResponse?.bookingBundleID === 'string'
+          ? recurringResponse.bookingBundleID
+          : recurringResponse?.bookings?.[0]?.bookingBundleID
+        if (!recurringBundleID) {
+          setErrorState('Could not determine payment bundle. Please contact support.')
+          return
+        }
         navigateAfterBooking(recurringBundleID)
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
-          const data = err.response?.data as { message?: string; conflicts?: { date: string; reason: string }[] }
+          const data = err.response?.data as {
+            message?: string;
+            conflicts?: { courtID?: string; date: string; reason: string }[];
+            missingCourtIDs?: string[];
+            inactiveCourtIDs?: string[];
+          }
           if (err.response?.status === 409 && data?.conflicts) {
-            setRecurringConflicts(data.conflicts)
-            setErrorState(`${data.conflicts.length} date(s) could not be booked due to conflicts.`)
+            setRecurringConflicts(data.conflicts.map((conflict) => ({
+              courtID: conflict.courtID ?? primaryCourtID,
+              date: conflict.date,
+              reason: conflict.reason,
+            })))
+            setErrorState(t('booking.recurringConflictsFound', { count: data.conflicts.length }))
           } else {
-            setErrorState(data?.message ?? 'Failed to create recurring booking.')
+            const diagnostics: string[] = []
+            if (Array.isArray(data?.missingCourtIDs) && data.missingCourtIDs.length > 0) {
+              diagnostics.push(`missing: ${data.missingCourtIDs.join(', ')}`)
+            }
+            if (Array.isArray(data?.inactiveCourtIDs) && data.inactiveCourtIDs.length > 0) {
+              diagnostics.push(`inactive: ${data.inactiveCourtIDs.join(', ')}`)
+            }
+            const diagnosticText = diagnostics.length > 0 ? ` (${diagnostics.join(' | ')})` : ''
+            setErrorState(`${data?.message ?? 'Failed to create recurring booking.'}${diagnosticText}`)
           }
         } else {
           setErrorState('Failed to create recurring booking.')
@@ -408,7 +432,11 @@ export default function CourtBookingModal({
 
       const isGuest = !currentUser?.id
       const email = isGuest ? guestEmail : undefined
-      const bundleID = 'bookings' in result ? result.bookingBundleID : result.bookingBundleID
+      const bundleID = result.bookingBundleID
+      if (!bundleID) {
+        setErrorState('Could not determine payment bundle. Please contact support.')
+        return
+      }
       navigateAfterBooking(bundleID, email)
     } catch (err) {
       let message = 'Booking failed. Please try again.'
@@ -470,7 +498,7 @@ export default function CourtBookingModal({
       setRangeStart(seedDate)
       setRangeEnd(moment(seedDate).add(1, 'month').format('YYYY-MM-DD'))
     }
-    if (seedCourtID) setRecurringCourtID(seedCourtID)
+    if (seedCourtID) setRecurringCourtIDs([seedCourtID])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, preselectedSlot, bookingItems])
 
@@ -613,16 +641,35 @@ export default function CourtBookingModal({
 
                 {bookingType === 'recurring' && currentUser && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-                    {courts.length > 1 && (
-                      <FormControl fullWidth size="small">
-                        <InputLabel>{t('booking.court')}</InputLabel>
-                        <Select value={recurringCourtID} label={t('booking.court')} onChange={(e) => setRecurringCourtID(e.target.value)}>
-                          {courts.map((c) => (
-                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
+                    <FormControl fullWidth size="small">
+                      <InputLabel>{t('booking.courts')}</InputLabel>
+                      <Select
+                        multiple
+                        value={recurringCourtIDs}
+                        label={t('booking.courts')}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          const nextCourtIDs = (typeof value === 'string' ? value.split(',') : value)
+                            .map((courtID) => courtID.trim())
+                            .filter((courtID) => courtID.length > 0)
+                          setRecurringCourtIDs(Array.from(new Set(nextCourtIDs)))
+                        }}
+                        renderValue={(selected) => {
+                          const selectedIDs = selected as string[]
+                          return selectedIDs.map((courtID) => getCourtNameByID(courtID)).join(', ')
+                        }}
+                      >
+                        {courts.map((c) => {
+                          const checked = recurringCourtIDs.includes(c.id)
+                          return (
+                            <MenuItem key={c.id} value={c.id}>
+                              <Checkbox size="small" checked={checked} />
+                              {c.name}
+                            </MenuItem>
+                          )
+                        })}
+                      </Select>
+                    </FormControl>
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <FormControl fullWidth size="small">
@@ -712,9 +759,14 @@ export default function CourtBookingModal({
                           {recurringDatesPreview.slice(0, 5).map((d) => moment(d).format('D MMM')).join(', ')}
                           {recurringDatesPreview.length > 5 ? ` +${recurringDatesPreview.length - 5} more` : ''}
                         </Typography>
-                        {recurringCourt && (
+                        {selectedRecurringCourts.length > 0 && (
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                            Est. total: {recurringTotalPrice.toFixed(2)} {recurringCourt.currency} · {recurringPricePerSession.toFixed(2)} {recurringCourt.currency}/session
+                            {t('booking.recurringEstimateLine', {
+                              total: recurringTotalPrice.toFixed(2),
+                              perSession: recurringPricePerSession.toFixed(2),
+                              currency: recurringCurrency,
+                              count: selectedRecurringCourts.length,
+                            })}
                           </Typography>
                         )}
                       </Box>
@@ -745,7 +797,7 @@ export default function CourtBookingModal({
                       <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.court')}:</strong> {recurringCourt?.name ?? recurringCourtID}
+                      <strong>{t('booking.courts')}:</strong> {selectedRecurringCourts.map((court) => court.name).join(', ') || '—'}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>{t('booking.time')}:</strong> {recurringStartTime} – {recurringEndTime}
@@ -769,14 +821,14 @@ export default function CourtBookingModal({
                       )}
                     </Typography>
                     <Typography variant="h6" sx={{ mt: 2 }}>
-                      <strong>{t('booking.estTotal')}:</strong> {recurringTotalPrice.toFixed(2)} {recurringCourt?.currency || 'THB'}
+                      <strong>{t('booking.estTotal')}:</strong> {recurringTotalPrice.toFixed(2)} {recurringCurrency}
                     </Typography>
                     {recurringConflicts.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
                         {recurringConflicts.map((c) => (
                           <Chip
-                            key={c.date}
-                            label={`${moment(c.date).format('D MMM')} – ${c.reason}`}
+                            key={`${c.courtID}-${c.date}-${c.reason}`}
+                            label={`${getCourtNameByID(c.courtID)} · ${moment(c.date).format('D MMM')} – ${c.reason}`}
                             size="small"
                             color="error"
                             variant="outlined"

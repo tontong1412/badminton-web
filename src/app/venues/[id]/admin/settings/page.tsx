@@ -96,12 +96,6 @@ export default function VenueSettingsPage() {
   const [scheduleSaving, setScheduleSaving] = useState(false)
   const [scheduleSuccess, setScheduleSuccess] = useState(false)
 
-  // Gap policy state
-  const [gapEnabled, setGapEnabled] = useState(true)
-  const [gapMinutes, setGapMinutes] = useState<30 | 60>(60)
-  const [gapSaving, setGapSaving] = useState(false)
-  const [gapSuccess, setGapSuccess] = useState(false)
-
   // Payment state
   const [bankName, setBankName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
@@ -200,8 +194,6 @@ export default function VenueSettingsPage() {
     })
     setWeekDays(days)
     setSlotDuration((v.slotDurationMinutes as 30 | 60) ?? 30)
-    setGapEnabled(v.gapPolicy?.enabled ?? true)
-    setGapMinutes((v.gapPolicy?.minimumGapMinutes as 30 | 60) ?? 60)
     setBankName(v.payment?.bankName ?? '')
     setAccountNumber(v.payment?.accountNumber ?? '')
     setAccountName(v.payment?.accountName ?? '')
@@ -214,8 +206,8 @@ export default function VenueSettingsPage() {
     setTermsTH(v.termsAndConditions?.th ?? '')
     setTermsEN(v.termsAndConditions?.en ?? '')
     setInitLoading(false)
-  // Only run when SWR data first arrives; userReady/user/router guard on changes
-  }, [swrVenue, userReady])
+  // Only run when SWR data first arrives; user access guard on changes
+  }, [swrVenue, userReady, user, router])
 
   // Load courts for this venue
   useEffect(() => {
@@ -405,25 +397,6 @@ export default function VenueSettingsPage() {
       console.error(e)
     } finally {
       setScheduleSaving(false)
-    }
-  }
-
-  const handleSaveGapPolicy = async() => {
-    setGapSaving(true)
-    setGapSuccess(false)
-    setError(null)
-    try {
-      const updated = await venueService.setSchedule(venueID, {
-        gapPolicy: { enabled: gapEnabled, minimumGapMinutes: gapMinutes },
-      })
-      setVenueState(updated)
-      setGapSuccess(true)
-      setTimeout(() => setGapSuccess(false), 3000)
-    } catch (e) {
-      setError('Failed to save gap policy')
-      console.error(e)
-    } finally {
-      setGapSaving(false)
     }
   }
 
@@ -857,38 +830,6 @@ export default function VenueSettingsPage() {
               {scheduleSaving ? <CircularProgress size={18} /> : 'Save'}
             </Button>
             {scheduleSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
-          </Box>
-        </Paper>
-
-        {/* ── Gap Policy ───────────────────────────────────────────────── */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Gap Policy</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Require a minimum gap between consecutive bookings so courts are not completely fragmented.
-          </Typography>
-          <FormControlLabel
-            control={<Switch checked={gapEnabled} onChange={(e) => setGapEnabled(e.target.checked)} />}
-            label="Enable gap policy"
-            sx={{ mb: 2, display: 'block' }}
-          />
-          {gapEnabled && (
-            <FormControl size="small" sx={{ minWidth: 200, mb: 2 }}>
-              <InputLabel>Minimum Gap</InputLabel>
-              <Select
-                value={gapMinutes}
-                label="Minimum Gap"
-                onChange={(e) => setGapMinutes(Number(e.target.value) as 30 | 60)}
-              >
-                <MenuItem value={30}>30 minutes</MenuItem>
-                <MenuItem value={60}>60 minutes</MenuItem>
-              </Select>
-            </FormControl>
-          )}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button variant="contained" size="small" onClick={handleSaveGapPolicy} disabled={gapSaving}>
-              {gapSaving ? <CircularProgress size={18} /> : 'Save'}
-            </Button>
-            {gapSuccess && <Typography variant="body2" color="success.main">Saved!</Typography>}
           </Box>
         </Paper>
 

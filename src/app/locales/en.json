@@ -239,7 +239,6 @@
     "step2": "Enter Details",
     "step3": "Confirm Booking",
     "step4": "Payment Info",
-    "gapPolicy": "Gap Policy",
     "bookingConfirmed": "Booking confirmed successfully!",
     "bookingPending": "Booking Received — Awaiting Payment",
     "numberOfCourts": "Courts",
@@ -272,6 +271,7 @@
     "weekly": "Weekly",
     "everyDay": "Every Day",
     "days": "Days",
+    "selectAtLeastOneCourt": "Please select at least one court.",
     "from": "From",
     "to": "To",
     "maxTwoMonths": "Max 2 months",
@@ -281,6 +281,9 @@
     "dateRange": "Date range",
     "sessions": "Sessions",
     "estTotal": "Est. Total",
+    "recurringConflictsFound": "{{count}} date(s) could not be booked due to conflicts.",
+    "recurringEstimateLine_one": "Est. total: {{total}} {{currency}} · {{perSession}} {{currency}}/session ({{count}} court)",
+    "recurringEstimateLine_other": "Est. total: {{total}} {{currency}} · {{perSession}} {{currency}}/session ({{count}} courts)",
     "discountCoupon": "Discount Coupon",
     "couponCode": "Coupon code",
     "enterCode": "Enter code",
@@ -343,6 +346,12 @@
       }
     },
     "done": "Done"
+  },
+  "favorite": {
+    "title": "Favorites",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "empty": "Save venues or tournaments to see your favorites here."
   },
   "venueReport": {
     "allVenues": "All Venues",
