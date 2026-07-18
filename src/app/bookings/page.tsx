@@ -31,13 +31,13 @@ import {
 } from '@mui/material'
 import { Booking, BookingResaleOutcome, BookingStatus, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
+import { MyBookingsTab, MyBookingsPagedResponse } from '../services/bookings'
 import resaleService from '../services/resale'
 import playersService from '../services/players'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
-import { useMyBookings, useMyPlayer } from '../libs/data'
-import { useAppDispatch, useAppSelector } from '../libs/redux/store'
-import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
+import { useMyPlayer } from '../libs/data'
+import { useAppSelector } from '../libs/redux/store'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
 import Layout from '../components/Layout'
@@ -46,6 +46,36 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { deriveGroupedPaymentStatus, getBookingDateBundleGroupKey } from './grouping'
 
 const EXPIRY_MINUTES = 10
+
+const TAB_DEFAULT_LIMITS: Record<MyBookingsTab, number> = {
+  active: 10,
+  past: 5,
+  cancelled: 5,
+}
+
+interface TabPagedState {
+  bookings: Booking[];
+  hasMore: boolean;
+  nextCursor: string | null;
+  isLoadingInitial: boolean;
+  isLoadingMore: boolean;
+  loadedOnce: boolean;
+}
+
+const EMPTY_TAB_STATE: TabPagedState = {
+  bookings: [],
+  hasMore: false,
+  nextCursor: null,
+  isLoadingInitial: false,
+  isLoadingMore: false,
+  loadedOnce: false,
+}
+
+const createInitialTabsState = (): Record<MyBookingsTab, TabPagedState> => ({
+  active: { ...EMPTY_TAB_STATE },
+  past: { ...EMPTY_TAB_STATE },
+  cancelled: { ...EMPTY_TAB_STATE },
+})
 
 function BookingCountdown({ createdAt }: { createdAt: string }) {
   const expiresAt = useMemo(() => new Date(createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000, [createdAt])
@@ -85,7 +115,6 @@ function BookingCountdown({ createdAt }: { createdAt: string }) {
 
 function MyBookingsPage() {
   const { t } = useTranslation()
-  const dispatch = useAppDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
   const highlightKey = searchParams.get('highlight')
@@ -96,11 +125,107 @@ function MyBookingsPage() {
     if (userReady && !user) router.replace('/')
   }, [userReady, user, router])
 
-  const { bookings, isLoading: loading, mutate: mutateBookings } = useMyBookings()
+  const [activeTab, setActiveTab] = useState<MyBookingsTab>('active')
+  const [tabState, setTabState] = useState<Record<MyBookingsTab, TabPagedState>>(createInitialTabsState)
   const [courtDetails, setCourtDetails] = useState<Record<string, Court>>({})
   const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
   const [error, setError] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const mobileLoadMoreRef = useRef<HTMLDivElement | null>(null)
+  const desktopTableRef = useRef<HTMLDivElement | null>(null)
+
+  const currentTabState = tabState[activeTab]
+  const bookings = currentTabState.bookings
+  const loading = currentTabState.isLoadingInitial
+  const loadingMore = currentTabState.isLoadingMore
+  const hasMore = currentTabState.hasMore
+
+  const mergeUniqueBookings = (current: Booking[], incoming: Booking[]): Booking[] => {
+    const map = new Map<string, Booking>()
+    current.forEach((booking) => map.set(booking.id, booking))
+    incoming.forEach((booking) => map.set(booking.id, booking))
+    return Array.from(map.values())
+  }
+
+  const updateTabFromResponse = (tab: MyBookingsTab, response: MyBookingsPagedResponse, append: boolean) => {
+    setTabState((prev) => {
+      const existing = prev[tab]
+      const mergedBookings = append ? mergeUniqueBookings(existing.bookings, response.bookings) : response.bookings
+      return {
+        ...prev,
+        [tab]: {
+          bookings: mergedBookings,
+          hasMore: response.hasMore,
+          nextCursor: response.nextCursor,
+          isLoadingInitial: false,
+          isLoadingMore: false,
+          loadedOnce: true,
+        },
+      }
+    })
+  }
+
+  const fetchTab = async(tab: MyBookingsTab, append: boolean): Promise<void> => {
+    const current = tabState[tab]
+    if (!user) {
+      return
+    }
+    if (append && (!current.hasMore || current.isLoadingMore || current.isLoadingInitial)) {
+      return
+    }
+    if (!append && current.isLoadingInitial) {
+      return
+    }
+
+    setTabState((prev) => ({
+      ...prev,
+      [tab]: {
+        ...prev[tab],
+        isLoadingInitial: append ? prev[tab].isLoadingInitial : true,
+        isLoadingMore: append,
+      },
+    }))
+
+    try {
+      const response = await bookingsService.getPaged({
+        tab,
+        limit: TAB_DEFAULT_LIMITS[tab],
+        cursor: append ? current.nextCursor ?? undefined : undefined,
+      })
+      updateTabFromResponse(tab, response, append)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load bookings'
+      setError(message)
+      setTabState((prev) => ({
+        ...prev,
+        [tab]: {
+          ...prev[tab],
+          isLoadingInitial: false,
+          isLoadingMore: false,
+        },
+      }))
+    }
+  }
+
+  const refreshActiveTab = async(): Promise<void> => {
+    await fetchTab(activeTab, false)
+  }
+
+  useEffect(() => {
+    if (!user) return
+    if (!tabState.active.loadedOnce && !tabState.active.isLoadingInitial) {
+      fetchTab('active', false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    if (!tabState[activeTab].loadedOnce && !tabState[activeTab].isLoadingInitial) {
+      fetchTab(activeTab, false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user])
 
   // Scroll to highlighted booking after data loads
   useEffect(() => {
@@ -120,7 +245,6 @@ function MyBookingsPage() {
   }, [loading, highlightKey, courtDetails])
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
-  const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
   const [resellDialogOpen, setResellDialogOpen] = useState(false)
   const [resellBooking, setResellBooking] = useState<Booking | null>(null)
   const [resellPrice, setResellPrice] = useState('')
@@ -178,49 +302,26 @@ function MyBookingsPage() {
     return grouped.sort((a, b) => {
       const aDate = moment(`${a.date} ${a.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
       const bDate = moment(`${b.date} ${b.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
-      return bDate - aDate
+      return activeTab === 'active' ? aDate - bDate : bDate - aDate
     })
-  }, [bookings])
+  }, [bookings, activeTab])
+  const groupedCountByTab = useMemo(() => {
+    const result: Record<MyBookingsTab, number> = { active: 0, past: 0, cancelled: 0 }
+    ;(['active', 'past', 'cancelled'] as MyBookingsTab[]).forEach((tab) => {
+      const keySet = new Set<string>()
+      tabState[tab].bookings.forEach((booking) => keySet.add(getBookingDateBundleGroupKey(booking)))
+      result[tab] = keySet.size
+    })
+    return result
+  }, [tabState])
 
-  const getGroupDateTimeValue = (group: { date: string; startTime: string }) =>
-    moment(`${group.date} ${group.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
-
-  const activeBookings = useMemo(
-    () => groupedBookings
-      .filter((g) => {
-        if (g.status === 'cancelled') return false
-        const nonCancelledBookings = g.bookings.filter((b) => b.status !== 'cancelled')
-        const lastBooking = nonCancelledBookings[nonCancelledBookings.length - 1] ?? g.bookings[g.bookings.length - 1]
-        return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())
-      })
-      .sort((a, b) => getGroupDateTimeValue(a) - getGroupDateTimeValue(b)),
-    [groupedBookings],
-  )
-  const pastBookings = useMemo(
-    () => groupedBookings
-      .filter((g) => {
-        if (g.status === 'cancelled') return false
-        const nonCancelledBookings = g.bookings.filter((b) => b.status !== 'cancelled')
-        const lastBooking = nonCancelledBookings[nonCancelledBookings.length - 1] ?? g.bookings[g.bookings.length - 1]
-        return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())
-      })
-      .sort((a, b) => getGroupDateTimeValue(b) - getGroupDateTimeValue(a)),
-    [groupedBookings],
-  )
-  const cancelledBookings = useMemo(
-    () => groupedBookings
-      .filter((g) => g.status === 'cancelled')
-      .sort((a, b) => getGroupDateTimeValue(b) - getGroupDateTimeValue(a)),
-    [groupedBookings],
-  )
-  const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeTab === 'past' ? pastBookings : activeBookings
+  const displayedBookings = groupedBookings
   const canShowResellActions = activeTab === 'active'
   const shouldShowInlineCancelledState = activeTab !== 'cancelled'
 
-  // Sync bookings into redux + load court/venue details whenever SWR data changes
+  // Load court and venue details for currently loaded tab bookings
   useEffect(() => {
     if (!bookings.length) return
-    dispatch(setBookings(bookings))
     const load = async() => {
       const courtIds = [...new Set(bookings.map((b) => b.courtID))]
       const courts: Record<string, Court> = {}
@@ -241,7 +342,6 @@ function MyBookingsPage() {
       setVenueDetails(venues)
     }
     load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -256,9 +356,7 @@ function MyBookingsPage() {
     try {
       setCancelling(true)
       await Promise.all(selectedBookingIds.map((bookingId) => bookingsService.cancel(bookingId)))
-
-      mutateBookings()
-      selectedBookingIds.forEach((bookingId) => dispatch(removeBooking(bookingId)))
+      await refreshActiveTab()
 
       setCancelDialogOpen(false)
       setSelectedBookingIds([])
@@ -306,7 +404,7 @@ function MyBookingsPage() {
     if (!listingId) return
     try {
       await resaleService.cancel(listingId)
-      mutateBookings()
+      await refreshActiveTab()
     } catch {
       // silently ignore; the listing may already be gone
     }
@@ -447,7 +545,7 @@ function MyBookingsPage() {
             await resaleService.create(resellBooking.id, parseFloat(price), subStartTime, subEndTime)
           }
         }
-        mutateBookings()
+        await refreshActiveTab()
         setResellDialogOpen(false)
         setResellBooking(null)
       } catch (err) {
@@ -467,7 +565,7 @@ function MyBookingsPage() {
         setResellSubmitting(true)
         setResellError(null)
         await resaleService.create(resellBooking.id, price)
-        mutateBookings()
+        await refreshActiveTab()
         setResellDialogOpen(false)
         setResellBooking(null)
       } catch (err) {
@@ -514,6 +612,32 @@ function MyBookingsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
+  const handleLoadMore = () => {
+    if (loading || loadingMore || !hasMore) return
+    fetchTab(activeTab, true)
+  }
+
+  useEffect(() => {
+    if (!isMobile || !mobileLoadMoreRef.current) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        handleLoadMore()
+      }
+    }, { root: null, rootMargin: '200px 0px', threshold: 0 })
+    observer.observe(mobileLoadMoreRef.current)
+    return () => observer.disconnect()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, activeTab, hasMore, loadingMore, loading])
+
+  const handleDesktopScroll = () => {
+    const el = desktopTableRef.current
+    if (!el || loading || loadingMore || !hasMore) return
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120
+    if (nearBottom) {
+      handleLoadMore()
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -536,9 +660,9 @@ function MyBookingsPage() {
           onChange={(_, v) => setActiveTab(v)}
           sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label={`Upcoming (${activeBookings.length})`} value="active" />
-          <Tab label={`Past (${pastBookings.length})`} value="past" />
-          <Tab label={`Cancelled (${cancelledBookings.length})`} value="cancelled" />
+          <Tab label={`Upcoming (${groupedCountByTab.active})`} value="active" />
+          <Tab label="Past" value="past" />
+          <Tab label="Cancelled" value="cancelled" />
         </Tabs>
 
         {error && (
@@ -547,11 +671,7 @@ function MyBookingsPage() {
           </Alert>
         )}
 
-        {bookings.length === 0 ? (
-          <Alert severity="info">
-            {t('booking.noBookingsFound')}
-          </Alert>
-        ) : displayedBookings.length === 0 ? (
+        {displayedBookings.length === 0 && !loading ? (
           <Alert severity="info">
             No {activeTab === 'cancelled' ? 'cancelled' : activeTab === 'past' ? 'past' : 'upcoming'} bookings found.
           </Alert>
@@ -703,9 +823,15 @@ function MyBookingsPage() {
                   </Card>
                 )
               })}
+              {loadingMore && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              )}
+              <Box ref={mobileLoadMoreRef} sx={{ height: 1 }} />
             </Box>
           ) : (
-            <Box component={Paper} sx={{ maxHeight: 520, overflow: 'auto' }}>
+            <Box ref={desktopTableRef} onScroll={handleDesktopScroll} component={Paper} sx={{ maxHeight: 520, overflow: 'auto' }}>
               <Table stickyHeader sx={{ minWidth: 800 }}>
                 <TableHead>
                   <TableRow>
@@ -886,6 +1012,11 @@ function MyBookingsPage() {
                   })}
                 </TableBody>
               </Table>
+              {loadingMore && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+                  <CircularProgress size={22} />
+                </Box>
+              )}
             </Box>
           )
         )}

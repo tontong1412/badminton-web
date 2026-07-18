@@ -11,6 +11,29 @@ const getAll = (): Promise<Booking[]> => {
   return request.then((response) => response.data as Booking[])
 }
 
+export type MyBookingsTab = 'active' | 'past' | 'cancelled'
+
+export interface MyBookingsPagedResponse {
+  tab: MyBookingsTab;
+  limit: number;
+  bookings: Booking[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+interface MyBookingsPagedParams {
+  tab: MyBookingsTab;
+  limit?: number;
+  cursor?: string;
+}
+
+const getPaged = (params: MyBookingsPagedParams): Promise<MyBookingsPagedResponse> => {
+  return axios.get(`${baseUrl}/paged`, {
+    withCredentials: true,
+    params,
+  }).then((response) => response.data as MyBookingsPagedResponse)
+}
+
 const getById = (id: string): Promise<Booking> => {
   const request = axios.get(`${baseUrl}/${id}`)
   return request.then((response) => response.data as Booking)
@@ -205,6 +228,7 @@ const reschedule = (bookingID: string, payload: RescheduleBookingPayload): Promi
 
 export default {
   getAll,
+  getPaged,
   getById,
   getBundle,
   createSingle,
