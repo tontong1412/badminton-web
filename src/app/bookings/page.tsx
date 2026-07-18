@@ -215,6 +215,7 @@ function MyBookingsPage() {
   )
   const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeTab === 'past' ? pastBookings : activeBookings
   const canShowResellActions = activeTab === 'active'
+  const shouldShowInlineCancelledState = activeTab !== 'cancelled'
 
   // Sync bookings into redux + load court/venue details whenever SWR data changes
   useEffect(() => {
@@ -584,13 +585,13 @@ function MyBookingsPage() {
                           // Merged: consecutive hours, no resale activity
                           const eligibleBookings = row.bookings.filter(isResellEligible)
                           return (
-                            <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
-                              {showDate && <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>}
+                            <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1 }}>
+                              {showDate && <Typography variant="body2" fontWeight={600} sx={{ textDecoration: shouldShowInlineCancelledState && isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>}
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{row.startTime} – {row.endTime}</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{row.startTime} – {row.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
                                 <Typography variant="body2" color="text.secondary">{courtDetails[row.courtID]?.name || '—'}</Typography>
-                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                 {canShowResellActions && eligibleBookings.length > 0 && (
                                   <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(eligibleBookings)}>
                                     Resell
@@ -605,9 +606,9 @@ function MyBookingsPage() {
                         const soldRanges = booking.resaleSoldRanges ?? []
                         const showPerHour = ((isListedForSale && listedSubRange !== null) || soldRanges.length > 0) && booking.durationMinutes > 60
                         return (
-                          <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
+                          <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1 }}>
                             {showDate && (
-                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>
+                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: shouldShowInlineCancelledState && isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>
                             )}
                             {showPerHour ? (
                               <>
@@ -616,10 +617,10 @@ function MyBookingsPage() {
                                   const isListedSlot = listedSubRange?.startTime === slot.startTime
                                   return (
                                     <Box key={slot.startTime} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || isSoldSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: (shouldShowInlineCancelledState && isCancelledSlot) || isSoldSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
                                       <Typography variant="body2" color="text.secondary">·</Typography>
                                       <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                      {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {canShowResellActions && isListedSlot && (
@@ -638,10 +639,10 @@ function MyBookingsPage() {
                               </>
                             ) : (
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                 {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                 {canShowResellActions && isListedForSale && (
                                   <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
@@ -744,7 +745,7 @@ function MyBookingsPage() {
                                   const isCancelledSlot = row.representative.status === 'cancelled'
                                   const isDateFullyCancelled = mergedRows.filter((r) => moment(r.date).format('DD/MM/YYYY') === dateStr).every((r) => r.representative.status === 'cancelled')
                                   return (
-                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isDateFullyCancelled ? 'line-through' : 'none' }}>
                                       {dateStr !== prevDateStr ? dateStr : ''}
                                     </Typography>
                                   )
@@ -754,7 +755,7 @@ function MyBookingsPage() {
                                 {mergedRows.map((row) => {
                                   const isCancelledSlot = row.representative.status === 'cancelled'
                                   return (
-                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                       {courtDetails[row.courtID]?.name || '—'}
                                     </Typography>
                                   )
@@ -768,10 +769,10 @@ function MyBookingsPage() {
                                     const eligibleBookings = row.bookings.filter(isResellEligible)
                                     return (
                                       <Box key={row.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                        <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                        <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                           {row.startTime} – {row.endTime}
                                         </Typography>
-                                        {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                        {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                         {canShowResellActions && eligibleBookings.length > 0 && (
                                           <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(eligibleBookings)}>
                                             Resell
@@ -793,10 +794,10 @@ function MyBookingsPage() {
                                             const isListedSlot = listedSubRange?.startTime === slot.startTime
                                             return (
                                               <Box key={slot.startTime} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || isSoldSlot ? 'line-through' : 'none' }}>
+                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: (shouldShowInlineCancelledState && isCancelledSlot) || isSoldSlot ? 'line-through' : 'none' }}>
                                                   {slot.startTime} – {slot.endTime}
                                                 </Typography>
-                                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {canShowResellActions && isListedSlot && (
@@ -815,10 +816,10 @@ function MyBookingsPage() {
                                         </>
                                       ) : (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                             {booking.startTime} – {booking.endTime}
                                           </Typography>
-                                          {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                          {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                           {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                           {canShowResellActions && isListedForSale && (
                                             <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
