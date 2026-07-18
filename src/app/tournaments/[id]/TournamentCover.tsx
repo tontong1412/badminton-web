@@ -3,7 +3,8 @@ import LoginModal from '@/app/components/LoginModal'
 import RegisterEventForm from '@/app/components/RegisterEventModal'
 import { RootState } from '@/app/libs/redux/store'
 import { useSelector } from '@/app/providers'
-import { Tournament, TournamentStatus } from '@/type'
+import FavoriteToggle from '@/app/components/FavoriteToggle'
+import { FavoriteItemType, Tournament, TournamentStatus } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
 import { Avatar, Box, Button, Container, Typography } from '@mui/material'
 import moment from 'moment'
@@ -52,21 +53,30 @@ const TournamentCover = ({ tournament }: Props) => {
 
         <Box component="section" sx={{ p: 2,  width: '100%', display: 'flex', flexDirection: 'column', alignItems:{ xs: 'center', md: 'flex-start' }, justifyContent:'center' }}>
           <div className='text-gray-200'>
-            <h1 className='text-2xl'>{tournament.name?.[language]}</h1>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+              <h1 className='text-2xl'>{tournament.name?.[language]}</h1>
+              <FavoriteToggle
+                itemType={FavoriteItemType.Tournament}
+                itemID={String(tournament.id)}
+                onRequireLogin={() => setLoginModalVisible(true)}
+                size="medium"
+                backgroundColor="rgba(255,255,255,0.92)"
+              />
+            </Box>
             <Box sx={{ pt:1  }}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><LocationOn/><Typography>{tournament.venue?.name?.en}</Typography></Box>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}><CalendarMonth/><Typography>{`${moment(tournament.startDate).format('DD MMM YYYY')} ${tournament.startDate !== tournament.endDate && `to ${moment(tournament.endDate).format('DD MMM YYYY')}`}`}</Typography></Box>
             </Box>
           </div>
-          {tournament.status === TournamentStatus.RegistrationOpen &&
-          <Box sx={{ paddingTop: 3 }}>
-            <Button
-              variant='contained'
-              size="large"
-              onClick={handleClickRegister}
-              sx={{ borderRadius: 5, backgroundColor: '#ff7961' }}>{t('tournament.registration.registerConfirm')}</Button>
+          <Box sx={{ paddingTop: 3, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            {tournament.status === TournamentStatus.RegistrationOpen &&
+              <Button
+                variant='contained'
+                size="large"
+                onClick={handleClickRegister}
+                sx={{ borderRadius: 5, backgroundColor: '#ff7961' }}>{t('tournament.registration.registerConfirm')}</Button>
+            }
           </Box>
-          }
         </Box>
       </Container>
       <RegisterEventForm

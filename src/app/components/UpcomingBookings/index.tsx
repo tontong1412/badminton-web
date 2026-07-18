@@ -84,7 +84,7 @@ const UpcomingBookings = () => {
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#80644f', mb: 1.5 }}>
+      <Typography gutterBottom variant="h5" component="div">
         {t('booking.myBookings')}
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>

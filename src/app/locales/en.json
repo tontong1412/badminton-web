@@ -347,6 +347,12 @@
     },
     "done": "Done"
   },
+  "favorite": {
+    "title": "Favorites",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "empty": "Save venues or tournaments to see your favorites here."
+  },
   "venueReport": {
     "allVenues": "All Venues",
     "tabDashboard": "Dashboard",

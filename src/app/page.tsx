@@ -14,6 +14,7 @@ import Layout from './components/Layout'
 import HomeBanner from './components/HomeBanner'
 import TournamentList from './tournaments/TounamentList'
 import UpcomingBookings from './components/UpcomingBookings'
+import HomeFavorites from './components/HomeFavorites'
 
 const Home = () => {
   const dispatch = useAppDispatch()
@@ -32,6 +33,8 @@ const Home = () => {
         <Typography sx={{ mt: 2, mb: 2, color: '#80644f' }} variant="h5">
           {t('greeting')}, {user?.player?.displayName?.[language] || user?.player?.officialName[language]}
         </Typography>
+
+        {user && <HomeFavorites />}
 
         <TournamentList
           query={[TournamentQuery.UpComing, TournamentQuery.RegistrationOpen]}

@@ -28,6 +28,17 @@ export enum Gender {
   Female = 'female'
 }
 
+export enum FavoriteItemType {
+  Venue = 'venue',
+  Tournament = 'tournament',
+}
+
+export interface FavoriteItem {
+  itemType: FavoriteItemType;
+  itemID: string;
+  addedAt: string;
+}
+
 export interface Player {
   id: string;
   officialName: {
@@ -55,6 +66,7 @@ export interface Player {
     accountNumber?: string;
     promptPayID?: string;
   }
+  favorites?: FavoriteItem[];
 }
 
 export interface PlayerWithAccount extends Player {
@@ -87,6 +99,7 @@ export interface User {
       line: string;
       tel: string;
     }
+    favorites?: FavoriteItem[];
   }
 }
 
