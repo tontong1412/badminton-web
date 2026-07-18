@@ -88,7 +88,7 @@ export interface User {
     };
     gender?: string;
     level: number;
-    displayName: {
+    displayName?: {
       th?: string;
       en?: string;
       pronunciation?: string;
