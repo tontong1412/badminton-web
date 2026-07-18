@@ -38,7 +38,6 @@ import { addBooking, addBookings, setError } from '../libs/redux/slices/bookingS
 import { login } from '../libs/redux/slices/appSlice'
 import moment from 'moment'
 import axios from 'axios'
-import { SERVICE_ENDPOINT } from '../constants'
 import { useRouter } from 'next/navigation'
 
 interface BookingItemInput {
@@ -293,24 +292,20 @@ export default function CourtBookingModal({
       try {
         setLoading(true)
         setRecurringConflicts([])
-        const response = await axios.post(
-          `${SERVICE_ENDPOINT}/bookings/recurring`,
-          {
-            // Keep compatibility with both API shapes across branches.
-            courtID: primaryCourtID,
-            courtIDs: selectedCourtIDs,
-            startTime: recurringStartTime,
-            endTime: recurringEndTime,
-            pattern: recurringPattern,
-            rangeStart,
-            rangeEnd,
-            daysOfWeek: recurringPattern === 'weekly' ? recurringDays : undefined,
-            note: note || undefined,
-          },
-          { withCredentials: true },
-        )
+        const response = await bookingsService.createRecurring({
+          // Keep compatibility with both API shapes across branches.
+          courtID: primaryCourtID,
+          courtIDs: selectedCourtIDs,
+          startTime: recurringStartTime,
+          endTime: recurringEndTime,
+          pattern: recurringPattern,
+          rangeStart,
+          rangeEnd,
+          daysOfWeek: recurringPattern === 'weekly' ? recurringDays : undefined,
+          note: note || undefined,
+        })
         setErrorState(null)
-        const recurringResponse = response.data as {
+        const recurringResponse = response as {
           bookingBundleID?: unknown;
           bookings?: Array<{ bookingBundleID?: string }>;
         } | undefined
