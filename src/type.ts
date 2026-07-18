@@ -400,10 +400,6 @@ export interface Venue {
   weeklySchedule: Record<string, DailySchedule | null>;
   holidays: HolidaySchedule[];
   slotDurationMinutes: number;
-  gapPolicy: {
-    enabled: boolean;
-    minimumGapMinutes: number;
-  };
   payment?: VenuePayment;
   slipok?: {
     branchId?: string;

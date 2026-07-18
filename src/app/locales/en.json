@@ -239,7 +239,6 @@
     "step2": "Enter Details",
     "step3": "Confirm Booking",
     "step4": "Payment Info",
-    "gapPolicy": "Gap Policy",
     "bookingConfirmed": "Booking confirmed successfully!",
     "bookingPending": "Booking Received — Awaiting Payment",
     "numberOfCourts": "Courts",

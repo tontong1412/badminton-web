@@ -76,10 +76,6 @@ export default function NewVenuePage() {
     Object.fromEntries(DAYS.map((d) => [d.key, defaultDay()]))
   )
 
-  // Gap policy
-  const [gapEnabled, setGapEnabled] = useState(true)
-  const [gapMinutes, setGapMinutes] = useState<30 | 60>(60)
-
   // Slot duration
   const [slotDuration, setSlotDuration] = useState<30 | 60>(60)
 
@@ -114,7 +110,6 @@ export default function NewVenuePage() {
       address: address.trim(),
       ownerUserID: selectedPlayer.userID,
       weeklySchedule,
-      gapPolicy: { enabled: gapEnabled, minimumGapMinutes: gapMinutes },
       slotDurationMinutes: slotDuration,
     }
 
@@ -320,31 +315,6 @@ export default function NewVenuePage() {
                 </TextField>
 
                 <Divider sx={{ my: 2 }} />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gapEnabled}
-                      onChange={(e) => setGapEnabled(e.target.checked)}
-                    />
-                  }
-                  label="Enable gap between bookings"
-                  sx={{ mb: 1, display: 'flex' }}
-                />
-
-                {gapEnabled && (
-                  <TextField
-                    select
-                    label="Minimum Gap"
-                    value={gapMinutes}
-                    onChange={(e) => setGapMinutes(Number(e.target.value) as 30 | 60)}
-                    size="small"
-                    sx={{ minWidth: 180 }}
-                  >
-                    <MenuItem value={30}>30 minutes</MenuItem>
-                    <MenuItem value={60}>60 minutes</MenuItem>
-                  </TextField>
-                )}
               </Paper>
 
               <Box sx={{ display: 'flex', gap: 2 }}>
