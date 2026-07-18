@@ -60,7 +60,6 @@ const TournamentCover = ({ tournament }: Props) => {
                 itemID={String(tournament.id)}
                 onRequireLogin={() => setLoginModalVisible(true)}
                 size="medium"
-                backgroundColor="rgba(255,255,255,0.92)"
               />
             </Box>
             <Box sx={{ pt:1  }}>
