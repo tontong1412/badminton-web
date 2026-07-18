@@ -119,7 +119,6 @@ export default function VenuesPage() {
                           itemType={FavoriteItemType.Venue}
                           itemID={String(venue.id)}
                           onRequireLogin={() => setLoginModalVisible(true)}
-                          backgroundColor="rgba(255,255,255,0.92)"
                         />
                       </Box>
                       {/* Card header — cover image or colour fallback */}
