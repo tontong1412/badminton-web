@@ -174,7 +174,6 @@ const HomeFavorites = () => {
                     <FavoriteToggle
                       itemType={FavoriteItemType.Tournament}
                       itemID={item.itemID}
-                      backgroundColor="rgba(255,255,255,0.92)"
                     />
                   </Box>
                 </Box>
