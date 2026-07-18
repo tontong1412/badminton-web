@@ -1,6 +1,6 @@
 'use client'
 import { useMatchesTournament } from '@/app/libs/data'
-import { Language, Match, MatchStatus } from '@/type'
+import { Language, Match, MatchStatus, MatchStep } from '@/type'
 import { Box, CircularProgress } from '@mui/material'
 import styles from '../draw/Bracket/MatchList.module.scss'
 import { useRouter } from 'next/navigation'
@@ -26,6 +26,20 @@ const MatchListMobile = ({ tournamentID, status }: MatchListMobileProps) => {
     return a.matchNumber - b.matchNumber
   }
 
+  const getRoundLabel = (match: Match) => {
+    if(match.step === MatchStep.Group){
+      return 'แบ่งกลุ่ม'
+    }
+
+    const roundName = MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]
+    if(match.step === MatchStep.Consolation){
+      const consolationPrefix = language === 'th' ? 'สายล่าง' : 'Con.'
+      return roundName ? `${consolationPrefix} - ${roundName}` : consolationPrefix
+    }
+
+    return roundName ?? '-'
+  }
+
   if(!matches) return <CircularProgress/>
 
   return (
@@ -42,7 +56,7 @@ const MatchListMobile = ({ tournamentID, status }: MatchListMobileProps) => {
             justifyContent: 'space-between',
 
           }}>
-            <div>{`${match.event?.name?.[language]}  รอบ ${match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}`}</div>
+            <div>{`${match.event?.name?.[language]}  รอบ ${getRoundLabel(match)}`}</div>
             <div style={{ display: 'flex', gap: '10px' }}>
               {match.status !== 'waiting' && <div>{`#${match.matchNumber}`}</div>}
               {match.status === 'playing' && <div>{`คอร์ด - ${match.court}`}</div>}

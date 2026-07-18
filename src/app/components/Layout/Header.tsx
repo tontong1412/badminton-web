@@ -102,7 +102,7 @@ const  ResponsiveAppBar = () => {
   const handleCloseUserMenu = async(selectedMenu: string) => {
     switch(selectedMenu){
     case 'Logout':
-      await axios.post(`${SERVICE_ENDPOINT}/users/logout`, { userId: user?.id }, { withCredentials: true })
+      await axios.post(`${SERVICE_ENDPOINT}/users/logout`, {}, { withCredentials: true })
       dispatch(logout())
       break
     case 'Account':

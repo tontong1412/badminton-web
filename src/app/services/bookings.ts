@@ -1,4 +1,4 @@
-import { Booking, BookingType, NewBooking } from '@/type'
+import { Booking, BookingType, NewBooking, VenueAnalyticsResponse } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 
@@ -140,6 +140,12 @@ interface VenueBookingsParams {
   venueID?: string;
 }
 
+interface VenueAnalyticsParams {
+  venueID: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 interface RescheduleBookingPayload {
   courtID: string;
   date: string;
@@ -154,6 +160,13 @@ const getVenueBookings = (params?: VenueBookingsParams): Promise<Booking[]> => {
     withCredentials: true,
     params,
   }).then((response) => response.data as Booking[])
+}
+
+const getVenueAnalytics = (params: VenueAnalyticsParams): Promise<VenueAnalyticsResponse> => {
+  return axios.get(`${baseUrl}/venue-admin/analytics`, {
+    withCredentials: true,
+    params,
+  }).then((response) => response.data as VenueAnalyticsResponse)
 }
 
 const approvePayment = (bookingBundleID: string): Promise<{ message: string; bookings: Booking[] }> => {
@@ -184,6 +197,7 @@ export default {
   cancel,
   payBooking,
   getVenueBookings,
+  getVenueAnalytics,
   approvePayment,
   markAsPaid,
   reschedule,

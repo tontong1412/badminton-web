@@ -40,12 +40,10 @@ import { useAppDispatch, useAppSelector } from '../libs/redux/store'
 import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
-import { Download } from '@mui/icons-material'
 import Layout from '../components/Layout'
 import axios from 'axios'
-import QRCode from 'react-qr-code'
-import generatePayload from 'promptpay-qr'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { deriveGroupedPaymentStatus } from './grouping'
 
 const EXPIRY_MINUTES = 10
 
@@ -118,92 +116,10 @@ function MyBookingsPage() {
         el.style.outlineColor = ''
       }, 3000)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [loading, highlightKey, courtDetails])
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
-  const [payingBundleID, setPayingBundleID] = useState<string | null>(null)
-  const [payDialogOpen, setPayDialogOpen] = useState(false)
-  const [payTargetBundleID, setPayTargetBundleID] = useState<string | null>(null)
-  const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
-  const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
-  const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
-  const [isResalePay, setIsResalePay] = useState(false)
-  const qrFrameRef = useRef<HTMLDivElement>(null)
-
-  const handleSaveQR = () => {
-    if (!qrFrameRef.current || (!payTargetVenue && !isResalePay)) return
-    const svg = qrFrameRef.current.querySelector('svg')
-    if (!svg) return
-
-    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-    const frameWidth = 320
-    const svgSize = 224
-    const textAreaHeight = 72
-
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const svgUrl = URL.createObjectURL(svgBlob)
-
-    const headerImg = new window.Image()
-    const qrImg = new window.Image()
-    let loaded = 0
-
-    const draw = () => {
-      loaded++
-      if (loaded < 2) return
-
-      const scaledHeaderH = Math.round(frameWidth * headerImg.naturalHeight / headerImg.naturalWidth)
-      const canvasH = scaledHeaderH + svgSize + textAreaHeight + 24
-
-      const canvas = document.createElement('canvas')
-      canvas.width = frameWidth
-      canvas.height = canvasH
-      const ctx = canvas.getContext('2d')!
-
-      // White bg
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, frameWidth, canvasH)
-
-      // Header image
-      ctx.drawImage(headerImg, 0, 0, frameWidth, scaledHeaderH)
-
-      // QR code
-      const qrX = (frameWidth - svgSize) / 2
-      ctx.drawImage(qrImg, qrX, scaledHeaderH + 12, svgSize, svgSize)
-
-      // Amount
-      ctx.fillStyle = '#1a237e'
-      ctx.font = 'bold 22px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText(`${promptPayTotal.toFixed(2)} ${payTargetCurrency}`, frameWidth / 2, scaledHeaderH + svgSize + 44)
-
-      // Scan label
-      ctx.fillStyle = '#666666'
-      ctx.font = '13px sans-serif'
-      ctx.fillText('สแกนเพื่อชำระเงิน', frameWidth / 2, scaledHeaderH + svgSize + 66)
-
-      URL.revokeObjectURL(svgUrl)
-
-      const saveCanvas = () => {
-        const link = document.createElement('a')
-        link.download = 'payment-qr.png'
-        link.href = canvas.toDataURL('image/png')
-        link.click()
-      }
-      saveCanvas()
-    }
-
-    headerImg.onload = draw
-    qrImg.onload = draw
-    headerImg.src = '/thai-qr-payment.webp'
-    qrImg.src = svgUrl
-  }
-  const [slipFile, setSlipFile] = useState<File | null>(null)
-  const [slipPreview, setSlipPreview] = useState<string | null>(null)
-  const [slipNote, setSlipNote] = useState('')
-  const [paySubmitting, setPaySubmitting] = useState(false)
-  const [payError, setPayError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
   const [resellDialogOpen, setResellDialogOpen] = useState(false)
   const [resellBooking, setResellBooking] = useState<Booking | null>(null)
@@ -242,8 +158,7 @@ function MyBookingsPage() {
       const totalPrice = nonCancelledItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
       const allCancelled = sortedItems.every((item) => item.status === 'cancelled')
       const allConfirmed = nonCancelledItems.length > 0 && nonCancelledItems.every((item) => item.status === 'confirmed')
-      const allPaid = nonCancelledItems.every((item) => item.paymentStatus === 'paid')
-      const anyUnpaid = nonCancelledItems.some((item) => item.paymentStatus === 'unpaid')
+      const paymentStatus = deriveGroupedPaymentStatus(sortedItems)
 
       return {
         groupKey,
@@ -256,7 +171,7 @@ function MyBookingsPage() {
         currency: first.currency,
         totalPrice,
         status: allCancelled ? 'cancelled' : (allConfirmed ? 'confirmed' : 'pending'),
-        paymentStatus: allPaid ? 'paid' : (anyUnpaid ? 'unpaid' : 'pending'),
+        paymentStatus,
       }
     })
 
@@ -345,54 +260,8 @@ function MyBookingsPage() {
     }
   }
 
-  const handlePayBundle = async(bundleID: string, bookingIds: string[], currency: string) => {
-    const bundleBookings = bookings.filter((b) => bookingIds.includes(b.id))
-    const firstCourtID = bundleBookings[0]?.courtID
-    const court = firstCourtID ? courtDetails[firstCourtID] : undefined
-    const venue = court ? venueDetails[court.venueID] : undefined
-    setPayTargetBundleID(bundleID)
-    setPayTargetBookings(bundleBookings)
-    setPayTargetCurrency(currency)
-    setPayTargetVenue(venue ?? null)
-    setIsResalePay(bundleBookings.some((b) => !!b.resaleSourceListingID))
-    setSlipFile(null)
-    setSlipPreview(null)
-    setSlipNote('')
-    setPayError(null)
-    setPayDialogOpen(true)
-  }
-
-  const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    setSlipFile(file)
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setSlipPreview(reader.result as string)
-      reader.readAsDataURL(file)
-    } else {
-      setSlipPreview(null)
-    }
-  }
-
-  const handleConfirmPay = async() => {
-    if (!payTargetBundleID || !slipPreview) return
-    try {
-      setPaySubmitting(true)
-      setPayError(null)
-      await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
-      setPayDialogOpen(false)
-      mutateBookings()
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setPayError(msg ?? 'Failed to verify payment slip. Please try again.')
-      } else {
-        setPayError(err instanceof Error ? err.message : 'Failed to pay booking')
-      }
-    } finally {
-      setPaySubmitting(false)
-      setPayingBundleID(null)
-    }
+  const handlePayBundle = (bundleID: string) => {
+    router.push(`/pay?bundleID=${bundleID}`)
   }
 
   const isResellEligible = (booking: Booking) => {
@@ -813,8 +682,7 @@ function MyBookingsPage() {
                             color="primary"
                             variant="contained"
                             fullWidth
-                            onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
-                            disabled={payingBundleID === group.bundleID}
+                            onClick={() => handlePayBundle(group.bundleID as string)}
                           >
                             {t('booking.pay')}
                           </Button>
@@ -994,8 +862,7 @@ function MyBookingsPage() {
                                   color="primary"
                                   variant="contained"
                                   sx={{ ml: 1 }}
-                                  onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
-                                  disabled={payingBundleID === group.bundleID}
+                                  onClick={() => handlePayBundle(group.bundleID as string)}
                                 >
                                   {t('booking.pay')}
                                 </Button>
@@ -1038,198 +905,6 @@ function MyBookingsPage() {
           </DialogActions>
         </Dialog>
 
-        <Dialog
-          open={payDialogOpen}
-          onClose={() => !paySubmitting && setPayDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>{t('booking.uploadSlip')}</DialogTitle>
-          <DialogContent>
-            {/* Booking details */}
-            <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                {t('booking.bookingDetails')}
-              </Typography>
-              {payTargetVenue && (
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.venue')}:</strong> {payTargetVenue.name?.en || payTargetVenue.name?.th}
-                </Typography>
-              )}
-              {payTargetBookings.map((b) => {
-                const court = courtDetails[b.courtID]
-                return (
-                  <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                    <Typography variant="body2">
-                      {court?.name ?? b.courtID} &nbsp;·&nbsp; {moment(b.date).format('DD/MM/YYYY')} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
-                      {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
-                    </Typography>
-                  </Box>
-                )
-              })}
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle2">{t('booking.total')}</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                  {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Payment method */}
-            {isResalePay ? (
-              (() => {
-                const sysPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
-                const sysBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
-                const sysAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
-                const sysAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
-                const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-                return (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                      {t('booking.paymentMethod')}
-                    </Typography>
-                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                      {sysBankName && <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {sysBankName}</Typography>}
-                      {sysAccountName && <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {sysAccountName}</Typography>}
-                      {sysAccountNumber && <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {sysAccountNumber}</Typography>}
-                      {sysPromptPayID && (
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box ref={qrFrameRef} sx={{ width: 240, borderRadius: 3, overflow: 'hidden', border: '1.5px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                            <Box component="img" src="/thai-qr-payment.webp" alt="Thai QR Payment" sx={{ width: '100%', display: 'block' }} />
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode value={generatePayload(sysPromptPayID, { amount: promptPayTotal })} size={168} style={{ display: 'block' }} />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>สแกนเพื่อชำระเงิน</Typography>
-                            </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>บันทึก QR</Button>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-                )
-              })()
-            ) : payTargetVenue?.payment ? (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                  {t('booking.paymentMethod')}
-                </Typography>
-                <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {payTargetVenue.payment.bankName}</Typography>
-                  <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
-                  <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
-                  {payTargetVenue.payment.promptPayID && (() => {
-                    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-                    return (
-                      <>
-                        {/* PromptPay QR Frame */}
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box ref={qrFrameRef} sx={{
-                            width: 240,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            border: '1.5px solid #e0e0e0',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                          }}>
-                            {/* Header image */}
-                            <Box
-                              component="img"
-                              src="/thai-qr-payment.webp"
-                              alt="Thai QR Payment"
-                              sx={{ width: '100%', display: 'block' }}
-                            />
-
-                            {/* QR Code area */}
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode
-                                value={generatePayload(payTargetVenue.payment.promptPayID, { amount: promptPayTotal })}
-                                size={168}
-                                style={{ display: 'block' }}
-                              />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
-                                สแกนเพื่อชำระเงิน
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>
-                            บันทึก QR
-                          </Button>
-                        </Box>
-                      </>
-                    )
-                  })()}
-                  {payTargetVenue.payment.qrCodeUrl && (
-                    <img
-                      src={payTargetVenue.payment.qrCodeUrl}
-                      alt="QR Code"
-                      style={{ marginTop: 8, maxWidth: 160, display: 'block' }}
-                    />
-                  )}
-                </Box>
-              </Box>
-            ) : null}
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('booking.uploadSlipInstruction')}
-            </Typography>
-            <Button
-              variant="contained"
-              component="label"
-              fullWidth
-              sx={{ mb: 2 }}
-            >
-              {slipFile ? t('booking.fileSelected') : t('booking.chooseFile')}
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={handleSlipFileChange}
-              />
-            </Button>
-            {payError && (
-              <Alert severity="error" sx={{ mb: 2 }}>{payError}</Alert>
-            )}
-            {slipPreview && (
-              <img
-                src={slipPreview}
-                alt="slip preview"
-                style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
-              />
-            )}
-            <TextField
-              size="small"
-              fullWidth
-              label={t('booking.note')}
-              value={slipNote}
-              onChange={(e) => setSlipNote(e.target.value)}
-              multiline
-              rows={2}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setPayDialogOpen(false)} disabled={paySubmitting}>
-              {t('booking.cancel')}
-            </Button>
-            <Button
-              onClick={handleConfirmPay}
-              variant="contained"
-              disabled={!slipPreview || paySubmitting}
-            >
-              {paySubmitting ? <CircularProgress size={20} /> : t('booking.confirmBooking')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
         {/* ── Resell Dialog ──────────────────────────────────── */}
         <Dialog open={resellDialogOpen} onClose={() => !resellSubmitting && setResellDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle>List Slot for Resale</DialogTitle>
@@ -1245,7 +920,7 @@ function MyBookingsPage() {
 
             {/* Fee notice */}
             <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-              A <strong>10% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>3 business days</strong> after the buyer pays.
+              A <strong>7% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>7 business days</strong> after the buyer pays.
             </Alert>
 
             {Object.keys(resellSlotConfig).length > 0 ? (

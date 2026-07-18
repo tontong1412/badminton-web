@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux'
 import TabPanel from '@/app/components/TabPanel'
 import GroupTable from './GroupTable'
 import Bracket from './Bracket'
+import DownloadDraw from './Bracket/DownloadDraw'
 import theme from '@/theme'
 import ParticipantMobile from './ParticipantMobile'
 import ParticipantTable from './ParticipantTable'
@@ -62,7 +63,7 @@ const DrawPage = () => {
 
   const handleContent = (
     event: React.MouseEvent<HTMLElement>,
-    newContent: MatchStep,
+    newContent: MatchStep | 'list',
   ) => {
     if(newContent !== null){
       setContent(newContent)
@@ -82,7 +83,19 @@ const DrawPage = () => {
     if(content === MatchStep.Group && (canPublishDraw || isManager)){
       return <GroupTable eventID={eventID} />
     }else if(content === MatchStep.PlayOff && (canPublishDraw || isManager)){
-      return <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {isManager && <Box><DownloadDraw eventID={eventID} step={MatchStep.PlayOff} /></Box>}
+          <Bracket eventID={eventID} step={MatchStep.PlayOff}/>
+        </Box>
+      )
+    }else if(content === MatchStep.Consolation && (canPublishDraw || isManager)){
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {isManager && <Box><DownloadDraw eventID={eventID} step={MatchStep.Consolation} /></Box>}
+          <Bracket eventID={eventID} step={MatchStep.Consolation}/>
+        </Box>
+      )
     } else if (content === 'list'){
       return (
         <>
@@ -146,6 +159,9 @@ const DrawPage = () => {
                       <ToggleButton value="playoff" aria-label="centered">
                         {event.format !== EventFormat.SingleElimination ? 'Play off' : 'Draw'}
                       </ToggleButton>
+                      {event.format === EventFormat.GroupPlayoffConsolation && <ToggleButton value="consolation" aria-label="right aligned">
+                        <Typography>Consolation</Typography>
+                      </ToggleButton>}
                     </ToggleButtonGroup>
                     {renderContent(event.id)}
                   </TabPanel>
