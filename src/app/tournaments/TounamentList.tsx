@@ -80,7 +80,6 @@ const TournamentList = ({ query, label, statuses }: TournamentListProps) => {
                   itemType={FavoriteItemType.Tournament}
                   itemID={String(tournament.id)}
                   onRequireLogin={() => setLoginModalVisible(true)}
-                  backgroundColor="rgba(255,255,255,0.92)"
                 />
               </Box>
               <CardActionArea sx={{ display: 'flex' }}>
