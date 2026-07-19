@@ -314,6 +314,7 @@
     "bookThisSlot": "จองช่วงเวลานี้",
     "confirmResalePurchase": "ยืนยันการซื้อต่อ",
     "confirmPurchase": "ยืนยันการซื้อ",
+    "resalePendingReservationInfo": "ช่วงเวลานี้จะถูกสำรองให้คุณขณะรอการชำระเงิน และจะเปลี่ยนเป็นขายสำเร็จเมื่อยืนยันการชำระเงินแล้วเท่านั้น",
     "courtVenue": "สนามแบดมินตัน",
     "all": "ทั้งหมด",
     "courtTypeLabel": "ประเภท",
