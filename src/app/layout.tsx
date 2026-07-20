@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import theme from '../theme'
 import Providers from './providers'
 import { TranslationWrapper } from './components/TranslationWrapper'
+import RouteAnalyticsTracker from './components/analytics/RouteAnalyticsTracker'
 
 const nunito = Nunito({
   weight: ['300', '400', '500', '700'],
@@ -49,6 +50,7 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <Providers>
+              <RouteAnalyticsTracker />
               <TranslationWrapper>
                 {children}
               </TranslationWrapper>

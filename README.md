@@ -19,6 +19,41 @@ npm install
 npm run dev
 ```
 
+## Firebase Analytics (website traffic)
+
+This project supports Firebase Analytics for traffic tracking in the Next.js App Router.
+
+### 1) Set up Firebase and GA4
+
+1. Create a Firebase project.
+2. Add a Web App in Firebase Project Settings.
+3. Enable Google Analytics integration and make sure a GA4 data stream is created.
+4. Copy the Web App config values and place them in your local env file.
+
+Use [.env.local.example](.env.local.example) as the template:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Required variables:
+
+- NEXT_PUBLIC_FIREBASE_API_KEY
+- NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+- NEXT_PUBLIC_FIREBASE_PROJECT_ID
+- NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+- NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+- NEXT_PUBLIC_FIREBASE_APP_ID
+- NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+
+### 2) Validate traffic events
+
+1. Run `npm run dev`.
+2. Open the site and navigate through multiple pages.
+3. Open GA4 DebugView and verify `page_view` events are received.
+
+If you see duplicate `page_view` events, disable the GA4 Enhanced Measurement option for browser history-based page changes.
+
 ## Test
 
 The project is test with unit tests and end-to-end tests
