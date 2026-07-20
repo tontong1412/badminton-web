@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import './globals.css'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import { Nunito, IBM_Plex_Sans_Thai  } from 'next/font/google'
@@ -50,7 +51,9 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <Providers>
-              <RouteAnalyticsTracker />
+              <Suspense fallback={null}>
+                <RouteAnalyticsTracker />
+              </Suspense>
               <TranslationWrapper>
                 {children}
               </TranslationWrapper>
