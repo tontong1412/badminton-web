@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import './globals.css'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import { Nunito, IBM_Plex_Sans_Thai  } from 'next/font/google'
@@ -6,6 +7,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import theme from '../theme'
 import Providers from './providers'
 import { TranslationWrapper } from './components/TranslationWrapper'
+import RouteAnalyticsTracker from './components/analytics/RouteAnalyticsTracker'
 
 const nunito = Nunito({
   weight: ['300', '400', '500', '700'],
@@ -49,6 +51,9 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <Providers>
+              <Suspense fallback={null}>
+                <RouteAnalyticsTracker />
+              </Suspense>
               <TranslationWrapper>
                 {children}
               </TranslationWrapper>
