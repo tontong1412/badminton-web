@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material'
+import { useState } from 'react'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
@@ -16,6 +17,10 @@ import { useVenues } from '../libs/data'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/Layout'
+import FavoriteToggle from '../components/FavoriteToggle'
+import { FavoriteItemType } from '@/type'
+import LoginModal from '../components/LoginModal'
+import { useAppSelector } from '../libs/redux/store'
 
 const ACCENTS = [
   { bg: '#80644f', light: '#F5EDE4', border: '#D4B8A0' },
@@ -29,6 +34,8 @@ const ACCENTS = [
 export default function VenuesPage() {
   const { t } = useTranslation()
   const { venues, isLoading: loading, isError } = useVenues()
+  const user = useAppSelector((state) => state.app.user)
+  const [loginModalVisible, setLoginModalVisible] = useState(false)
   const error = isError ? 'Failed to load venues' : null
 
   if (loading) {
@@ -96,6 +103,7 @@ export default function VenuesPage() {
                         border: '1px solid #D4B8A0',
                         borderRadius: 3,
                         overflow: 'hidden',
+                        position: 'relative',
                         display: 'flex',
                         flexDirection: 'column',
                         height: '100%',
@@ -106,6 +114,13 @@ export default function VenuesPage() {
                         },
                       }}
                     >
+                      <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>
+                        <FavoriteToggle
+                          itemType={FavoriteItemType.Venue}
+                          itemID={String(venue.id)}
+                          onRequireLogin={() => setLoginModalVisible(true)}
+                        />
+                      </Box>
                       {/* Card header — cover image or colour fallback */}
                       <Box
                         sx={{
@@ -151,14 +166,6 @@ export default function VenuesPage() {
                         >
                           {venue.name.en || venue.name.th}
                         </Typography>
-                        {venue.name.th && venue.name.en && (
-                          <Typography variant="caption" sx={{ color: '#94A3B8', mb: 1.5, display: 'block' }}>
-                            {venue.name.th}
-                          </Typography>
-                        )}
-
-                        {/* Divider */}
-                        <Box sx={{ height: '1px', bgcolor: '#F5EDE4', mb: 1.5 }} />
 
                         {/* Address */}
                         <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start', mb: 2 }}>
@@ -197,6 +204,7 @@ export default function VenuesPage() {
           )}
         </Container>
       </Box>
+      {!user && <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible} />}
     </Layout>
   )
 }

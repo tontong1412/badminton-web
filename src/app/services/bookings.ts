@@ -1,4 +1,4 @@
-import { Booking, BookingType, NewBooking } from '@/type'
+import { Booking, BookingType, NewBooking, VenueAnalyticsResponse } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 
@@ -9,6 +9,29 @@ const getAll = (): Promise<Booking[]> => {
     withCredentials: true,
   })
   return request.then((response) => response.data as Booking[])
+}
+
+export type MyBookingsTab = 'active' | 'past' | 'cancelled'
+
+export interface MyBookingsPagedResponse {
+  tab: MyBookingsTab;
+  limit: number;
+  bookings: Booking[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+interface MyBookingsPagedParams {
+  tab: MyBookingsTab;
+  limit?: number;
+  cursor?: string;
+}
+
+const getPaged = (params: MyBookingsPagedParams): Promise<MyBookingsPagedResponse> => {
+  return axios.get(`${baseUrl}/paged`, {
+    withCredentials: true,
+    params,
+  }).then((response) => response.data as MyBookingsPagedResponse)
 }
 
 const getById = (id: string): Promise<Booking> => {
@@ -71,25 +94,40 @@ const createBundle = (payload: CreateBundlePayload): Promise<Booking | BookingBu
   return request.then((response) => response.data as Booking | BookingBundleResponse)
 }
 
-interface CreateRecurringBookingPayload extends NewBooking {
-  courtID: string;
-  startDate: string;
-  endDate: string;
+export interface CreateRecurringBookingPayload {
+  courtID?: string;
+  courtIDs?: string[];
+  rangeStart: string;
+  rangeEnd: string;
   startTime: string;
   endTime: string;
-  durationMinutes: number;
-  totalPrice: number;
-  currency: string;
-  dayOfWeek: number[];
-  bookerType: 'guest' | 'user';
-  bookingType: BookingType.Recurring;
+  pattern: 'daily' | 'weekly';
+  daysOfWeek?: number[];
+  slip?: string;
+  note?: string;
+  bookedAsAdmin?: boolean;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
 }
 
-const createRecurring = (booking: CreateRecurringBookingPayload): Promise<Booking> => {
-  const request = axios.post(`${baseUrl}/recurring`, booking, {
+interface CreateRecurringBookingResponse {
+  recurringGroups: {
+    id: string;
+    courtID: string;
+  }[];
+  recurringGroup?: {
+    id: string;
+    courtID: string;
+  };
+  bookings: Booking[];
+}
+
+const createRecurring = (payload: CreateRecurringBookingPayload): Promise<CreateRecurringBookingResponse> => {
+  const request = axios.post(`${baseUrl}/recurring`, payload, {
     withCredentials: true,
   })
-  return request.then((response) => response.data as Booking)
+  return request.then((response) => response.data as CreateRecurringBookingResponse)
 }
 
 const cancel = (id: string): Promise<void> => {
@@ -123,6 +161,7 @@ const payBooking = (bookingBundleID: string, payload: PayBookingPayload, guestEm
 export interface BundleResponse {
   bookings: import('@/type').Booking[];
   venue: import('@/type').Venue | null;
+  courts?: import('@/type').Court[];
   court: import('@/type').Court | null;
 }
 
@@ -140,6 +179,12 @@ interface VenueBookingsParams {
   venueID?: string;
 }
 
+interface VenueAnalyticsParams {
+  venueID: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 interface RescheduleBookingPayload {
   courtID: string;
   date: string;
@@ -154,6 +199,13 @@ const getVenueBookings = (params?: VenueBookingsParams): Promise<Booking[]> => {
     withCredentials: true,
     params,
   }).then((response) => response.data as Booking[])
+}
+
+const getVenueAnalytics = (params: VenueAnalyticsParams): Promise<VenueAnalyticsResponse> => {
+  return axios.get(`${baseUrl}/venue-admin/analytics`, {
+    withCredentials: true,
+    params,
+  }).then((response) => response.data as VenueAnalyticsResponse)
 }
 
 const approvePayment = (bookingBundleID: string): Promise<{ message: string; bookings: Booking[] }> => {
@@ -176,6 +228,7 @@ const reschedule = (bookingID: string, payload: RescheduleBookingPayload): Promi
 
 export default {
   getAll,
+  getPaged,
   getById,
   getBundle,
   createSingle,
@@ -184,6 +237,7 @@ export default {
   cancel,
   payBooking,
   getVenueBookings,
+  getVenueAnalytics,
   approvePayment,
   markAsPaid,
   reschedule,

@@ -32,7 +32,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import SportsTennisIcon from '@mui/icons-material/SportsTennis'
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
-import { BookingAvailability, Court, CourtPricingRule, ResaleBookingSnapshot, ResaleListing, Venue } from '@/type'
+import { BookingAvailability, Court, CourtPricingRule, FavoriteItemType, ResaleBookingSnapshot, ResaleListing, Venue } from '@/type'
 import courtsService from '../../services/courts'
 import resaleService from '../../services/resale'
 import { useVenue, useCourts, useResaleListings } from '../../libs/data'
@@ -40,6 +40,7 @@ import CourtBookingModal from '../../components/CourtBookingModal'
 import CourtAvailabilityTable from '../../components/CourtAvailabilityTable'
 import Layout from '../../components/Layout'
 import LoginModal from '../../components/LoginModal'
+import FavoriteToggle from '../../components/FavoriteToggle'
 import { useAppSelector } from '../../libs/redux/store'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
@@ -212,11 +213,16 @@ export default function VenueCourtsPage() {
     try {
       setResaleBuying(true)
       setResaleBuyError(null)
-      await resaleService.buy(resaleBuyListing.id)
+      const response = await resaleService.buy(resaleBuyListing.id)
       setResaleBuyDialogOpen(false)
       setResaleBuyListing(null)
       mutateResale()
-      router.push('/bookings')
+      const bundleID = response?.booking?.bookingBundleID
+      if (bundleID) {
+        router.push(`/pay?bundleID=${encodeURIComponent(String(bundleID))}`)
+      } else {
+        router.push('/bookings')
+      }
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setResaleBuyError(msg ?? 'Failed to purchase listing')
@@ -341,7 +347,7 @@ export default function VenueCourtsPage() {
     }
 
     loadGuided()
-  }, [selectedDate, filteredCourts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount])
+  }, [selectedDate, filteredCourts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount, venueId])
 
   const filteredGuidedSlots = useMemo(
     () => guidedSlots.filter((s) => s.courtCount >= requestedCourtCount),
@@ -495,7 +501,7 @@ export default function VenueCourtsPage() {
     }
 
     loadFree()
-  }, [selectedDate, filteredCourts, slotDurationMinutes])
+  }, [selectedDate, filteredCourts, slotDurationMinutes, venueId])
 
   const handleCellClick = (startTime: string, court: Court) => {
     if (moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm').isBefore(moment().startOf('hour'))) {
@@ -581,7 +587,15 @@ export default function VenueCourtsPage() {
                 className="text-gray-200"
                 sx={{ textAlign: { xs: 'center', md: 'left' } }}
               >
-                <h1 className="text-2xl">{venue.name?.en || venue.name?.th}</h1>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                  <h1 className="text-2xl">{venue.name?.en || venue.name?.th}</h1>
+                  <FavoriteToggle
+                    itemType={FavoriteItemType.Venue}
+                    itemID={String(venue.id)}
+                    onRequireLogin={() => setLoginModalOpen(true)}
+                    size="medium"
+                  />
+                </Box>
                 <Box sx={{ pt: 1 }}>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
                     <PlaceOutlinedIcon sx={{ fontSize: 18 }} />
@@ -1490,6 +1504,9 @@ export default function VenueCourtsPage() {
                 <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
                   {t('booking.price')}: {resaleBuyListing.askingPrice} {resaleBuyListing.currency}
                 </Typography>
+                <Alert severity="info" sx={{ mt: 1.5 }}>
+                  {t('booking.resalePendingReservationInfo')}
+                </Alert>
               </Box>
             )
           })()}

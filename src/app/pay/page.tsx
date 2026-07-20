@@ -1,7 +1,8 @@
 'use client'
 
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Box,
@@ -14,9 +15,9 @@ import {
   Typography,
 } from '@mui/material'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
-import moment from 'moment'
 import axios from 'axios'
 import QRCode from 'react-qr-code'
+import { useTranslation } from 'react-i18next'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const generatePayload = require('promptpay-qr') as (id: string, options?: { amount?: number }) => string
 import Layout from '../components/Layout'
@@ -24,6 +25,7 @@ import bookingsService from '../services/bookings'
 import { Booking, BookingStatus, Court, Venue } from '@/type'
 
 function GuestPayContent() {
+  const { t, i18n } = useTranslation()
   const searchParams = useSearchParams()
   const bundleID = searchParams.get('bundleID')
   const guestEmail = searchParams.get('email')
@@ -32,6 +34,7 @@ function GuestPayContent() {
   const [error, setError] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [venue, setVenue] = useState<Venue | null>(null)
+  const [courtsByID, setCourtsByID] = useState<Record<string, Court>>({})
   const [court, setCourt] = useState<Court | null>(null)
 
   const [slipFile, setSlipFile] = useState<File | null>(null)
@@ -40,34 +43,52 @@ function GuestPayContent() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const loadBundle = useCallback(async() => {
-    if (!bundleID || !guestEmail) {
-      setError('Invalid payment link. Please check your email for the correct link.')
+    if (!bundleID) {
+      setError(t('booking.payPage.errors.invalidPaymentLink'))
       setLoading(false)
       return
     }
     try {
       setLoading(true)
-      const data = await bookingsService.getBundle(bundleID, guestEmail)
+      const data = await bookingsService.getBundle(bundleID, guestEmail ?? undefined)
       setBookings(data.bookings)
       setVenue(data.venue)
       setCourt(data.court)
+      const courtMap: Record<string, Court> = {}
+      for (const courtItem of data.courts ?? []) {
+        courtMap[courtItem.id] = courtItem
+      }
+      if (data.court) {
+        courtMap[data.court.id] = data.court
+      }
+      setCourtsByID(courtMap)
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setError(msg ?? 'Failed to load booking details.')
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setError(t('booking.payPage.errors.unauthorizedPaymentPage'))
+        } else {
+          setError(msg ?? t('booking.payPage.errors.loadBookingDetailsFailed'))
+        }
       } else {
-        setError('Failed to load booking details.')
+        setError(t('booking.payPage.errors.loadBookingDetailsFailed'))
       }
     } finally {
       setLoading(false)
     }
-  }, [bundleID, guestEmail])
+  }, [bundleID, guestEmail, t])
 
   useEffect(() => {
     loadBundle()
   }, [loadBundle])
+
+  useEffect(() => {
+    if (!slipPreview || submitting) return
+    submitButtonRef.current?.focus()
+  }, [slipPreview, submitting])
 
   const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
@@ -82,18 +103,18 @@ function GuestPayContent() {
   }
 
   const handleSubmit = async() => {
-    if (!bundleID || !guestEmail || !slipPreview) return
+    if (!bundleID || !slipPreview) return
     try {
       setSubmitting(true)
       setSubmitError(null)
-      await bookingsService.payBooking(bundleID, { slip: slipPreview, note: slipNote || undefined }, guestEmail)
+      await bookingsService.payBooking(bundleID, { slip: slipPreview, note: slipNote || undefined }, guestEmail ?? undefined)
       setSuccess(true)
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setSubmitError(msg ?? 'Failed to submit payment. Please try again.')
+        setSubmitError(msg ?? t('booking.payPage.errors.submitPaymentFailed'))
       } else {
-        setSubmitError('Failed to submit payment. Please try again.')
+        setSubmitError(t('booking.payPage.errors.submitPaymentFailed'))
       }
     } finally {
       setSubmitting(false)
@@ -103,7 +124,42 @@ function GuestPayContent() {
   const totalPrice = bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0)
   const currency = bookings[0]?.currency ?? ''
   const bookingRef = bookings[0]?.bookingRef
+  const isThaiLocale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').startsWith('th')
+  const bookingDateLocale = isThaiLocale ? 'th-TH' : 'en-US'
+  const formatBookingDate = (date: string) => {
+    const parsedDate = new Date(date)
+    if (Number.isNaN(parsedDate.getTime())) return date
+    return new Intl.DateTimeFormat(bookingDateLocale, {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+    }).format(parsedDate)
+  }
   const isCancelled = bookings.some((b) => b.status === BookingStatus.Cancelled)
+  const isResalePay = bookings.some((b) => Boolean(b.resaleSourceListingID))
+  const sortedBookings = useMemo(() => {
+    return [...bookings].sort((a, b) => {
+      const dateCmp = new Date(a.date).getTime() - new Date(b.date).getTime()
+      if (dateCmp !== 0) return dateCmp
+
+      const courtNameA = courtsByID[a.courtID]?.name ?? court?.name ?? ''
+      const courtNameB = courtsByID[b.courtID]?.name ?? court?.name ?? ''
+      const courtCmp = courtNameA.localeCompare(courtNameB, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+      if (courtCmp !== 0) return courtCmp
+
+      const startCmp = a.startTime.localeCompare(b.startTime)
+      if (startCmp !== 0) return startCmp
+
+      return a.endTime.localeCompare(b.endTime)
+    })
+  }, [bookings, courtsByID, court?.name])
+  const systemPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
+  const systemBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
+  const systemAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
+  const systemAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
 
   if (loading) {
     return (
@@ -127,14 +183,14 @@ function GuestPayContent() {
         <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
           <CheckCircleOutlineIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
           <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
-            Payment Submitted!
+            {t('booking.payPage.success.title')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Your payment slip has been submitted successfully. The venue will verify it shortly.
+            {t('booking.payPage.success.description')}
           </Typography>
           {bookingRef && (
             <Typography variant="body2" sx={{ mt: 2, fontFamily: 'monospace', fontWeight: 700 }}>
-              Booking ref: #{bookingRef}
+              {t('booking.payPage.bookingRef')}: #{bookingRef}
             </Typography>
           )}
         </Paper>
@@ -147,7 +203,7 @@ function GuestPayContent() {
       <Paper elevation={3} sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h5" fontWeight={700}>
-            Complete Payment
+            {t('booking.payPage.title')}
           </Typography>
           {bookingRef && (
             <Typography
@@ -162,26 +218,50 @@ function GuestPayContent() {
         {/* Booking summary */}
         <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'divider' }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-            Booking Details
+            {t('booking.payPage.bookingDetails')}
           </Typography>
           {venue && (
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Venue:</strong> {venue.name?.en || venue.name?.th}
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, lineHeight: 1.25 }}>
+              {venue.name?.en || venue.name?.th}
             </Typography>
           )}
-          {bookings.map((b) => (
-            <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="body2">
-                {court?.name ?? '—'} &nbsp;·&nbsp; {moment(b.date).format('DD/MM/YYYY')} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
-                {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
-              </Typography>
-            </Box>
-          ))}
+          {sortedBookings.map((b, index) => {
+            const bookingCourt = courtsByID[b.courtID]
+            const bookingCourtName = bookingCourt?.name ?? court?.name ?? '—'
+            const currentDayKey = new Date(b.date).toDateString()
+            const previousDayKey = index > 0 ? new Date(sortedBookings[index - 1].date).toDateString() : ''
+            const showDayDivider = index === 0 || currentDayKey !== previousDayKey
+            return (
+              <Box key={b.id}>
+                {showDayDivider && (
+                  <Box sx={{ mt: index === 0 ? 0.5 : 1.5, mb: 0.5 }}>
+                    <Divider sx={{ mb: 0.5 }} />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                      {formatBookingDate(b.date)}
+                    </Typography>
+                  </Box>
+                )}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                  <Typography variant="body2">
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {bookingCourtName} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      {bookingCourtName}
+                      <br />
+                      {b.startTime}–{b.endTime}
+                    </Box>
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
+                    {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
+                  </Typography>
+                </Box>
+              </Box>
+            )
+          })}
           <Divider sx={{ my: 1 }} />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="subtitle2">Total</Typography>
+            <Typography variant="subtitle2">{t('booking.total')}</Typography>
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
               {totalPrice.toFixed(2)} {currency}
             </Typography>
@@ -189,44 +269,113 @@ function GuestPayContent() {
         </Box>
 
         {/* Payment info */}
-        {venue?.payment ? (
+        {isResalePay ? (
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-              Payment Method
+              {t('booking.paymentMethod')}
             </Typography>
-            <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Box>
+            <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ textAlign: 'center' }}>
+                {systemBankName && (
+                  <Typography variant="body2">
+                    <strong>{t('booking.bankName')}:</strong> {systemBankName}
+                  </Typography>
+                )}
+                {systemAccountName && (
+                  <Typography variant="body2">
+                    <strong>{t('booking.accountName')}:</strong> {systemAccountName}
+                  </Typography>
+                )}
+                {systemAccountNumber && (
+                  <Typography variant="body2">
+                    <strong>{t('booking.accountNumber')}:</strong> {systemAccountNumber}
+                  </Typography>
+                )}
+                {systemPromptPayID && (
+                  <Typography variant="body2">
+                    <strong>{t('booking.promptPayID')}:</strong> {systemPromptPayID}
+                  </Typography>
+                )}
+              </Box>
+              {systemPromptPayID && (
+                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ width: '100%', maxWidth: 300, border: 1, borderColor: 'divider', borderRadius: '14px 14px 0 0', overflow: 'hidden', bgcolor: 'white' }}>
+                    <Image
+                      src="/thai-qr-payment.webp"
+                      alt={t('booking.payPage.thaiQrPaymentFrameAlt')}
+                      width={640}
+                      height={239}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                    />
+                    <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'center' }}>
+                      <QRCode
+                        value={generatePayload(systemPromptPayID, { amount: totalPrice })}
+                        size={220}
+                        style={{ width: '100%', maxWidth: 220, height: 'auto', display: 'block' }}
+                      />
+                    </Box>
+                    {systemAccountName && (
+                      <Typography variant="h6" sx={{ textAlign: 'center' }}>
+                        {systemAccountName}
+                      </Typography>
+                    )}
+                  </Box>
+
+                </Box>
+              )}
+            </Box>
+          </Box>
+        ) : venue?.payment ? (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+              {t('booking.paymentMethod')}
+            </Typography>
+            <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ textAlign: 'center' }}>
                 {venue.payment.bankName && (
                   <Typography variant="body2">
-                    <strong>Bank:</strong> {venue.payment.bankName}
+                    <strong>{t('booking.bankName')}:</strong> {venue.payment.bankName}
                   </Typography>
                 )}
                 {venue.payment.accountName && (
                   <Typography variant="body2">
-                    <strong>Account Name:</strong> {venue.payment.accountName}
+                    <strong>{t('booking.accountName')}:</strong> {venue.payment.accountName}
                   </Typography>
                 )}
                 {venue.payment.accountNumber && (
                   <Typography variant="body2">
-                    <strong>Account Number:</strong> {venue.payment.accountNumber}
+                    <strong>{t('booking.accountNumber')}:</strong> {venue.payment.accountNumber}
                   </Typography>
                 )}
                 {venue.payment.promptPayID && (
                   <Typography variant="body2">
-                    <strong>PromptPay ID:</strong> {venue.payment.promptPayID}
+                    <strong>{t('booking.promptPayID')}:</strong> {venue.payment.promptPayID}
                   </Typography>
                 )}
               </Box>
               {venue.payment.promptPayID && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ml: 2, flexShrink: 0 }}>
-                  <QRCode
-                    value={generatePayload(venue.payment.promptPayID, { amount: totalPrice })}
-                    size={80}
-                    style={{ borderRadius: 4, border: '1px solid #e0e0e0', padding: 4, background: 'white' }}
-                  />
-                  <Typography variant="caption" sx={{ mt: 0.5, fontWeight: 600, color: 'text.secondary' }}>
-                    Scan to Pay
-                  </Typography>
+                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ pb:2, width: '100%', maxWidth: 300, border: 1, borderColor: 'divider', borderRadius: '14px', overflow: 'hidden', bgcolor: 'white' }}>
+                    <Image
+                      src="/thai-qr-payment.webp"
+                      alt={t('booking.payPage.thaiQrPaymentFrameAlt')}
+                      width={640}
+                      height={239}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                    />
+                    <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'center' }}>
+                      <QRCode
+                        value={generatePayload(venue.payment.promptPayID, { amount: totalPrice })}
+                        size={220}
+                        style={{ width: '100%', maxWidth: 220, height: 'auto', display: 'block' }}
+                      />
+                    </Box>
+                    {venue.payment.accountName && (
+                      <Typography variant="h6" sx={{ textAlign: 'center' }}>
+                        {venue.payment.accountName}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -237,12 +386,12 @@ function GuestPayContent() {
 
         {isCancelled ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            This booking has been cancelled. Payment is no longer accepted.
+            {t('booking.payPage.bookingCancelled')}
           </Alert>
         ) : (
           <>
             <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-              Transfer the amount above and upload your payment slip to confirm the booking.
+              {t('booking.payPage.transferInstruction')}
             </Typography>
 
             <Button
@@ -251,14 +400,14 @@ function GuestPayContent() {
               fullWidth
               sx={{ mb: 2 }}
             >
-              {slipFile ? `Selected: ${slipFile.name}` : 'Choose Payment Slip'}
+              {slipFile ? t('booking.payPage.selectedSlip', { fileName: slipFile.name }) : t('booking.uploadSlip')}
               <input type="file" accept="image/*" hidden onChange={handleSlipFileChange} />
             </Button>
 
             {slipPreview && (
               <img
                 src={slipPreview}
-                alt="slip preview"
+                alt={t('booking.payPage.slipPreviewAlt')}
                 style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
               />
             )}
@@ -266,7 +415,7 @@ function GuestPayContent() {
             <TextField
               size="small"
               fullWidth
-              label="Note (optional)"
+              label={t('booking.payPage.noteOptional')}
               value={slipNote}
               onChange={(e) => setSlipNote(e.target.value)}
               multiline
@@ -279,13 +428,40 @@ function GuestPayContent() {
             )}
 
             <Button
+              ref={submitButtonRef}
               variant="contained"
               fullWidth
               size="large"
               disabled={!slipPreview || submitting}
               onClick={handleSubmit}
+              sx={
+                slipPreview && !submitting
+                  ? {
+                    '@keyframes submitGlowPulse': {
+                      '0%': {
+                        boxShadow: '0 0 0 0 rgba(128, 100, 79, 0.6)',
+                      },
+                      '70%': {
+                        boxShadow: '0 0 0 8px rgba(128, 100, 79, 0)',
+                      },
+                      '100%': {
+                        boxShadow: '0 0 0 0 rgba(128, 100, 79, 0)',
+                      },
+                    },
+                    boxShadow: '0 0 0 2px rgba(128, 100, 79, 0.5)',
+                    animation: 'submitGlowPulse 1.4s ease-in-out infinite',
+                    '&:hover': {
+                      boxShadow: '0 0 0 2px rgba(128, 100, 79, 0.7)',
+                    },
+                    '&:focus-visible': {
+                      outline: '2px solid rgba(128, 100, 79, 0.8)',
+                      outlineOffset: 2,
+                    },
+                  }
+                  : undefined
+              }
             >
-              {submitting ? <CircularProgress size={24} /> : 'Submit Payment'}
+              {submitting ? <CircularProgress size={24} /> : t('booking.payPage.submitPayment')}
             </Button>
           </>
         )}

@@ -7,9 +7,44 @@ import { RootState } from '@/app/libs/redux/store'
 import stylesBracket from './Bracket.module.scss'
 import styleMatchList from './MatchList.module.scss'
 
-const MatchUp = ({ match, style = 'bracket' }: {match: Match, style: 'bracket'|'list'}) => {
+interface MatchUpProps {
+  match: Match
+  style: 'bracket' | 'list'
+  placeholderTeamA?: string
+  placeholderTeamB?: string
+}
+
+const MatchUp = ({ match, style = 'bracket', placeholderTeamA, placeholderTeamB }: MatchUpProps) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const styles = style === 'bracket' ? stylesBracket : styleMatchList
+
+  const renderTeamName = (team: Match['teamA'], placeholder?: string, isBye?: boolean) => {
+    if (team?.players && team.players.length > 0) {
+      return team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName?.[language]}</Typography>)
+    }
+    if (placeholder) return <Typography>{placeholder}</Typography>
+    if (isBye) return <Typography>Bye</Typography>
+    return null
+  }
+
+  const participantClassName = (
+    team: Match['teamA'],
+    isWinner: boolean | undefined,
+    isLoser: boolean | undefined,
+    placeholder?: string,
+    isBye?: boolean
+  ) => {
+    const shouldCenterSingleLine = team?.players?.length === 1
+      || (!!placeholder && (!team?.players || team.players.length === 0))
+      || (!!isBye && (!team?.players || team.players.length === 0))
+
+    return [
+      styles.participant,
+      isWinner ? styles.winner : '',
+      isLoser ? styles.loser : '',
+      shouldCenterSingleLine ? styles.singlePlayer : ''
+    ].filter(Boolean).join(' ')
+  }
 
   const renderMatchDetail = (match: Match, team: 'teamA'| 'teamB', teamIndex: number) => {
     if (match.status === 'waiting') return (
@@ -31,8 +66,14 @@ const MatchUp = ({ match, style = 'bracket' }: {match: Match, style: 'bracket'|'
       <div className={styles.participants} >
         {/* <div className="participants" onClick={() => setModalVisible(true)}> */}
         <div className={styles.group}>
-          <div className={`${styles.participant} ${match.status === 'finished' ? (match.teamA?.scoreSet > match.teamB?.scoreSet || (match.skip && match.byePosition === 0)) ? styles.winner : styles.loser : null}`}>
-            {match.teamA?.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName?.[language]}</Typography>) || ''}
+          <div className={participantClassName(
+            match.teamA,
+            Boolean(match.status === 'finished' && (match.teamA?.scoreSet > match.teamB?.scoreSet || (match.skip === true && match.byePosition === 0))),
+            Boolean(match.status === 'finished' && !(match.teamA?.scoreSet > match.teamB?.scoreSet || (match.skip === true && match.byePosition === 0))),
+            placeholderTeamA,
+            match.skip === true && match.byePosition === 0
+          )}>
+            {renderTeamName(match.teamA, placeholderTeamA, match.skip === true && match.byePosition === 0)}
           </div>
           {
             !match.matchNumber || match.status === 'playing' || (match.scoreLabel && match.scoreLabel.length) > 0
@@ -43,8 +84,14 @@ const MatchUp = ({ match, style = 'bracket' }: {match: Match, style: 'bracket'|'
           }
         </div>
         <div className={styles.group}>
-          <div className={`${styles.participant} ${match.status === 'finished' ? (match.teamB?.scoreSet > match.teamA?.scoreSet || (match.skip && match.byePosition === 1))  ? styles.winner : styles.loser : null}`}>
-            {match.teamB?.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName?.[language]}</Typography>) || ''}
+          <div className={participantClassName(
+            match.teamB,
+            Boolean(match.status === 'finished' && (match.teamB?.scoreSet > match.teamA?.scoreSet || (match.skip === true && match.byePosition === 1))),
+            Boolean(match.status === 'finished' && !(match.teamB?.scoreSet > match.teamA?.scoreSet || (match.skip === true && match.byePosition === 1))),
+            placeholderTeamB,
+            match.skip === true && match.byePosition === 1
+          )}>
+            {renderTeamName(match.teamB, placeholderTeamB, match.skip === true && match.byePosition === 1)}
           </div>
           {
             !match.matchNumber || match.status === 'playing' || (match.scoreLabel && match.scoreLabel.length) > 0

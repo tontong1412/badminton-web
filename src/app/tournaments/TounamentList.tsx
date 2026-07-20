@@ -1,5 +1,5 @@
 'use client'
-import { Language, Tournament, TournamentQuery } from '@/type'
+import { FavoriteItemType, Language, Tournament, TournamentQuery, TournamentStatus } from '@/type'
 import { CalendarMonth, LocationOn } from '@mui/icons-material'
 import { Box, Card, CardActionArea, CardContent, CardMedia, CircularProgress, Typography } from '@mui/material'
 import moment from 'moment'
@@ -9,26 +9,45 @@ import { useTranslation } from 'react-i18next'
 import { useSelector } from '../providers'
 import { RootState } from '../libs/redux/store'
 import { SERVICE_ENDPOINT } from '../constants'
+import FavoriteToggle from '../components/FavoriteToggle'
+import LoginModal from '../components/LoginModal'
 
 interface TournamentListProps {
-  query: TournamentQuery
+  query: TournamentQuery | TournamentQuery[]
   label?: string
+  statuses?: TournamentStatus[]
 }
 
-const TournamentList = ({ query, label }: TournamentListProps) => {
-  const [tournaments, setTournaments] = useState([])
+const TournamentList = ({ query, label, statuses }: TournamentListProps) => {
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { t } = useTranslation()
   const language: Language = useSelector((state: RootState) => state.app.language)
+  const user = useSelector((state: RootState) => state.app.user)
+  const queryList = Array.isArray(query) ? query : [query]
+  const queryKey = queryList.join(',')
+  const [loginModalVisible, setLoginModalVisible] = useState(false)
 
   useEffect(() => {
     const fetchTournaments = async() => {
       try {
-        const response = await fetch(`${SERVICE_ENDPOINT}/tournaments?tab=${query}`)
-        const data = await response.json()
-        setTournaments(data)
+        const responses = await Promise.all(
+          queryList.map((tab) => fetch(`${SERVICE_ENDPOINT}/tournaments?tab=${tab}`))
+        )
+        const payloads = await Promise.all(responses.map((response) => response.json()))
+        const merged = payloads.flat() as Tournament[]
+        const deduplicated = Array.from(
+          new Map(merged.map((tournament) => [String(tournament.id), tournament])).values()
+        )
+        const sorted = deduplicated.sort((a, b) => moment(a.startDate).valueOf() - moment(b.startDate).valueOf())
+        const filtered = statuses?.length
+          ? sorted.filter((tournament) => tournament.status && statuses.includes(tournament.status))
+          : sorted
+
+        setTournaments(filtered)
+        setError(null)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(err.message)
@@ -37,8 +56,9 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
       }
     }
 
+    setLoading(true)
     fetchTournaments()
-  }, [])
+  }, [queryKey, statuses])
 
   if (loading) return <CircularProgress/>
   if (error) return <p>Error: {error}</p>
@@ -54,7 +74,14 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
             <Card
               key={tournament.id}
               onClick={() => router.push(`/tournaments/${tournament.id}`)}
-              sx={{ mt:'1px', mb:'1px', ml:'1px', display: 'flex', minWidth: 350, maxWidth: 400 }}>
+              sx={{ mt:'1px', mb:'1px', ml:'1px', display: 'flex', minWidth: 350, maxWidth: 400, position: 'relative' }}>
+              <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}>
+                <FavoriteToggle
+                  itemType={FavoriteItemType.Tournament}
+                  itemID={String(tournament.id)}
+                  onRequireLogin={() => setLoginModalVisible(true)}
+                />
+              </Box>
               <CardActionArea sx={{ display: 'flex' }}>
                 <CardMedia
                   component="img"
@@ -97,6 +124,7 @@ const TournamentList = ({ query, label }: TournamentListProps) => {
           {t('tournament.notfound')}
         </Typography>
       )}
+      {!user && <LoginModal visible={loginModalVisible} setVisible={setLoginModalVisible} />}
     </Box>
   )
 }

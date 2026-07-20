@@ -31,23 +31,51 @@ import {
 } from '@mui/material'
 import { Booking, BookingResaleOutcome, BookingStatus, Court, PaymentStatus, Venue } from '@/type'
 import bookingsService from '../services/bookings'
+import { MyBookingsTab, MyBookingsPagedResponse } from '../services/bookings'
 import resaleService from '../services/resale'
 import playersService from '../services/players'
 import courtsService from '../services/courts'
 import venueService from '../services/venues'
-import { useMyBookings, useMyPlayer } from '../libs/data'
-import { useAppDispatch, useAppSelector } from '../libs/redux/store'
-import { setBookings, removeBooking } from '../libs/redux/slices/bookingSlice'
+import { useMyPlayer } from '../libs/data'
+import { useAppSelector } from '../libs/redux/store'
 import { useTranslation } from 'react-i18next'
 import moment from 'moment'
-import { Download } from '@mui/icons-material'
 import Layout from '../components/Layout'
 import axios from 'axios'
-import QRCode from 'react-qr-code'
-import generatePayload from 'promptpay-qr'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { deriveGroupedPaymentStatus, getBookingDateBundleGroupKey } from './grouping'
 
 const EXPIRY_MINUTES = 10
+
+const TAB_DEFAULT_LIMITS: Record<MyBookingsTab, number> = {
+  active: 10,
+  past: 5,
+  cancelled: 5,
+}
+
+interface TabPagedState {
+  bookings: Booking[];
+  hasMore: boolean;
+  nextCursor: string | null;
+  isLoadingInitial: boolean;
+  isLoadingMore: boolean;
+  loadedOnce: boolean;
+}
+
+const EMPTY_TAB_STATE: TabPagedState = {
+  bookings: [],
+  hasMore: false,
+  nextCursor: null,
+  isLoadingInitial: false,
+  isLoadingMore: false,
+  loadedOnce: false,
+}
+
+const createInitialTabsState = (): Record<MyBookingsTab, TabPagedState> => ({
+  active: { ...EMPTY_TAB_STATE },
+  past: { ...EMPTY_TAB_STATE },
+  cancelled: { ...EMPTY_TAB_STATE },
+})
 
 function BookingCountdown({ createdAt }: { createdAt: string }) {
   const expiresAt = useMemo(() => new Date(createdAt).getTime() + EXPIRY_MINUTES * 60 * 1000, [createdAt])
@@ -87,7 +115,6 @@ function BookingCountdown({ createdAt }: { createdAt: string }) {
 
 function MyBookingsPage() {
   const { t } = useTranslation()
-  const dispatch = useAppDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
   const highlightKey = searchParams.get('highlight')
@@ -98,11 +125,107 @@ function MyBookingsPage() {
     if (userReady && !user) router.replace('/')
   }, [userReady, user, router])
 
-  const { bookings, isLoading: loading, mutate: mutateBookings } = useMyBookings()
+  const [activeTab, setActiveTab] = useState<MyBookingsTab>('active')
+  const [tabState, setTabState] = useState<Record<MyBookingsTab, TabPagedState>>(createInitialTabsState)
   const [courtDetails, setCourtDetails] = useState<Record<string, Court>>({})
   const [venueDetails, setVenueDetails] = useState<Record<string, Venue>>({})
   const [error, setError] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const mobileLoadMoreRef = useRef<HTMLDivElement | null>(null)
+  const desktopTableRef = useRef<HTMLDivElement | null>(null)
+
+  const currentTabState = tabState[activeTab]
+  const bookings = currentTabState.bookings
+  const loading = currentTabState.isLoadingInitial
+  const loadingMore = currentTabState.isLoadingMore
+  const hasMore = currentTabState.hasMore
+
+  const mergeUniqueBookings = (current: Booking[], incoming: Booking[]): Booking[] => {
+    const map = new Map<string, Booking>()
+    current.forEach((booking) => map.set(booking.id, booking))
+    incoming.forEach((booking) => map.set(booking.id, booking))
+    return Array.from(map.values())
+  }
+
+  const updateTabFromResponse = (tab: MyBookingsTab, response: MyBookingsPagedResponse, append: boolean) => {
+    setTabState((prev) => {
+      const existing = prev[tab]
+      const mergedBookings = append ? mergeUniqueBookings(existing.bookings, response.bookings) : response.bookings
+      return {
+        ...prev,
+        [tab]: {
+          bookings: mergedBookings,
+          hasMore: response.hasMore,
+          nextCursor: response.nextCursor,
+          isLoadingInitial: false,
+          isLoadingMore: false,
+          loadedOnce: true,
+        },
+      }
+    })
+  }
+
+  const fetchTab = async(tab: MyBookingsTab, append: boolean): Promise<void> => {
+    const current = tabState[tab]
+    if (!user) {
+      return
+    }
+    if (append && (!current.hasMore || current.isLoadingMore || current.isLoadingInitial)) {
+      return
+    }
+    if (!append && current.isLoadingInitial) {
+      return
+    }
+
+    setTabState((prev) => ({
+      ...prev,
+      [tab]: {
+        ...prev[tab],
+        isLoadingInitial: append ? prev[tab].isLoadingInitial : true,
+        isLoadingMore: append,
+      },
+    }))
+
+    try {
+      const response = await bookingsService.getPaged({
+        tab,
+        limit: TAB_DEFAULT_LIMITS[tab],
+        cursor: append ? current.nextCursor ?? undefined : undefined,
+      })
+      updateTabFromResponse(tab, response, append)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load bookings'
+      setError(message)
+      setTabState((prev) => ({
+        ...prev,
+        [tab]: {
+          ...prev[tab],
+          isLoadingInitial: false,
+          isLoadingMore: false,
+        },
+      }))
+    }
+  }
+
+  const refreshActiveTab = async(): Promise<void> => {
+    await fetchTab(activeTab, false)
+  }
+
+  useEffect(() => {
+    if (!user) return
+    if (!tabState.active.loadedOnce && !tabState.active.isLoadingInitial) {
+      fetchTab('active', false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    if (!tabState[activeTab].loadedOnce && !tabState[activeTab].isLoadingInitial) {
+      fetchTab(activeTab, false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user])
 
   // Scroll to highlighted booking after data loads
   useEffect(() => {
@@ -118,93 +241,10 @@ function MyBookingsPage() {
         el.style.outlineColor = ''
       }, 3000)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [loading, highlightKey, courtDetails])
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([])
   const [cancelling, setCancelling] = useState(false)
-  const [payingBundleID, setPayingBundleID] = useState<string | null>(null)
-  const [payDialogOpen, setPayDialogOpen] = useState(false)
-  const [payTargetBundleID, setPayTargetBundleID] = useState<string | null>(null)
-  const [payTargetBookings, setPayTargetBookings] = useState<Booking[]>([])
-  const [payTargetCurrency, setPayTargetCurrency] = useState<string>('THB')
-  const [payTargetVenue, setPayTargetVenue] = useState<Venue | null>(null)
-  const [isResalePay, setIsResalePay] = useState(false)
-  const qrFrameRef = useRef<HTMLDivElement>(null)
-
-  const handleSaveQR = () => {
-    if (!qrFrameRef.current || (!payTargetVenue && !isResalePay)) return
-    const svg = qrFrameRef.current.querySelector('svg')
-    if (!svg) return
-
-    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-    const frameWidth = 320
-    const svgSize = 224
-    const textAreaHeight = 72
-
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const svgUrl = URL.createObjectURL(svgBlob)
-
-    const headerImg = new window.Image()
-    const qrImg = new window.Image()
-    let loaded = 0
-
-    const draw = () => {
-      loaded++
-      if (loaded < 2) return
-
-      const scaledHeaderH = Math.round(frameWidth * headerImg.naturalHeight / headerImg.naturalWidth)
-      const canvasH = scaledHeaderH + svgSize + textAreaHeight + 24
-
-      const canvas = document.createElement('canvas')
-      canvas.width = frameWidth
-      canvas.height = canvasH
-      const ctx = canvas.getContext('2d')!
-
-      // White bg
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, frameWidth, canvasH)
-
-      // Header image
-      ctx.drawImage(headerImg, 0, 0, frameWidth, scaledHeaderH)
-
-      // QR code
-      const qrX = (frameWidth - svgSize) / 2
-      ctx.drawImage(qrImg, qrX, scaledHeaderH + 12, svgSize, svgSize)
-
-      // Amount
-      ctx.fillStyle = '#1a237e'
-      ctx.font = 'bold 22px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText(`${promptPayTotal.toFixed(2)} ${payTargetCurrency}`, frameWidth / 2, scaledHeaderH + svgSize + 44)
-
-      // Scan label
-      ctx.fillStyle = '#666666'
-      ctx.font = '13px sans-serif'
-      ctx.fillText('สแกนเพื่อชำระเงิน', frameWidth / 2, scaledHeaderH + svgSize + 66)
-
-      URL.revokeObjectURL(svgUrl)
-
-      const saveCanvas = () => {
-        const link = document.createElement('a')
-        link.download = 'payment-qr.png'
-        link.href = canvas.toDataURL('image/png')
-        link.click()
-      }
-      saveCanvas()
-    }
-
-    headerImg.onload = draw
-    qrImg.onload = draw
-    headerImg.src = '/thai-qr-payment.webp'
-    qrImg.src = svgUrl
-  }
-  const [slipFile, setSlipFile] = useState<File | null>(null)
-  const [slipPreview, setSlipPreview] = useState<string | null>(null)
-  const [slipNote, setSlipNote] = useState('')
-  const [paySubmitting, setPaySubmitting] = useState(false)
-  const [payError, setPayError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'active' | 'past' | 'cancelled'>('active')
   const [resellDialogOpen, setResellDialogOpen] = useState(false)
   const [resellBooking, setResellBooking] = useState<Booking | null>(null)
   const [resellPrice, setResellPrice] = useState('')
@@ -223,7 +263,7 @@ function MyBookingsPage() {
     const groupedMap = new Map<string, Booking[]>()
 
     bookings.forEach((booking) => {
-      const key = booking.bookingBundleID || `single-${booking.id}`
+      const key = getBookingDateBundleGroupKey(booking)
       const existing = groupedMap.get(key) || []
       existing.push(booking)
       groupedMap.set(key, existing)
@@ -242,8 +282,7 @@ function MyBookingsPage() {
       const totalPrice = nonCancelledItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0)
       const allCancelled = sortedItems.every((item) => item.status === 'cancelled')
       const allConfirmed = nonCancelledItems.length > 0 && nonCancelledItems.every((item) => item.status === 'confirmed')
-      const allPaid = nonCancelledItems.every((item) => item.paymentStatus === 'paid')
-      const anyUnpaid = nonCancelledItems.some((item) => item.paymentStatus === 'unpaid')
+      const paymentStatus = deriveGroupedPaymentStatus(sortedItems)
 
       return {
         groupKey,
@@ -256,45 +295,33 @@ function MyBookingsPage() {
         currency: first.currency,
         totalPrice,
         status: allCancelled ? 'cancelled' : (allConfirmed ? 'confirmed' : 'pending'),
-        paymentStatus: allPaid ? 'paid' : (anyUnpaid ? 'unpaid' : 'pending'),
+        paymentStatus,
       }
     })
 
     return grouped.sort((a, b) => {
       const aDate = moment(`${a.date} ${a.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
       const bDate = moment(`${b.date} ${b.startTime}`, 'YYYY-MM-DD HH:mm').valueOf()
-      return bDate - aDate
+      return activeTab === 'active' ? aDate - bDate : bDate - aDate
     })
-  }, [bookings])
+  }, [bookings, activeTab])
+  const groupedCountByTab = useMemo(() => {
+    const result: Record<MyBookingsTab, number> = { active: 0, past: 0, cancelled: 0 }
+    ;(['active', 'past', 'cancelled'] as MyBookingsTab[]).forEach((tab) => {
+      const keySet = new Set<string>()
+      tabState[tab].bookings.forEach((booking) => keySet.add(getBookingDateBundleGroupKey(booking)))
+      result[tab] = keySet.size
+    })
+    return result
+  }, [tabState])
 
-  const activeBookings = useMemo(
-    () => groupedBookings.filter((g) => {
-      if (g.status === 'cancelled') return false
-      const nonCancelledBookings = g.bookings.filter((b) => b.status !== 'cancelled')
-      const lastBooking = nonCancelledBookings[nonCancelledBookings.length - 1] ?? g.bookings[g.bookings.length - 1]
-      return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isAfter(moment())
-    }),
-    [groupedBookings],
-  )
-  const pastBookings = useMemo(
-    () => groupedBookings.filter((g) => {
-      if (g.status === 'cancelled') return false
-      const nonCancelledBookings = g.bookings.filter((b) => b.status !== 'cancelled')
-      const lastBooking = nonCancelledBookings[nonCancelledBookings.length - 1] ?? g.bookings[g.bookings.length - 1]
-      return moment(`${lastBooking.date} ${lastBooking.endTime}`, 'YYYY-MM-DD HH:mm').isSameOrBefore(moment())
-    }),
-    [groupedBookings],
-  )
-  const cancelledBookings = useMemo(
-    () => groupedBookings.filter((g) => g.status === 'cancelled'),
-    [groupedBookings],
-  )
-  const displayedBookings = activeTab === 'cancelled' ? cancelledBookings : activeTab === 'past' ? pastBookings : activeBookings
+  const displayedBookings = groupedBookings
+  const canShowResellActions = activeTab === 'active'
+  const shouldShowInlineCancelledState = activeTab !== 'cancelled'
 
-  // Sync bookings into redux + load court/venue details whenever SWR data changes
+  // Load court and venue details for currently loaded tab bookings
   useEffect(() => {
     if (!bookings.length) return
-    dispatch(setBookings(bookings))
     const load = async() => {
       const courtIds = [...new Set(bookings.map((b) => b.courtID))]
       const courts: Record<string, Court> = {}
@@ -315,7 +342,6 @@ function MyBookingsPage() {
       setVenueDetails(venues)
     }
     load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -330,9 +356,7 @@ function MyBookingsPage() {
     try {
       setCancelling(true)
       await Promise.all(selectedBookingIds.map((bookingId) => bookingsService.cancel(bookingId)))
-
-      mutateBookings()
-      selectedBookingIds.forEach((bookingId) => dispatch(removeBooking(bookingId)))
+      await refreshActiveTab()
 
       setCancelDialogOpen(false)
       setSelectedBookingIds([])
@@ -345,54 +369,8 @@ function MyBookingsPage() {
     }
   }
 
-  const handlePayBundle = async(bundleID: string, bookingIds: string[], currency: string) => {
-    const bundleBookings = bookings.filter((b) => bookingIds.includes(b.id))
-    const firstCourtID = bundleBookings[0]?.courtID
-    const court = firstCourtID ? courtDetails[firstCourtID] : undefined
-    const venue = court ? venueDetails[court.venueID] : undefined
-    setPayTargetBundleID(bundleID)
-    setPayTargetBookings(bundleBookings)
-    setPayTargetCurrency(currency)
-    setPayTargetVenue(venue ?? null)
-    setIsResalePay(bundleBookings.some((b) => !!b.resaleSourceListingID))
-    setSlipFile(null)
-    setSlipPreview(null)
-    setSlipNote('')
-    setPayError(null)
-    setPayDialogOpen(true)
-  }
-
-  const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    setSlipFile(file)
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setSlipPreview(reader.result as string)
-      reader.readAsDataURL(file)
-    } else {
-      setSlipPreview(null)
-    }
-  }
-
-  const handleConfirmPay = async() => {
-    if (!payTargetBundleID || !slipPreview) return
-    try {
-      setPaySubmitting(true)
-      setPayError(null)
-      await bookingsService.payBooking(payTargetBundleID, { slip: slipPreview, note: slipNote || undefined })
-      setPayDialogOpen(false)
-      mutateBookings()
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setPayError(msg ?? 'Failed to verify payment slip. Please try again.')
-      } else {
-        setPayError(err instanceof Error ? err.message : 'Failed to pay booking')
-      }
-    } finally {
-      setPaySubmitting(false)
-      setPayingBundleID(null)
-    }
+  const handlePayBundle = (bundleID: string) => {
+    router.push(`/pay?bundleID=${bundleID}`)
   }
 
   const isResellEligible = (booking: Booking) => {
@@ -426,7 +404,7 @@ function MyBookingsPage() {
     if (!listingId) return
     try {
       await resaleService.cancel(listingId)
-      mutateBookings()
+      await refreshActiveTab()
     } catch {
       // silently ignore; the listing may already be gone
     }
@@ -567,7 +545,7 @@ function MyBookingsPage() {
             await resaleService.create(resellBooking.id, parseFloat(price), subStartTime, subEndTime)
           }
         }
-        mutateBookings()
+        await refreshActiveTab()
         setResellDialogOpen(false)
         setResellBooking(null)
       } catch (err) {
@@ -587,7 +565,7 @@ function MyBookingsPage() {
         setResellSubmitting(true)
         setResellError(null)
         await resaleService.create(resellBooking.id, price)
-        mutateBookings()
+        await refreshActiveTab()
         setResellDialogOpen(false)
         setResellBooking(null)
       } catch (err) {
@@ -634,6 +612,32 @@ function MyBookingsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
+  const handleLoadMore = () => {
+    if (loading || loadingMore || !hasMore) return
+    fetchTab(activeTab, true)
+  }
+
+  useEffect(() => {
+    if (!isMobile || !mobileLoadMoreRef.current) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        handleLoadMore()
+      }
+    }, { root: null, rootMargin: '200px 0px', threshold: 0 })
+    observer.observe(mobileLoadMoreRef.current)
+    return () => observer.disconnect()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, activeTab, hasMore, loadingMore, loading])
+
+  const handleDesktopScroll = () => {
+    const el = desktopTableRef.current
+    if (!el || loading || loadingMore || !hasMore) return
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120
+    if (nearBottom) {
+      handleLoadMore()
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -656,9 +660,9 @@ function MyBookingsPage() {
           onChange={(_, v) => setActiveTab(v)}
           sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label={`Upcoming (${activeBookings.length})`} value="active" />
-          <Tab label={`Past (${pastBookings.length})`} value="past" />
-          <Tab label={`Cancelled (${cancelledBookings.length})`} value="cancelled" />
+          <Tab label={`Upcoming (${groupedCountByTab.active})`} value="active" />
+          <Tab label="Past" value="past" />
+          <Tab label="Cancelled" value="cancelled" />
         </Tabs>
 
         {error && (
@@ -667,11 +671,7 @@ function MyBookingsPage() {
           </Alert>
         )}
 
-        {bookings.length === 0 ? (
-          <Alert severity="info">
-            {t('booking.noBookingsFound')}
-          </Alert>
-        ) : displayedBookings.length === 0 ? (
+        {displayedBookings.length === 0 && !loading ? (
           <Alert severity="info">
             No {activeTab === 'cancelled' ? 'cancelled' : activeTab === 'past' ? 'past' : 'upcoming'} bookings found.
           </Alert>
@@ -705,14 +705,14 @@ function MyBookingsPage() {
                           // Merged: consecutive hours, no resale activity
                           const eligibleBookings = row.bookings.filter(isResellEligible)
                           return (
-                            <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
-                              {showDate && <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>}
+                            <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1 }}>
+                              {showDate && <Typography variant="body2" fontWeight={600} sx={{ textDecoration: shouldShowInlineCancelledState && isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>}
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{row.startTime} – {row.endTime}</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{row.startTime} – {row.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
                                 <Typography variant="body2" color="text.secondary">{courtDetails[row.courtID]?.name || '—'}</Typography>
-                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                {eligibleBookings.length > 0 && (
+                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                {canShowResellActions && eligibleBookings.length > 0 && (
                                   <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(eligibleBookings)}>
                                     Resell
                                   </Button>
@@ -726,9 +726,9 @@ function MyBookingsPage() {
                         const soldRanges = booking.resaleSoldRanges ?? []
                         const showPerHour = ((isListedForSale && listedSubRange !== null) || soldRanges.length > 0) && booking.durationMinutes > 60
                         return (
-                          <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot ? 0.5 : 1 }}>
+                          <Box key={row.key} sx={{ mb: 0.5, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1 }}>
                             {showDate && (
-                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>
+                              <Typography variant="body2" fontWeight={600} sx={{ textDecoration: shouldShowInlineCancelledState && isDateFullyCancelled ? 'line-through' : 'none' }}>{dateStr}</Typography>
                             )}
                             {showPerHour ? (
                               <>
@@ -737,13 +737,13 @@ function MyBookingsPage() {
                                   const isListedSlot = listedSubRange?.startTime === slot.startTime
                                   return (
                                     <Box key={slot.startTime} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot || isSoldSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ textDecoration: (shouldShowInlineCancelledState && isCancelledSlot) || isSoldSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
                                       <Typography variant="body2" color="text.secondary">·</Typography>
                                       <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                      {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                      {isListedSlot && (
+                                      {canShowResellActions && isListedSlot && (
                                         <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
                                           Cancel Listing
                                         </Button>
@@ -751,7 +751,7 @@ function MyBookingsPage() {
                                     </Box>
                                   )
                                 })}
-                                {isResellEligible(booking) && (
+                                {canShowResellActions && isResellEligible(booking) && (
                                   <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1, mt: 0.5 }} onClick={() => handleResellClick(booking)}>
                                     Resell
                                   </Button>
@@ -759,17 +759,17 @@ function MyBookingsPage() {
                               </>
                             ) : (
                               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
+                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                 {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                {isListedForSale && (
+                                {canShowResellActions && isListedForSale && (
                                   <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
                                     Cancel Listing
                                   </Button>
                                 )}
-                                {isResellEligible(booking) && (
+                                {canShowResellActions && isResellEligible(booking) && (
                                   <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(booking)}>
                                     Resell
                                   </Button>
@@ -813,8 +813,7 @@ function MyBookingsPage() {
                             color="primary"
                             variant="contained"
                             fullWidth
-                            onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
-                            disabled={payingBundleID === group.bundleID}
+                            onClick={() => handlePayBundle(group.bundleID as string)}
                           >
                             {t('booking.pay')}
                           </Button>
@@ -824,9 +823,15 @@ function MyBookingsPage() {
                   </Card>
                 )
               })}
+              {loadingMore && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              )}
+              <Box ref={mobileLoadMoreRef} sx={{ height: 1 }} />
             </Box>
           ) : (
-            <Box component={Paper} sx={{ maxHeight: 520, overflow: 'auto' }}>
+            <Box ref={desktopTableRef} onScroll={handleDesktopScroll} component={Paper} sx={{ maxHeight: 520, overflow: 'auto' }}>
               <Table stickyHeader sx={{ minWidth: 800 }}>
                 <TableHead>
                   <TableRow>
@@ -866,7 +871,7 @@ function MyBookingsPage() {
                                   const isCancelledSlot = row.representative.status === 'cancelled'
                                   const isDateFullyCancelled = mergedRows.filter((r) => moment(r.date).format('DD/MM/YYYY') === dateStr).every((r) => r.representative.status === 'cancelled')
                                   return (
-                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isDateFullyCancelled ? 'line-through' : 'none' }}>
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isDateFullyCancelled ? 'line-through' : 'none' }}>
                                       {dateStr !== prevDateStr ? dateStr : ''}
                                     </Typography>
                                   )
@@ -876,7 +881,7 @@ function MyBookingsPage() {
                                 {mergedRows.map((row) => {
                                   const isCancelledSlot = row.representative.status === 'cancelled'
                                   return (
-                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                    <Typography key={row.key} variant="body2" sx={{ mb: 0.25, opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                       {courtDetails[row.courtID]?.name || '—'}
                                     </Typography>
                                   )
@@ -890,11 +895,11 @@ function MyBookingsPage() {
                                     const eligibleBookings = row.bookings.filter(isResellEligible)
                                     return (
                                       <Box key={row.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                        <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                        <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                           {row.startTime} – {row.endTime}
                                         </Typography>
-                                        {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                        {eligibleBookings.length > 0 && (
+                                        {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                        {canShowResellActions && eligibleBookings.length > 0 && (
                                           <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(eligibleBookings)}>
                                             Resell
                                           </Button>
@@ -915,13 +920,13 @@ function MyBookingsPage() {
                                             const isListedSlot = listedSubRange?.startTime === slot.startTime
                                             return (
                                               <Box key={slot.startTime} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot || isSoldSlot ? 'line-through' : 'none' }}>
+                                                <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: (shouldShowInlineCancelledState && isCancelledSlot) || isSoldSlot ? 'line-through' : 'none' }}>
                                                   {slot.startTime} – {slot.endTime}
                                                 </Typography>
-                                                {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                                {isListedSlot && (
+                                                {canShowResellActions && isListedSlot && (
                                                   <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
                                                     Cancel Listing
                                                   </Button>
@@ -929,7 +934,7 @@ function MyBookingsPage() {
                                               </Box>
                                             )
                                           })}
-                                          {isResellEligible(booking) && (
+                                          {canShowResellActions && isResellEligible(booking) && (
                                             <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1, mt: 0.5 }} onClick={() => handleResellClick(booking)}>
                                               Resell
                                             </Button>
@@ -937,17 +942,17 @@ function MyBookingsPage() {
                                         </>
                                       ) : (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25, flexWrap: 'wrap' }}>
-                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot ? 0.5 : 1, textDecoration: isCancelledSlot ? 'line-through' : 'none' }}>
+                                          <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                             {booking.startTime} – {booking.endTime}
                                           </Typography>
-                                          {isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                          {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                           {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                          {isListedForSale && (
+                                          {canShowResellActions && isListedForSale && (
                                             <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
                                               Cancel Listing
                                             </Button>
                                           )}
-                                          {isResellEligible(booking) && (
+                                          {canShowResellActions && isResellEligible(booking) && (
                                             <Button size="small" variant="outlined" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleResellClick(booking)}>
                                               Resell
                                             </Button>
@@ -994,8 +999,7 @@ function MyBookingsPage() {
                                   color="primary"
                                   variant="contained"
                                   sx={{ ml: 1 }}
-                                  onClick={() => handlePayBundle(group.bundleID as string, group.bookings.map((b) => b.id), group.currency)}
-                                  disabled={payingBundleID === group.bundleID}
+                                  onClick={() => handlePayBundle(group.bundleID as string)}
                                 >
                                   {t('booking.pay')}
                                 </Button>
@@ -1008,6 +1012,11 @@ function MyBookingsPage() {
                   })}
                 </TableBody>
               </Table>
+              {loadingMore && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+                  <CircularProgress size={22} />
+                </Box>
+              )}
             </Box>
           )
         )}
@@ -1038,198 +1047,6 @@ function MyBookingsPage() {
           </DialogActions>
         </Dialog>
 
-        <Dialog
-          open={payDialogOpen}
-          onClose={() => !paySubmitting && setPayDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>{t('booking.uploadSlip')}</DialogTitle>
-          <DialogContent>
-            {/* Booking details */}
-            <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                {t('booking.bookingDetails')}
-              </Typography>
-              {payTargetVenue && (
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>{t('booking.venue')}:</strong> {payTargetVenue.name?.en || payTargetVenue.name?.th}
-                </Typography>
-              )}
-              {payTargetBookings.map((b) => {
-                const court = courtDetails[b.courtID]
-                return (
-                  <Box key={b.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                    <Typography variant="body2">
-                      {court?.name ?? b.courtID} &nbsp;·&nbsp; {moment(b.date).format('DD/MM/YYYY')} &nbsp;·&nbsp; {b.startTime}–{b.endTime}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, ml: 2, whiteSpace: 'nowrap' }}>
-                      {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
-                    </Typography>
-                  </Box>
-                )
-              })}
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle2">{t('booking.total')}</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                  {payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0).toFixed(2)} {payTargetCurrency}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Payment method */}
-            {isResalePay ? (
-              (() => {
-                const sysPromptPayID = process.env.NEXT_PUBLIC_SYSTEM_PROMPT_PAY_ID
-                const sysBankName = process.env.NEXT_PUBLIC_SYSTEM_BANK_NAME
-                const sysAccountName = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NAME
-                const sysAccountNumber = process.env.NEXT_PUBLIC_SYSTEM_ACCOUNT_NUMBER
-                const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-                return (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                      {t('booking.paymentMethod')}
-                    </Typography>
-                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                      {sysBankName && <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {sysBankName}</Typography>}
-                      {sysAccountName && <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {sysAccountName}</Typography>}
-                      {sysAccountNumber && <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {sysAccountNumber}</Typography>}
-                      {sysPromptPayID && (
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box ref={qrFrameRef} sx={{ width: 240, borderRadius: 3, overflow: 'hidden', border: '1.5px solid #e0e0e0', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                            <Box component="img" src="/thai-qr-payment.webp" alt="Thai QR Payment" sx={{ width: '100%', display: 'block' }} />
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode value={generatePayload(sysPromptPayID, { amount: promptPayTotal })} size={168} style={{ display: 'block' }} />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>สแกนเพื่อชำระเงิน</Typography>
-                            </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>บันทึก QR</Button>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-                )
-              })()
-            ) : payTargetVenue?.payment ? (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                  {t('booking.paymentMethod')}
-                </Typography>
-                <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="body2"><strong>{t('booking.bankName')}:</strong> {payTargetVenue.payment.bankName}</Typography>
-                  <Typography variant="body2"><strong>{t('booking.accountName')}:</strong> {payTargetVenue.payment.accountName}</Typography>
-                  <Typography variant="body2"><strong>{t('booking.accountNumber')}:</strong> {payTargetVenue.payment.accountNumber}</Typography>
-                  {payTargetVenue.payment.promptPayID && (() => {
-                    const promptPayTotal = payTargetBookings.reduce((sum, b) => sum + (parseFloat(String(b.totalPrice)) || 0), 0)
-                    return (
-                      <>
-                        {/* PromptPay QR Frame */}
-                        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                          <Box ref={qrFrameRef} sx={{
-                            width: 240,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            border: '1.5px solid #e0e0e0',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                          }}>
-                            {/* Header image */}
-                            <Box
-                              component="img"
-                              src="/thai-qr-payment.webp"
-                              alt="Thai QR Payment"
-                              sx={{ width: '100%', display: 'block' }}
-                            />
-
-                            {/* QR Code area */}
-                            <Box sx={{ bgcolor: '#fff', px: 2, pt: 1.5, pb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                              <QRCode
-                                value={generatePayload(payTargetVenue.payment.promptPayID, { amount: promptPayTotal })}
-                                size={168}
-                                style={{ display: 'block' }}
-                              />
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a237e', letterSpacing: 0.5 }}>
-                                {promptPayTotal.toFixed(2)} <Box component="span" sx={{ fontSize: '0.8rem', fontWeight: 400 }}>{payTargetCurrency}</Box>
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#666', letterSpacing: 0.5, pb: 0.5 }}>
-                                สแกนเพื่อชำระเงิน
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleSaveQR}>
-                            บันทึก QR
-                          </Button>
-                        </Box>
-                      </>
-                    )
-                  })()}
-                  {payTargetVenue.payment.qrCodeUrl && (
-                    <img
-                      src={payTargetVenue.payment.qrCodeUrl}
-                      alt="QR Code"
-                      style={{ marginTop: 8, maxWidth: 160, display: 'block' }}
-                    />
-                  )}
-                </Box>
-              </Box>
-            ) : null}
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('booking.uploadSlipInstruction')}
-            </Typography>
-            <Button
-              variant="contained"
-              component="label"
-              fullWidth
-              sx={{ mb: 2 }}
-            >
-              {slipFile ? t('booking.fileSelected') : t('booking.chooseFile')}
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={handleSlipFileChange}
-              />
-            </Button>
-            {payError && (
-              <Alert severity="error" sx={{ mb: 2 }}>{payError}</Alert>
-            )}
-            {slipPreview && (
-              <img
-                src={slipPreview}
-                alt="slip preview"
-                style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 4, marginBottom: 12 }}
-              />
-            )}
-            <TextField
-              size="small"
-              fullWidth
-              label={t('booking.note')}
-              value={slipNote}
-              onChange={(e) => setSlipNote(e.target.value)}
-              multiline
-              rows={2}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setPayDialogOpen(false)} disabled={paySubmitting}>
-              {t('booking.cancel')}
-            </Button>
-            <Button
-              onClick={handleConfirmPay}
-              variant="contained"
-              disabled={!slipPreview || paySubmitting}
-            >
-              {paySubmitting ? <CircularProgress size={20} /> : t('booking.confirmBooking')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
         {/* ── Resell Dialog ──────────────────────────────────── */}
         <Dialog open={resellDialogOpen} onClose={() => !resellSubmitting && setResellDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle>List Slot for Resale</DialogTitle>
@@ -1245,7 +1062,7 @@ function MyBookingsPage() {
 
             {/* Fee notice */}
             <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-              A <strong>10% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>3 business days</strong> after the buyer pays.
+              A <strong>7% processing fee</strong> will be deducted from your asking price. Payout is transferred to your account within <strong>7 business days</strong> after the buyer pays.
             </Alert>
 
             {Object.keys(resellSlotConfig).length > 0 ? (

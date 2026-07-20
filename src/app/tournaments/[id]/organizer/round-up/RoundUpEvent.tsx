@@ -1,4 +1,4 @@
-import { Box, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { Box, Button, ButtonGroup, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import DrawBracket from '../draw/drawBracket'
 import { useEvent, useMatchesEvent } from '@/app/libs/data'
 import { useEffect, useState } from 'react'
@@ -18,7 +18,21 @@ interface DataRow {
   diff:number;
   team:EventTeam;
   group: string;
-  draw: number;
+  drawKo: number;
+  drawConsolation: number;
+}
+
+type DrawTarget = 'ko' | 'consolation'
+
+const getRowDraw = (row: DataRow, target: DrawTarget) => {
+  return target === 'ko' ? row.drawKo : row.drawConsolation
+}
+
+const buildBracketValue = (rows: DataRow[], target: DrawTarget) => {
+  return rows.map((d) => {
+    const drawOrder = getRowDraw(d, target)
+    return drawOrder > -1 ? (drawOrder + 1).toString() : ''
+  })
 }
 
 const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
@@ -30,6 +44,9 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
   const [dataRow, setDataRow] = useState<DataRow[]>([])
   const [bracketValue, setBracketValue] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [drawTarget, setDrawTarget] = useState<DrawTarget>('ko')
+
+  const hasConsolation = (event?.draw?.consolation?.length ?? 0) > 0
 
   useEffect(() => {
     if(matches){
@@ -38,50 +55,79 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
     if(event){
       setDraw(event.draw)
       setBracketValue([...Array.from({ length: event.teams.length },  () => '')])
+      if((event.draw.ko?.length ?? 0) === 0 && (event.draw.consolation?.length ?? 0) > 0){
+        setDrawTarget('consolation')
+      }
     }
 
   }, [matches, event])
+
+  useEffect(() => {
+    setBracketValue(buildBracketValue(dataRow, drawTarget))
+  }, [dataRow, drawTarget])
 
   const onRoundUp = async() => {
     setLoading(true)
     await axios.post(`${SERVICE_ENDPOINT}/events/round-up`, {
       eventID: eventID,
       bracketOrder: draw.ko,
+      consolationBracketOrder: draw.consolation,
     }, { withCredentials:true })
     setLoading(false)
   }
 
   const handleChangeBracketOrder = (rowIndex: number, value: number|undefined) => {
+    const targetKey = drawTarget
+    const targetDefaultDraw = event.draw[targetKey] ?? []
+    const currentTargetDraw = [...(draw[targetKey] ?? [])]
+
     if(!value){
-      if(!draw.ko) draw.ko = []
-      const tempDrawKO = [...draw.ko]
-      const idx = tempDrawKO.findIndex((t) => typeof t === 'string' ? false : t.id === dataRow[rowIndex].team.id)
-      tempDrawKO[idx] = event.draw.ko?.[idx] ?? ''
-      setDraw({ ...draw, ko: tempDrawKO })
+      const tempDataRow = [...dataRow]
+      const row = tempDataRow[rowIndex]
+      if(targetKey === 'ko'){
+        row.drawKo = -1
+      }else{
+        row.drawConsolation = -1
+      }
+      setDataRow(tempDataRow)
+
+      const idx = currentTargetDraw.findIndex((t) => typeof t === 'string' ? false : t.id === dataRow[rowIndex].team.id)
+      if(idx >= 0){
+        currentTargetDraw[idx] = targetDefaultDraw[idx] ?? ''
+      }
+      setDraw({ ...draw, [targetKey]: currentTargetDraw })
     }else{
-      if(!draw.ko) draw.ko = []
       // first remove other team that has this bracket order
-      const tempDrawKO = [...draw.ko]
-      const idx = tempDrawKO.findIndex((t) => typeof t === 'string' ? false : t.id === dataRow[rowIndex].team.id)
-      tempDrawKO[idx] = event.draw.ko?.[idx] ?? ''
+      const idx = currentTargetDraw.findIndex((t) => typeof t === 'string' ? false : t.id === dataRow[rowIndex].team.id)
+      if(idx >= 0){
+        currentTargetDraw[idx] = targetDefaultDraw[idx] ?? ''
+      }
 
 
       const tempDataRow = [...dataRow]
-      const indexOfPreviouslyAssigned = tempDataRow.findIndex((t) => t.draw === value - 1)
+      const indexOfPreviouslyAssigned = tempDataRow.findIndex((t) => getRowDraw(t, targetKey) === value - 1)
 
       if(indexOfPreviouslyAssigned !== -1){
-        tempDataRow[indexOfPreviouslyAssigned].draw = -1
+        if(targetKey === 'ko'){
+          tempDataRow[indexOfPreviouslyAssigned].drawKo = -1
+        }else{
+          tempDataRow[indexOfPreviouslyAssigned].drawConsolation = -1
+        }
         const tempBracketValue = [...bracketValue]
         tempBracketValue[indexOfPreviouslyAssigned] = ''
         setBracketValue(tempBracketValue)
       }
 
 
-      tempDataRow[rowIndex].draw = value - 1
+      if(targetKey === 'ko'){
+        tempDataRow[rowIndex].drawKo = value - 1
+      }else{
+        tempDataRow[rowIndex].drawConsolation = value - 1
+      }
       setDataRow(tempDataRow)
 
-      tempDrawKO[value - 1] = dataRow[rowIndex].team
-      setDraw({ ...draw, ko: tempDrawKO })
+      currentTargetDraw[value - 1] = dataRow[rowIndex].team
+      setDraw({ ...draw, [targetKey]: currentTargetDraw })
     }
 
   }
@@ -110,7 +156,8 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
           diff,
           team,
           group: MAP_GROUP_NAME[index].NAME,
-          draw: -1
+          drawKo: -1,
+          drawConsolation: -1
         }
       })
     })
@@ -126,14 +173,20 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
       return group
     })
     const tempDrawKO = draw.ko ? [...draw.ko ] : []
+    const tempDrawConsolation = draw.consolation ? [...draw.consolation] : []
 
     const data = winner.reduce((prev, group) => {
       group.forEach((team, index) => {
         if(!event.draw.ko) return
         const defaultOrder = event.draw.ko.findIndex((e) => e === `ที่ ${index + 1} กลุ่ม ${team.group}`)
+        const defaultConsolationOrder = event.draw.consolation?.findIndex((e) => e === `ที่ ${index + 1} กลุ่ม ${team.group}`) ?? -1
 
         if (defaultOrder >= 0 && autoFill) { // found
-          tempDrawKO[defaultOrder] = team.team ?? 'not found'
+          tempDrawKO[defaultOrder] = drawTarget === 'ko' ? (team.team ?? 'not found') : tempDrawKO[defaultOrder]
+        }
+
+        if(defaultConsolationOrder >= 0 && autoFill){
+          tempDrawConsolation[defaultConsolationOrder] = drawTarget === 'consolation' ? (team.team ?? 'not found') : tempDrawConsolation[defaultConsolationOrder]
         }
 
 
@@ -142,14 +195,15 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
           score: team.score,
           diff: team.diff,
           group: team.group,
-          draw: autoFill ? defaultOrder : -1
+          drawKo: autoFill && drawTarget === 'ko' ? defaultOrder : -1,
+          drawConsolation: autoFill && drawTarget === 'consolation' ? defaultConsolationOrder : -1,
         })
       })
       return prev
     }, [])
     setDataRow(data)
-    setBracketValue(data.map((d) => d.draw > -1 ? (d.draw + 1).toString() : ''))
-    setDraw({ ...draw, ko: tempDrawKO })
+    setBracketValue(buildBracketValue(data, drawTarget))
+    setDraw({ ...draw, ko: tempDrawKO, consolation: tempDrawConsolation })
   }
 
   const onChangeBracketValue = (idx: number, value:string) => {
@@ -160,6 +214,16 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
   }
   return (
     <Box>
+      <ButtonGroup sx={{ mb: 1 }} variant='contained'>
+        <Button variant={drawTarget === 'ko' ? 'contained' : 'outlined'} onClick={() => setDrawTarget('ko')}>
+          Playoff
+        </Button>
+        {hasConsolation && (
+          <Button variant={drawTarget === 'consolation' ? 'contained' : 'outlined'} onClick={() => setDrawTarget('consolation')}>
+            Consolation
+          </Button>
+        )}
+      </ButtonGroup>
       <Button onClick={() => prepareData(true)} variant='contained'>Auto Fill</Button>
       <Button sx={{ ml:1 }} onClick={onRoundUp} variant='contained' loading={loading}>Save</Button>
       <Box sx={{ display: 'flex', gap:2 }}>
@@ -219,7 +283,8 @@ const RoundUpEvent = ({ eventID }: RoundUpEventProps) => {
           </TableContainer>
         </Box>
         <Box sx={{ width: '50%' }}>
-          <DrawBracket draw={draw} order={draw.ko ?? []} setDraw={setDraw} blockWidth={430}/>
+          <Typography variant='h6' sx={{ mb: 1 }}>{drawTarget === 'ko' ? 'Playoff' : 'Consolation'}</Typography>
+          <DrawBracket draw={draw} order={drawTarget === 'ko' ? (draw.ko ?? []) : (draw.consolation ?? [])} setDraw={setDraw} drawKey={drawTarget} blockWidth={430}/>
         </Box>
       </Box>
     </Box>

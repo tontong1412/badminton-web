@@ -95,6 +95,8 @@ function getDurationOptions(startTime: string, maxAvailableMinutes: number): { v
   return opts
 }
 
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
 // Merge selected cells (courtID:slot) into bundle items grouped by court
 function buildBundleItems(selectedCells: Set<string>, date: string): BookingBundleItem[] {
   const byCourtID = new Map<string, number[]>()
@@ -161,7 +163,13 @@ export default function VenueTimetablePage() {
     if (!userID || (!isSystemAdmin && !isOwner && !isManager)) router.replace('/admin')
   }, [venue, userReady, initLoading, router])
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
+  const [bookMode, setBookMode] = useState<'single' | 'recurring'>('single')
   const [bookDurationMinutes, setBookDurationMinutes] = useState(60)
+  const [recurringPattern, setRecurringPattern] = useState<'daily' | 'weekly'>('weekly')
+  const [recurringDays, setRecurringDays] = useState<number[]>([])
+  const [recurringRangeStart, setRecurringRangeStart] = useState<string>(moment().format('YYYY-MM-DD'))
+  const [recurringRangeEnd, setRecurringRangeEnd] = useState<string>(moment().add(1, 'month').format('YYYY-MM-DD'))
+  const [recurringCourtIDs, setRecurringCourtIDs] = useState<string[]>([])
   const [bookError, setBookError] = useState<string | null>(null)
   const [bookSubmitting, setBookSubmitting] = useState(false)
 
@@ -265,7 +273,14 @@ export default function VenueTimetablePage() {
     const maxAvail = getMaxAvailableMinutes(court.id, slot, bookings)
     const defaultDuration = maxAvail >= 60 ? 60 : maxAvail >= 30 ? 30 : 30
     setBookDialog({ court, startTime: slot })
+    setBookMode('single')
     setBookDurationMinutes(defaultDuration)
+    const selectedDay = moment(date).day()
+    setRecurringPattern('weekly')
+    setRecurringDays([selectedDay])
+    setRecurringRangeStart(date)
+    setRecurringRangeEnd(moment(date).add(1, 'month').format('YYYY-MM-DD'))
+    setRecurringCourtIDs([court.id])
     setGuestName('')
     setGuestPhone('')
     setGuestEmail('')
@@ -345,18 +360,72 @@ export default function VenueTimetablePage() {
       setBookError(null)
       const endTime = minutesToTime(timeToMinutes(bookDialog.startTime) + bookDurationMinutes)
       const parsedPrice = overridePrice !== '' ? parseFloat(overridePrice) : undefined
-      await bookingsService.createBundle({
-        items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime }],
-        guestName: guestName || undefined,
-        guestPhone: guestPhone || undefined,
-        guestEmail: guestEmail || undefined,
-        bookedAsAdmin: true,
-        overridePrice: parsedPrice !== undefined && !isNaN(parsedPrice) ? parsedPrice : undefined,
-      })
+      if (bookMode === 'recurring') {
+        if (moment(recurringRangeStart).isAfter(moment(recurringRangeEnd))) {
+          setBookError('Range end must be after range start.')
+          return
+        }
+        if (recurringCourtIDs.length === 0) {
+          setBookError('Please select at least one court for recurring booking.')
+          return
+        }
+        if (recurringPattern === 'weekly' && recurringDays.length === 0) {
+          setBookError('Please select at least one weekday for weekly recurrence.')
+          return
+        }
+
+        const response = await bookingsService.createRecurring({
+          courtIDs: recurringCourtIDs,
+          startTime: bookDialog.startTime,
+          endTime,
+          pattern: recurringPattern,
+          rangeStart: recurringRangeStart,
+          rangeEnd: recurringRangeEnd,
+          daysOfWeek: recurringPattern === 'weekly' ? recurringDays : undefined,
+          bookedAsAdmin: true,
+          guestName: guestName || undefined,
+          guestPhone: guestPhone || undefined,
+          guestEmail: guestEmail || undefined,
+        })
+        setSuccessMessage(`Created ${response.bookings.length} recurring booking slots across ${recurringCourtIDs.length} court${recurringCourtIDs.length > 1 ? 's' : ''}.`)
+      } else {
+        await bookingsService.createBundle({
+          items: [{ courtID: bookDialog.court.id, date, startTime: bookDialog.startTime, endTime }],
+          guestName: guestName || undefined,
+          guestPhone: guestPhone || undefined,
+          guestEmail: guestEmail || undefined,
+          bookedAsAdmin: true,
+          overridePrice: parsedPrice !== undefined && !isNaN(parsedPrice) ? parsedPrice : undefined,
+        })
+      }
       setBookDialog(null)
       mutateBookings()
     } catch (e) {
-      setBookError('Failed to create booking')
+      const errorResponse = (e as {
+        response?: {
+          status?: number;
+          data?: {
+            message?: string;
+            conflicts?: unknown[];
+            missingCourtIDs?: string[];
+            inactiveCourtIDs?: string[];
+          }
+        }
+      })?.response
+      if (errorResponse?.status === 409 && errorResponse.data?.conflicts) {
+        const conflictCount = errorResponse.data.conflicts.length
+        setBookError(`Recurring conflict found on ${conflictCount} slot${conflictCount > 1 ? 's' : ''}.`)
+      } else {
+        const diagnostics: string[] = []
+        if (Array.isArray(errorResponse?.data?.missingCourtIDs) && errorResponse.data.missingCourtIDs.length > 0) {
+          diagnostics.push(`missing: ${errorResponse.data.missingCourtIDs.join(', ')}`)
+        }
+        if (Array.isArray(errorResponse?.data?.inactiveCourtIDs) && errorResponse.data.inactiveCourtIDs.length > 0) {
+          diagnostics.push(`inactive: ${errorResponse.data.inactiveCourtIDs.join(', ')}`)
+        }
+        const diagnosticText = diagnostics.length > 0 ? ` (${diagnostics.join(' | ')})` : ''
+        setBookError(`${errorResponse?.data?.message ?? 'Failed to create booking'}${diagnosticText}`)
+      }
       console.error(e)
     } finally {
       setBookSubmitting(false)
@@ -1059,8 +1128,30 @@ export default function VenueTimetablePage() {
           <DialogTitle>New Booking — {bookDialog?.court.name}</DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
             {bookError && <Alert severity="error" sx={{ mb: 1 }}>{bookError}</Alert>}
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={bookMode}
+              onChange={(_, value: 'single' | 'recurring' | null) => {
+                if (!value) return
+                setBookMode(value)
+              }}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              <ToggleButton value="single">Single</ToggleButton>
+              <ToggleButton value="recurring">Recurring</ToggleButton>
+            </ToggleButtonGroup>
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField size="small" label="Date" value={date} InputProps={{ readOnly: true }} fullWidth />
+              <TextField
+                size="small"
+                label={bookMode === 'recurring' ? 'Range Start' : 'Date'}
+                type={bookMode === 'recurring' ? 'date' : 'text'}
+                value={bookMode === 'recurring' ? recurringRangeStart : date}
+                onChange={(e) => setRecurringRangeStart(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={bookMode === 'recurring' ? undefined : { readOnly: true }}
+                fullWidth
+              />
               <TextField size="small" label="Start" value={bookDialog?.startTime || ''} InputProps={{ readOnly: true }} fullWidth />
             </Box>
             <FormControl size="small" fullWidth>
@@ -1071,19 +1162,87 @@ export default function VenueTimetablePage() {
                 ))}
               </Select>
             </FormControl>
+            {bookMode === 'recurring' && (
+              <>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Courts</InputLabel>
+                  <Select
+                    multiple
+                    label="Courts"
+                    value={recurringCourtIDs}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const nextCourtIDs = (typeof value === 'string' ? value.split(',') : value)
+                        .map((courtID) => courtID.trim())
+                        .filter((courtID) => courtID.length > 0)
+                      setRecurringCourtIDs(Array.from(new Set(nextCourtIDs)))
+                    }}
+                    renderValue={(selected) => {
+                      const selectedIDs = selected as string[]
+                      return sortedCourts
+                        .filter((court) => selectedIDs.includes(court.id))
+                        .map((court) => court.name)
+                        .join(', ')
+                    }}
+                  >
+                    {sortedCourts.map((court) => (
+                      <MenuItem key={court.id} value={court.id}>
+                        {court.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  size="small"
+                  label="Range End"
+                  type="date"
+                  value={recurringRangeEnd}
+                  onChange={(e) => setRecurringRangeEnd(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: recurringRangeStart }}
+                  helperText="Admin recurring booking has no future date limit."
+                  fullWidth
+                />
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Pattern</InputLabel>
+                  <Select
+                    label="Pattern"
+                    value={recurringPattern}
+                    onChange={(e) => setRecurringPattern(e.target.value as 'daily' | 'weekly')}
+                  >
+                    <MenuItem value="daily">Daily</MenuItem>
+                    <MenuItem value="weekly">Weekly</MenuItem>
+                  </Select>
+                </FormControl>
+                {recurringPattern === 'weekly' && (
+                  <ToggleButtonGroup
+                    size="small"
+                    value={recurringDays}
+                    onChange={(_, days: number[]) => setRecurringDays(days)}
+                    sx={{ flexWrap: 'wrap' }}
+                  >
+                    {DAY_LABELS.map((label, idx) => (
+                      <ToggleButton key={label} value={idx}>{label}</ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                )}
+              </>
+            )}
             <Divider />
             <TextField size="small" label="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} fullWidth />
             <TextField size="small" label="Guest Phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} fullWidth />
             <TextField size="small" label="Guest Email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} fullWidth />
-            <TextField
-              size="small"
-              label="Price override (leave blank to use court rate)"
-              type="number"
-              value={overridePrice}
-              onChange={(e) => setOverridePrice(e.target.value)}
-              inputProps={{ min: 0 }}
-              fullWidth
-            />
+            {bookMode === 'single' && (
+              <TextField
+                size="small"
+                label="Price override (leave blank to use court rate)"
+                type="number"
+                value={overridePrice}
+                onChange={(e) => setOverridePrice(e.target.value)}
+                inputProps={{ min: 0 }}
+                fullWidth
+              />
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setBookDialog(null)} disabled={bookSubmitting}>Cancel</Button>

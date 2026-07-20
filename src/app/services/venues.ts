@@ -27,7 +27,6 @@ const setSchedule = (
   id: string,
   payload: {
     weeklySchedule?: Record<string, { open: string; close: string } | null>;
-    gapPolicy?: { enabled: boolean; minimumGapMinutes: 30 | 60 };
   },
 ): Promise<Venue> => {
   return axios.put(`${baseUrl}/${id}/schedule`, payload, { withCredentials: true }).then((r) => r.data as Venue)
@@ -66,7 +65,6 @@ export interface CreateVenuePayload {
   ownerUserID: string;
   location?: { type: 'Point'; coordinates: [number, number] };
   weeklySchedule?: Record<string, { open: string; close: string } | null>;
-  gapPolicy?: { enabled: boolean; minimumGapMinutes: 30 | 60 };
   slotDurationMinutes?: 30 | 60;
 }
 

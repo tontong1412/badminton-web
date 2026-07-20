@@ -28,6 +28,17 @@ export enum Gender {
   Female = 'female'
 }
 
+export enum FavoriteItemType {
+  Venue = 'venue',
+  Tournament = 'tournament',
+}
+
+export interface FavoriteItem {
+  itemType: FavoriteItemType;
+  itemID: string;
+  addedAt: string;
+}
+
 export interface Player {
   id: string;
   officialName: {
@@ -55,6 +66,7 @@ export interface Player {
     accountNumber?: string;
     promptPayID?: string;
   }
+  favorites?: FavoriteItem[];
 }
 
 export interface PlayerWithAccount extends Player {
@@ -76,7 +88,7 @@ export interface User {
     };
     gender?: string;
     level: number;
-    displayName: {
+    displayName?: {
       th?: string;
       en?: string;
       pronunciation?: string;
@@ -87,6 +99,7 @@ export interface User {
       line: string;
       tel: string;
     }
+    favorites?: FavoriteItem[];
   }
 }
 
@@ -400,10 +413,6 @@ export interface Venue {
   weeklySchedule: Record<string, DailySchedule | null>;
   holidays: HolidaySchedule[];
   slotDurationMinutes: number;
-  gapPolicy: {
-    enabled: boolean;
-    minimumGapMinutes: number;
-  };
   payment?: VenuePayment;
   slipok?: {
     branchId?: string;
@@ -449,7 +458,8 @@ export interface Booking {
   durationMinutes: number;
   totalPrice: number;
   currency: string;
-  bookerType: 'guest' | 'user';
+  bookerType: 'guest' | 'user' | 'admin';
+  createdByUserID?: string;
   userID?: string;
   guestName?: string;
   guestPhone?: string;
@@ -501,8 +511,58 @@ export interface BookingAvailability {
   }[];
 }
 
+export interface VenueAnalyticsMonthRow {
+  monthKey: string;
+  monthLabel: string;
+  totalBookings: number;
+  paidBookings: number;
+  cancelledBookings: number;
+  paidRevenue: number;
+  discountTotal: number;
+  bookedMinutes: number;
+  utilisationPct: number;
+}
+
+export interface VenueAnalyticsSummary {
+  totalBookings: number;
+  paidBookings: number;
+  cancelledBookings: number;
+  paidRevenue: number;
+  pendingRevenue: number;
+  unpaidRevenue: number;
+  discountTotal: number;
+  bookedMinutes: number;
+  utilisationPct: number;
+  monthOverMonthGrowthPct: number | null;
+}
+
+export interface VenueAnalyticsResponse {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: VenueAnalyticsSummary;
+  monthlyRows: VenueAnalyticsMonthRow[];
+  weekdayDemand: Array<{ day: string; count: number }>;
+  hourDemand: Array<{ hour: string; count: number }>;
+  courtRanking: Array<{
+    courtID: string;
+    courtName: string;
+    paidRevenue: number;
+    bookedMinutes: number;
+    utilisationPct: number;
+  }>;
+  forecastNextMonth: {
+    monthLabel: string;
+    bookings: number;
+    paidRevenue: number;
+    basisMonths: number;
+  };
+}
+
 export enum ResaleStatus {
   Active = 'active',
+  Pending = 'pending',
   Sold = 'sold',
   Cancelled = 'cancelled',
 }

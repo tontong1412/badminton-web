@@ -1,6 +1,6 @@
 'use client'
 import { useMatchesTournament } from '@/app/libs/data'
-import { Language, Match, MatchStatus } from '@/type'
+import { Language, Match, MatchStatus, MatchStep } from '@/type'
 import { Box, Button, Chip, CircularProgress, IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
@@ -41,6 +41,20 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
       return 0
     }
     return a.matchNumber - b.matchNumber
+  }
+
+  const getRoundLabel = (match: Match) => {
+    if(match.step === MatchStep.Group){
+      return 'แบ่งกลุ่ม'
+    }
+
+    const roundName = MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]
+    if(match.step === MatchStep.Consolation){
+      const consolationPrefix = language === 'th' ? 'สายล่าง' : 'Con.'
+      return roundName ? `${consolationPrefix} ${roundName}` : consolationPrefix
+    }
+
+    return roundName ?? '-'
   }
 
   const filteredRows: Match[] | undefined = matches?.filter((row) => {
@@ -109,7 +123,7 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                   <Typography >{moment(match.date).format('H.mm')}</Typography>
                 </TableCell>
                 <TableCell align="center">
-                  <Typography >{match.step === 'group' ? 'แบ่งกลุ่ม' : MAP_ROUND_NAME[match.round?.toString() as keyof typeof MAP_ROUND_NAME]}</Typography>
+                  <Typography >{getRoundLabel(match)}</Typography>
                 </TableCell>
                 <TableCell >
                   {match.teamA?.players.map((player) => {

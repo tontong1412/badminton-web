@@ -62,6 +62,7 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
   const [slipImage, setSlipImage] = useState<string | undefined>(team.slip)
   const [buttonLoading, setButtonLoading] = useState(false)
   const qrContainerRef = useRef<HTMLDivElement>(null)
+  const uploadButtonRef = useRef<HTMLLabelElement | null>(null)
   const { t } = useTranslation()
 
   const handleSaveQR = () => {
@@ -146,7 +147,6 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
     }
     const response = await axios.post(`${SERVICE_ENDPOINT}/events/update-team`, payload, { withCredentials: true })
     setEvent(response.data)
-    setButtonLoading(false)
   }
 
   const updateTeam = async(teamID: string, field: string, value: unknown) => {
@@ -163,25 +163,35 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
   }
 
   const handleUploadSlip = async(slip:File| null) => {
-    setButtonLoading(true)
-    if(!slip)return
-    const maxSize = 5 * 1024 * 1024
-    if (slip.size > maxSize) {
-      alert('File size exceeds 5MB')
+    if (!slip) {
+      uploadButtonRef.current?.focus()
       return
     }
-    // Compress the image
-    const compressedFile = await imageCompression(slip, {
-      maxSizeMB: 1, // aim to compress to around 1MB
-      maxWidthOrHeight: 512, // keep reasonable dimensions
-      useWebWorker: true,
-    })
 
-    const base64String = await photoUtils.toBase64(compressedFile)
-    team.slip = base64String
-    setSlipImage(base64String)
+    setButtonLoading(true)
+    try {
+      const maxSize = 5 * 1024 * 1024
+      if (slip.size > maxSize) {
+        alert('File size exceeds 5MB')
+        return
+      }
 
-    await uploadSlip(base64String)
+      // Compress the image
+      const compressedFile = await imageCompression(slip, {
+        maxSizeMB: 1, // aim to compress to around 1MB
+        maxWidthOrHeight: 512, // keep reasonable dimensions
+        useWebWorker: true,
+      })
+
+      const base64String = await photoUtils.toBase64(compressedFile)
+      team.slip = base64String
+      setSlipImage(base64String)
+
+      await uploadSlip(base64String)
+    } finally {
+      setButtonLoading(false)
+      uploadButtonRef.current?.focus()
+    }
   }
 
   return (
@@ -271,6 +281,7 @@ const PaymentModal = ({ visible, setVisible, event, team, setEvent, isManager, s
           </Box>}
 
           <Button
+            ref={uploadButtonRef}
             sx={{ mt:1 }}
             variant="contained"
             component="label"

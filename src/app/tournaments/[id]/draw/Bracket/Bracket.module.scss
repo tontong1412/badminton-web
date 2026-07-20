@@ -112,6 +112,13 @@ $font-content:      "Roboto Slab", serif;
                     border-color: $color-community; // Variable converted
                   }
 
+                  &.singlePlayer{
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    padding-top: 0;
+                  }
+
                   .single{
                     margin: 0 1.25rem;
                     line-height: 3;
