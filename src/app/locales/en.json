@@ -311,6 +311,7 @@
     "bookThisSlot": "Book This Slot",
     "confirmResalePurchase": "Confirm Resale Purchase",
     "confirmPurchase": "Confirm Purchase",
+    "resalePendingReservationInfo": "This slot will be reserved for you while payment is pending. It becomes sold only after payment is confirmed.",
     "courtVenue": "Court Venue",
     "all": "All",
     "courtTypeLabel": "Type",

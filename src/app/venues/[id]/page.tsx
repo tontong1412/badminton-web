@@ -213,11 +213,16 @@ export default function VenueCourtsPage() {
     try {
       setResaleBuying(true)
       setResaleBuyError(null)
-      await resaleService.buy(resaleBuyListing.id)
+      const response = await resaleService.buy(resaleBuyListing.id)
       setResaleBuyDialogOpen(false)
       setResaleBuyListing(null)
       mutateResale()
-      router.push('/bookings')
+      const bundleID = response?.booking?.bookingBundleID
+      if (bundleID) {
+        router.push(`/pay?bundleID=${encodeURIComponent(String(bundleID))}`)
+      } else {
+        router.push('/bookings')
+      }
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setResaleBuyError(msg ?? 'Failed to purchase listing')
@@ -342,7 +347,7 @@ export default function VenueCourtsPage() {
     }
 
     loadGuided()
-  }, [selectedDate, filteredCourts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount])
+  }, [selectedDate, filteredCourts, requestedDurationMinutes, availabilityKey, slotDurationMinutes, requestedCourtCount, venueId])
 
   const filteredGuidedSlots = useMemo(
     () => guidedSlots.filter((s) => s.courtCount >= requestedCourtCount),
@@ -496,7 +501,7 @@ export default function VenueCourtsPage() {
     }
 
     loadFree()
-  }, [selectedDate, filteredCourts, slotDurationMinutes])
+  }, [selectedDate, filteredCourts, slotDurationMinutes, venueId])
 
   const handleCellClick = (startTime: string, court: Court) => {
     if (moment(`${selectedDate} ${startTime}`, 'YYYY-MM-DD HH:mm').isBefore(moment().startOf('hour'))) {
@@ -1499,6 +1504,9 @@ export default function VenueCourtsPage() {
                 <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
                   {t('booking.price')}: {resaleBuyListing.askingPrice} {resaleBuyListing.currency}
                 </Typography>
+                <Alert severity="info" sx={{ mt: 1.5 }}>
+                  {t('booking.resalePendingReservationInfo')}
+                </Alert>
               </Box>
             )
           })()}
