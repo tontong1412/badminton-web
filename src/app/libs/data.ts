@@ -91,7 +91,7 @@ export const usePlayers = (): PlayersResponse => {
   )
 
   return {
-    players: data,
+    players: data ?? [],
     isLoading: !error && !data,
     isError: error,
     mutate

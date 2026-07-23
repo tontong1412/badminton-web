@@ -1,4 +1,4 @@
-import { Player, PlayerWithAccount } from '@/type'
+import { NewPlayer, Player, PlayerWithAccount } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 const baseUrl = `${SERVICE_ENDPOINT}/players`
@@ -18,9 +18,13 @@ const getMe = (): Promise<Player> =>
 const updateMe = (id: string, data: Partial<Player>): Promise<Player> =>
   axios.put(`${baseUrl}/${id}`, data, { withCredentials: true }).then((r) => r.data as Player)
 
+const create = (data: NewPlayer): Promise<Player> =>
+  axios.post(baseUrl, data).then((r) => r.data as Player)
+
 export default {
   getAll,
   getWithAccount,
   getMe,
+  create,
   updateMe,
 }
