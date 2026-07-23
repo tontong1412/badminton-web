@@ -5,6 +5,9 @@ import {
   SessionRegistrationDetail,
   SessionRegistrationPlayerSnapshot,
   SessionRegistrationPaymentStatus,
+  SessionMatchStatus,
+  SessionOpenPlayMatch,
+  SessionStatsResponse,
   SessionStatus,
   SessionType,
 } from '@/type'
@@ -191,6 +194,60 @@ const cancel = (id: string): Promise<OpenPlaySession> => {
   return axios.put(`${baseUrl}/${id}/cancel`, {}, { withCredentials: true }).then((response) => response.data as OpenPlaySession)
 }
 
+// ── Match management ─────────────────────────────────────────────────────────
+
+export interface MatchTeamPayload {
+  playerIDs: string[];
+}
+
+export interface CreateMatchPayload {
+  court: string;
+  teams: [MatchTeamPayload, MatchTeamPayload];
+}
+
+export interface UpdateMatchPayload {
+  court?: string;
+  teams?: [MatchTeamPayload, MatchTeamPayload];
+  status?: SessionMatchStatus;
+  winnerTeamIndex?: 0 | 1 | null;
+}
+
+const getStats = (sessionID: string): Promise<SessionStatsResponse> => {
+  return axios
+    .get(`${baseUrl}/${sessionID}/stats`, { withCredentials: true })
+    .then((response) => response.data as SessionStatsResponse)
+}
+
+const getMatches = (sessionID: string): Promise<SessionOpenPlayMatch[]> => {
+  return axios
+    .get(`${baseUrl}/${sessionID}/matches`, { withCredentials: true })
+    .then((response) => response.data as SessionOpenPlayMatch[])
+}
+
+const createMatch = (sessionID: string, payload: CreateMatchPayload): Promise<SessionOpenPlayMatch> => {
+  return axios
+    .post(`${baseUrl}/${sessionID}/matches`, payload, { withCredentials: true })
+    .then((response) => response.data as SessionOpenPlayMatch)
+}
+
+const autoGenerateMatches = (sessionID: string): Promise<SessionOpenPlayMatch[]> => {
+  return axios
+    .post(`${baseUrl}/${sessionID}/matches/auto`, {}, { withCredentials: true })
+    .then((response) => response.data as SessionOpenPlayMatch[])
+}
+
+const updateMatch = (sessionID: string, matchID: string, payload: UpdateMatchPayload): Promise<SessionOpenPlayMatch> => {
+  return axios
+    .put(`${baseUrl}/${sessionID}/matches/${matchID}`, payload, { withCredentials: true })
+    .then((response) => response.data as SessionOpenPlayMatch)
+}
+
+const deleteMatch = (sessionID: string, matchID: string): Promise<void> => {
+  return axios
+    .delete(`${baseUrl}/${sessionID}/matches/${matchID}`, { withCredentials: true })
+    .then(() => undefined)
+}
+
 export default {
   getAll,
   getMine,
@@ -211,4 +268,10 @@ export default {
   start,
   end,
   cancel,
+  getMatches,
+  getStats,
+  createMatch,
+  autoGenerateMatches,
+  updateMatch,
+  deleteMatch,
 }

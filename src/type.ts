@@ -328,6 +328,61 @@ export interface SessionRegistrationDetail extends SessionRegistration {
   player?: SessionRegistrationPlayerSnapshot;
 }
 
+// ── Session Matches ───────────────────────────────────────────────────────────
+
+export enum SessionMatchStatus {
+  Pending = 'pending',
+  Playing = 'playing',
+  Completed = 'completed',
+  Skipped = 'skipped',
+}
+
+export interface SessionMatchTeam {
+  playerIDs: string[];
+  playerSnapshots?: SessionRegistrationPlayerSnapshot[];
+}
+
+export interface SessionOpenPlayMatch {
+  id: string;
+  sessionID: string;
+  court: string;
+  teams: [SessionMatchTeam, SessionMatchTeam];
+  status: SessionMatchStatus;
+  startedAt?: string;
+  endedAt?: string;
+  winnerTeamIndex?: 0 | 1;
+  createdAt: string;
+}
+
+export interface SessionHeadToHeadCount {
+  playerID: string;
+  count: number;
+}
+
+export interface SessionPlayerStats {
+  playerID: string;
+  player?: SessionRegistrationPlayerSnapshot;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  waitingRounds: number;
+  playTimeMs: number;
+  totalWaitingTimeMs: number;
+  currentWaitTimeMs: number;
+  waitSinceLastMatchMs?: number;
+  currentlyPlaying: boolean;
+  lastMatchStartedAt?: string;
+  lastMatchEndedAt?: string;
+  teammateHistory: SessionHeadToHeadCount[];
+  opponentHistory: SessionHeadToHeadCount[];
+}
+
+export interface SessionStatsResponse {
+  sessionID: string;
+  generatedAt: string;
+  players: SessionPlayerStats[];
+}
+
 export enum TournamentQuery {
   Recent = 'recent',
   UpComing = 'upComing',

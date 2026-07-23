@@ -1,7 +1,7 @@
 import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
-import { Booking, BookingAvailability, Court, Event, Match, OpenPlaySession, Player, ResaleListing, ResalePayoutItem, SessionRegistrationDetail, Tournament, Venue, VenueAnalyticsResponse } from '@/type'
+import { Booking, BookingAvailability, Court, Event, Match, OpenPlaySession, Player, ResaleListing, ResalePayoutItem, SessionRegistrationDetail, SessionOpenPlayMatch, SessionStatsResponse, Tournament, Venue, VenueAnalyticsResponse } from '@/type'
 import { useSelector } from 'react-redux'
 import { RootState } from './redux/store'
 
@@ -318,6 +318,38 @@ export const useMySessionRegistration = (sessionID: string | undefined): Session
   )
 
   return { registration: data, isLoading, isError: !!error, mutate }
+}
+
+export interface SessionMatchesResponse {
+  matches: SessionOpenPlayMatch[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<SessionOpenPlayMatch[] | undefined>
+}
+
+export const useSessionMatches = (sessionID: string | undefined, enabled: boolean): SessionMatchesResponse => {
+  const key = sessionID && enabled ? `${SERVICE_ENDPOINT}/sessions/${sessionID}/matches` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true),
+  )
+  return { matches: data ?? [], isLoading, isError: !!error, mutate }
+}
+
+export interface SessionStatsHookResponse {
+  stats: SessionStatsResponse | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<SessionStatsResponse | undefined>
+}
+
+export const useSessionStats = (sessionID: string | undefined, enabled: boolean): SessionStatsHookResponse => {
+  const key = sessionID && enabled ? `${SERVICE_ENDPOINT}/sessions/${sessionID}/stats` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true),
+  )
+  return { stats: data, isLoading, isError: !!error, mutate }
 }
 
 // ── Bookings ─────────────────────────────────────────────────────────────────
