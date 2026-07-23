@@ -1,4 +1,5 @@
 'use client'
+import Layout from '@/app/components/Layout'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import { useEffect, useState } from 'react'
@@ -42,20 +43,22 @@ const MatchQueue = () => {
     }
   }
   return (
-    <Box>
-      <Tabs value={value} onChange={handleChange} aria-label="Match status tab">
-        <Tab label="Waiting" />
-        <Tab label="Playing" />
-        <Tab label="Finished" />
-      </Tabs>
-      {renderTab()}
-      <FloatingAddButton onClick={() => setAddQueueModalVisible(true)}/>
-      <AddQueueModal
-        visible={addQueueModalVisible}
-        setVisible={setAddQueueModalVisible}
-        setMatchList={setMatchList}
-      />
-    </Box>
+    <Layout>
+      <Box>
+        <Tabs value={value} onChange={handleChange} aria-label="Match status tab">
+          <Tab label="Waiting" />
+          <Tab label="Playing" />
+          <Tab label="Finished" />
+        </Tabs>
+        {renderTab()}
+        <FloatingAddButton onClick={() => setAddQueueModalVisible(true)}/>
+        <AddQueueModal
+          visible={addQueueModalVisible}
+          setVisible={setAddQueueModalVisible}
+          setMatchList={setMatchList}
+        />
+      </Box>
+    </Layout>
   )
 }
 export default MatchQueue
