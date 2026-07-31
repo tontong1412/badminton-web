@@ -196,18 +196,191 @@ export type NewMatch = Omit<Match, 'id'>
 
 export interface Session {
   id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  maxParticipant: number;
-  courtFee: {
-    type: string;
-    amount: number;
+  type: SessionType;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  venueID: string;
+  venueSnapshot: SessionVenueSnapshot;
+  organizerUserIDs: string[];
+  maxParticipants: number;
+  currentParticipants: number;
+  waitingCount: number;
+  status: SessionStatus;
+  registrationOpen: boolean;
+  organizerContact: SessionOrganizerContact;
+  notes?: string;
+}
+
+export enum SessionType {
+  OpenPlay = 'openPlay',
+  Training = 'training',
+}
+
+export enum SessionStatus {
+  Upcoming = 'upcoming',
+  Full = 'full',
+  Ongoing = 'ongoing',
+  Completed = 'completed',
+  Cancelled = 'cancelled',
+}
+
+export enum SessionPricingType {
+  Fixed = 'fixed',
+  Shared = 'shared',
+}
+
+export enum SessionRegistrationStatus {
+  Pending = 'pending',
+  Approved = 'approved',
+  WaitingList = 'waitingList',
+  Rejected = 'rejected',
+  Cancelled = 'cancelled',
+  Removed = 'removed',
+}
+
+export enum SessionRegistrationPaymentStatus {
+  Pending = 'pending',
+  Paid = 'paid',
+  PartiallyPaid = 'partiallyPaid',
+  Refunded = 'refunded',
+}
+
+export enum SessionAttendanceStatus {
+  Registered = 'registered',
+  CheckedIn = 'checkedIn',
+  NoShow = 'noShow',
+  Cancelled = 'cancelled',
+}
+
+export interface SessionVenueSnapshot {
+  id: string;
+  name: {
+    th: string;
+    en: string;
   };
-  shuttlecockFee: number;
-  players: Player[];
-  queue: Match[]
+  address: string;
+}
+
+export interface SessionOrganizerContact {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
+export interface SessionPricing {
+  type: SessionPricingType;
+  fixedPrice?: number;
+  courtRentalCost?: number;
+  shuttlecockCost?: number;
+  totalCost?: number;
+  perPlayerCost?: number;
+  currency: string;
+}
+
+export interface OpenPlaySession extends Session {
+  type: SessionType.OpenPlay;
+  requiresApproval: boolean;
+  pricing: SessionPricing;
+}
+
+export interface SessionRegistration {
+  id: string;
+  sessionID: string;
+  playerID: string;
+  registeredAt: string;
+  registrationStatus: SessionRegistrationStatus;
+  paymentStatus: SessionRegistrationPaymentStatus;
+  attendanceStatus: SessionAttendanceStatus;
+  waitingPosition?: number;
+  approvedByUserID?: string;
+  approvedAt?: string;
+  manuallyAddedByUserID?: string;
+  note?: string;
+}
+
+export interface SessionRegistrationPlayerSnapshot {
+  id: string;
+  officialName?: {
+    th?: string;
+    en?: string;
+    pronunciation?: string;
+  };
+  displayName?: {
+    th?: string;
+    en?: string;
+    pronunciation?: string;
+  };
+  photo?: string;
+  level?: number;
+  club?: string;
+  contact?: {
+    line?: string;
+    tel?: string;
+    tg?: string;
+    whatsapp?: string;
+    email?: string;
+  };
+}
+
+export interface SessionRegistrationDetail extends SessionRegistration {
+  player?: SessionRegistrationPlayerSnapshot;
+}
+
+// ── Session Matches ───────────────────────────────────────────────────────────
+
+export enum SessionMatchStatus {
+  Pending = 'pending',
+  Playing = 'playing',
+  Completed = 'completed',
+  Skipped = 'skipped',
+}
+
+export interface SessionMatchTeam {
+  playerIDs: string[];
+  playerSnapshots?: SessionRegistrationPlayerSnapshot[];
+}
+
+export interface SessionOpenPlayMatch {
+  id: string;
+  sessionID: string;
+  court: string;
+  teams: [SessionMatchTeam, SessionMatchTeam];
+  status: SessionMatchStatus;
+  startedAt?: string;
+  endedAt?: string;
+  winnerTeamIndex?: 0 | 1;
+  createdAt: string;
+}
+
+export interface SessionHeadToHeadCount {
+  playerID: string;
+  count: number;
+}
+
+export interface SessionPlayerStats {
+  playerID: string;
+  player?: SessionRegistrationPlayerSnapshot;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  waitingRounds: number;
+  playTimeMs: number;
+  totalWaitingTimeMs: number;
+  currentWaitTimeMs: number;
+  waitSinceLastMatchMs?: number;
+  currentlyPlaying: boolean;
+  lastMatchStartedAt?: string;
+  lastMatchEndedAt?: string;
+  teammateHistory: SessionHeadToHeadCount[];
+  opponentHistory: SessionHeadToHeadCount[];
+}
+
+export interface SessionStatsResponse {
+  sessionID: string;
+  generatedAt: string;
+  players: SessionPlayerStats[];
 }
 
 export enum TournamentQuery {

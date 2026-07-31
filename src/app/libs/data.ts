@@ -1,7 +1,7 @@
 import useSWR, { MutatorOptions } from 'swr'
 import { SERVICE_ENDPOINT } from '../constants'
 import axios from 'axios'
-import { Booking, BookingAvailability, Court, Event, Match, Player, ResaleListing, ResalePayoutItem, Tournament, Venue, VenueAnalyticsResponse } from '@/type'
+import { Booking, BookingAvailability, Court, Event, Match, OpenPlaySession, Player, ResaleListing, ResalePayoutItem, SessionRegistrationDetail, SessionOpenPlayMatch, SessionStatsResponse, Tournament, Venue, VenueAnalyticsResponse } from '@/type'
 import { useSelector } from 'react-redux'
 import { RootState } from './redux/store'
 
@@ -91,7 +91,7 @@ export const usePlayers = (): PlayersResponse => {
   )
 
   return {
-    players: data,
+    players: data ?? [],
     isLoading: !error && !data,
     isError: error,
     mutate
@@ -258,6 +258,98 @@ export const useCourtAvailability = (
     : null
   const { data, error, mutate } = useSWR(key, fetcher)
   return { availability: data, isLoading: !error && !data, isError: error, mutate }
+}
+
+// ── Sessions ────────────────────────────────────────────────────────────────
+
+export interface SessionsResponse {
+  sessions: OpenPlaySession[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<OpenPlaySession[] | undefined>
+}
+
+export const useSessions = (): SessionsResponse => {
+  const { data, error, isLoading, mutate } = useSWR(
+    `${SERVICE_ENDPOINT}/sessions`,
+    fetcher
+  )
+  return { sessions: data ?? [], isLoading, isError: !!error, mutate }
+}
+
+export interface SessionResponse {
+  session: OpenPlaySession | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<OpenPlaySession | undefined>
+}
+
+export const useSession = (id: string | undefined): SessionResponse => {
+  const { data, error, isLoading, mutate } = useSWR(
+    id ? `${SERVICE_ENDPOINT}/sessions/${id}` : null,
+    fetcher
+  )
+  return { session: data, isLoading, isError: !!error, mutate }
+}
+
+export const useMySessions = (): SessionsResponse => {
+  const user = useSelector((state: RootState) => state.app.user)
+  const key = user ? `${SERVICE_ENDPOINT}/sessions/mine` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true)
+  )
+  return { sessions: data ?? [], isLoading, isError: !!error, mutate }
+}
+
+export interface SessionRegistrationResponse {
+  registration: SessionRegistrationDetail | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<SessionRegistrationDetail | undefined>
+}
+
+export const useMySessionRegistration = (sessionID: string | undefined): SessionRegistrationResponse => {
+  const user = useSelector((state: RootState) => state.app.user)
+  const key = user && sessionID ? `${SERVICE_ENDPOINT}/sessions/${sessionID}/my-registration` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true),
+  )
+
+  return { registration: data, isLoading, isError: !!error, mutate }
+}
+
+export interface SessionMatchesResponse {
+  matches: SessionOpenPlayMatch[]
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<SessionOpenPlayMatch[] | undefined>
+}
+
+export const useSessionMatches = (sessionID: string | undefined, enabled: boolean): SessionMatchesResponse => {
+  const key = sessionID && enabled ? `${SERVICE_ENDPOINT}/sessions/${sessionID}/matches` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true),
+  )
+  return { matches: data ?? [], isLoading, isError: !!error, mutate }
+}
+
+export interface SessionStatsHookResponse {
+  stats: SessionStatsResponse | undefined
+  isLoading: boolean
+  isError: boolean
+  mutate: () => Promise<SessionStatsResponse | undefined>
+}
+
+export const useSessionStats = (sessionID: string | undefined, enabled: boolean): SessionStatsHookResponse => {
+  const key = sessionID && enabled ? `${SERVICE_ENDPOINT}/sessions/${sessionID}/stats` : null
+  const { data, error, isLoading, mutate } = useSWR(
+    key,
+    (url) => fetcher(url, true),
+  )
+  return { stats: data, isLoading, isError: !!error, mutate }
 }
 
 // ── Bookings ─────────────────────────────────────────────────────────────────
