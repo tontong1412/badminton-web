@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Container,
   Typography,
@@ -12,6 +12,7 @@ import {
   Button,
   Tabs,
   Tab,
+  Badge,
   Switch,
   FormControlLabel,
   FormControl,
@@ -32,7 +33,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { Autocomplete } from '@mui/material'
 import { HolidaySchedule, PlayerWithAccount, User, Venue, Court, CourtPricingRule, Coupon } from '@/type'
 import venueService from '../../../../services/venues'
-import { useVenue } from '../../../../libs/data'
+import { useVenue, useVenueBookings } from '../../../../libs/data'
 import playerService from '../../../../services/players'
 import courtService from '../../../../services/courts'
 import couponService, { CreateCouponPayload } from '../../../../services/coupons'
@@ -166,6 +167,11 @@ export default function VenueSettingsPage() {
   const [couponSaving, setCouponSaving] = useState(false)
 
   const { venue: swrVenue, isLoading: swrLoading } = useVenue(venueID)
+  const { bookings: pendingRawBookings } = useVenueBookings({ venueID, paymentStatus: 'pending' })
+  const pendingCount = useMemo(() =>
+    new Set(pendingRawBookings.map((b) => b.bookingBundleID || `single-${b.id}`)).size,
+  [pendingRawBookings]
+  )
 
   useEffect(() => {
     if (!swrVenue) return
@@ -646,7 +652,7 @@ export default function VenueSettingsPage() {
         >
           <Tab label="Dashboard" value="dashboard" />
           <Tab label="Timetable" value="timetable" />
-          <Tab label="Payments" value="bookings" />
+          <Tab label={<Badge badgeContent={pendingCount} color="error">Payments</Badge>} value="bookings" />
           <Tab label="Settings" value="settings" />
         </Tabs>
 

@@ -17,6 +17,7 @@ import {
   Button,
   Tabs,
   Tab,
+  Badge,
   FormControl,
   InputLabel,
   Select,
@@ -152,6 +153,11 @@ export default function VenueTimetablePage() {
     [allCourts, venueID]
   )
   const { bookings, isLoading: loading, mutate: mutateBookings } = useVenueBookings({ venueID, date })
+  const { bookings: pendingRawBookings } = useVenueBookings({ venueID, paymentStatus: 'pending' })
+  const pendingCount = useMemo(() =>
+    new Set(pendingRawBookings.map((b) => b.bookingBundleID || `single-${b.id}`)).size,
+  [pendingRawBookings]
+  )
 
   // Auth / access guard
   useEffect(() => {
@@ -643,7 +649,7 @@ export default function VenueTimetablePage() {
         >
           <Tab label="Dashboard" value="dashboard" />
           <Tab label="Timetable" value="timetable" />
-          <Tab label="Payments" value="bookings" />
+          <Tab label={<Badge badgeContent={pendingCount} color="error">Payments</Badge>} value="bookings" />
           <Tab label="Settings" value="settings" />
         </Tabs>
 
