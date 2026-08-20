@@ -607,6 +607,21 @@ export interface CourtPricingRule {
   pricePerHour: number;
 }
 
+export interface CourtAddOn {
+  id: string;
+  name: string;
+  price: number;
+  details?: string;
+  isActive: boolean;
+}
+
+export interface BookingAddOnSnapshot {
+  id: string;
+  name: string;
+  price: number;
+  details?: string;
+}
+
 export interface Court {
   id: string;
   venueID: string;
@@ -614,6 +629,7 @@ export interface Court {
   description?: string;
   pricePerHour: number;
   pricingRules?: CourtPricingRule[];
+  addOns?: CourtAddOn[];
   slotStartOffsetMinutes?: number;
   currency: string;
   status: 'active' | 'inactive';
@@ -641,6 +657,8 @@ export interface Booking {
   recurringGroupID?: string;
   status: BookingStatus;
   paymentStatus: PaymentStatus;
+  selectedAddOns?: BookingAddOnSnapshot[];
+  addOnTotalPrice?: number;
   slip?: string;
   slipTimestamp?: string;
   resaleListingID?: string | { id: string; subStartTime?: string; subEndTime?: string; status?: string };

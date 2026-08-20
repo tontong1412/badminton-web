@@ -31,7 +31,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { Autocomplete } from '@mui/material'
-import { HolidaySchedule, PlayerWithAccount, User, Venue, Court, CourtPricingRule, Coupon } from '@/type'
+import { HolidaySchedule, PlayerWithAccount, User, Venue, Court, CourtPricingRule, Coupon, CourtAddOn } from '@/type'
 import venueService from '../../../../services/venues'
 import { useVenue, useVenueBookings } from '../../../../libs/data'
 import playerService from '../../../../services/players'
@@ -55,6 +55,14 @@ interface DayScheduleState {
   open: string;
   close: string;
 }
+
+const newAddOnDraft = (): CourtAddOn => ({
+  id: `addon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  name: '',
+  price: 0,
+  details: '',
+  isActive: true,
+})
 
 export default function VenueSettingsPage() {
   const params = useParams()
@@ -147,6 +155,7 @@ export default function VenueSettingsPage() {
   const [courtCurrency, setCourtCurrency] = useState('THB')
   const [courtStatus, setCourtStatus] = useState<'active' | 'inactive'>('active')
   const [courtPricingRules, setCourtPricingRules] = useState<CourtPricingRule[]>([])
+  const [courtAddOns, setCourtAddOns] = useState<CourtAddOn[]>([])
   const [courtType, setCourtType] = useState('regular')
   const [courtSaving, setCourtSaving] = useState(false)
   const [newHolidayOpen, setNewHolidayOpen] = useState('08:00')
@@ -542,6 +551,7 @@ export default function VenueSettingsPage() {
       setCourtCurrency(court.currency)
       setCourtStatus(court.status)
       setCourtPricingRules(court.pricingRules ?? [])
+      setCourtAddOns(court.addOns ?? [])
       setCourtType(court.courtType ?? 'regular')
     } else {
       setEditingCourt(null)
@@ -551,6 +561,7 @@ export default function VenueSettingsPage() {
       setCourtCurrency('THB')
       setCourtStatus('active')
       setCourtPricingRules([])
+      setCourtAddOns([])
       setCourtType('regular')
     }
     setCourtError(null)
@@ -568,6 +579,20 @@ export default function VenueSettingsPage() {
       setCourtError('Price must be a valid number.')
       return
     }
+    const normalizedAddOns = courtAddOns.map((addOn) => ({
+      ...addOn,
+      id: addOn.id || `addon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: addOn.name.trim(),
+      details: addOn.details?.trim() || undefined,
+      price: Number.isFinite(addOn.price) ? addOn.price : 0,
+      isActive: addOn.isActive !== false,
+    }))
+    const invalidAddOn = normalizedAddOns.find((addOn) => addOn.name.length === 0 || addOn.price < 0)
+    if (invalidAddOn) {
+      setCourtError('Each add-on must have a name and non-negative price.')
+      return
+    }
+
     setCourtSaving(true)
     setCourtError(null)
     try {
@@ -579,6 +604,7 @@ export default function VenueSettingsPage() {
           currency: courtCurrency,
           status: courtStatus,
           pricingRules: courtPricingRules,
+          addOns: normalizedAddOns,
           courtType: courtType.trim() || 'regular',
         })
         setCourts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
@@ -590,6 +616,7 @@ export default function VenueSettingsPage() {
           pricePerHour: price,
           currency: courtCurrency,
           status: courtStatus,
+          addOns: normalizedAddOns,
           courtType: courtType.trim() || 'regular',
         })
         setCourts((prev) => [...prev, created])
@@ -612,6 +639,14 @@ export default function VenueSettingsPage() {
 
   const removePricingRule = (i: number) =>
     setCourtPricingRules((prev) => prev.filter((_, idx) => idx !== i))
+
+  const addCourtAddOn = () => setCourtAddOns((prev) => [...prev, newAddOnDraft()])
+
+  const updateCourtAddOn = (idx: number, field: keyof CourtAddOn, value: string | number | boolean) => {
+    setCourtAddOns((prev) => prev.map((addOn, i) => (i === idx ? { ...addOn, [field]: value } : addOn)))
+  }
+
+  const removeCourtAddOn = (idx: number) => setCourtAddOns((prev) => prev.filter((_, i) => i !== idx))
 
   const updateDay = (index: number, partial: Partial<DayScheduleState>) => {
     setWeekDays((prev) => prev.map((d, i) => (i === index ? { ...d, ...partial } : d)))
@@ -1189,6 +1224,7 @@ export default function VenueSettingsPage() {
                     {court.pricePerHour} {court.currency}/hr · {court.status}
                     {court.courtType && ` · ${court.courtType}`}
                     {court.pricingRules && court.pricingRules.length > 0 && ` · ${court.pricingRules.length} pricing rule(s)`}
+                    {court.addOns && court.addOns.length > 0 && ` · ${court.addOns.filter((addOn) => addOn.isActive !== false).length} active add-on(s)`}
                   </Typography>
                 </Box>
                 <Button size="small" onClick={() => openCourtForm(court)}>Edit</Button>
@@ -1239,6 +1275,41 @@ export default function VenueSettingsPage() {
                 </Box>
               ))}
               <Button size="small" startIcon={<AddIcon />} onClick={addPricingRule} sx={{ mb: 2 }}>Add Rule</Button>
+
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Bookable Add-ons (optional)</Typography>
+              {courtAddOns.map((addOn, i) => (
+                <Box key={addOn.id || i} sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <TextField
+                    label="Name"
+                    size="small"
+                    value={addOn.name}
+                    onChange={(e) => updateCourtAddOn(i, 'name', e.target.value)}
+                    sx={{ width: 170 }}
+                  />
+                  <TextField
+                    label="Price"
+                    type="number"
+                    size="small"
+                    value={addOn.price}
+                    onChange={(e) => updateCourtAddOn(i, 'price', Number(e.target.value))}
+                    inputProps={{ min: 0 }}
+                    sx={{ width: 110 }}
+                  />
+                  <TextField
+                    label="Details"
+                    size="small"
+                    value={addOn.details ?? ''}
+                    onChange={(e) => updateCourtAddOn(i, 'details', e.target.value)}
+                    sx={{ width: 260 }}
+                  />
+                  <FormControlLabel
+                    control={<Switch size="small" checked={addOn.isActive !== false} onChange={(e) => updateCourtAddOn(i, 'isActive', e.target.checked)} />}
+                    label="Active"
+                  />
+                  <IconButton size="small" onClick={() => removeCourtAddOn(i)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                </Box>
+              ))}
+              <Button size="small" startIcon={<AddIcon />} onClick={addCourtAddOn} sx={{ mb: 2 }}>Add Add-on</Button>
 
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button variant="outlined" size="small" onClick={() => setCourtFormOpen(false)} disabled={courtSaving}>Cancel</Button>

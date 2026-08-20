@@ -176,6 +176,7 @@
     "date": "Date",
     "time": "Time",
     "price": "Price",
+    "addOns": "Add-ons",
     "total": "Total",
     "status": "Status",
     "paymentStatus": "Payment Status",

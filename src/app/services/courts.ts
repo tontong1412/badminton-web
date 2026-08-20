@@ -1,4 +1,4 @@
-import { Court, BookingAvailability, CourtPricingRule } from '@/type'
+import { Court, BookingAvailability, CourtPricingRule, CourtAddOn } from '@/type'
 import axios from 'axios'
 import { SERVICE_ENDPOINT } from '../constants'
 
@@ -12,6 +12,7 @@ export interface CreateCourtPayload {
   currency: string
   status?: 'active' | 'inactive'
   courtType?: string
+  addOns?: CourtAddOn[]
 }
 
 export interface UpdateCourtPayload {
@@ -22,6 +23,7 @@ export interface UpdateCourtPayload {
   status?: 'active' | 'inactive'
   pricingRules?: CourtPricingRule[]
   courtType?: string
+  addOns?: CourtAddOn[]
 }
 
 const getAll = (): Promise<Court[]> => {

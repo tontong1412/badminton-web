@@ -280,6 +280,15 @@ function GuestPayContent() {
                     {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
                   </Typography>
                 </Box>
+                {(b.selectedAddOns?.length ?? 0) > 0 && (
+                  <Box sx={{ pl: 0.5, pb: 0.5 }}>
+                    {b.selectedAddOns?.map((addOn) => (
+                      <Typography key={`${b.id}-${addOn.id}`} variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        + {addOn.name} ({addOn.price.toFixed(2)} {b.currency}){addOn.details ? ` — ${addOn.details}` : ''}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
               </Box>
             )
           })}

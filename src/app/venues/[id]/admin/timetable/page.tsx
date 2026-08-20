@@ -18,6 +18,7 @@ import {
   Tabs,
   Tab,
   Badge,
+  Checkbox,
   FormControl,
   InputLabel,
   Select,
@@ -58,8 +59,9 @@ function minutesToTime(m: number) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${m % 60 === 0 ? '00' : '30'}`
 }
 
-function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus): string {
+function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus, hasAddOns: boolean): string {
   if (status === BookingStatus.Cancelled) return '#e0e0e0'
+  if (status === BookingStatus.Confirmed && hasAddOns) return '#ffcc80'
   if (paymentStatus === PaymentStatus.Paid) return '#c8e6c9'
   if (paymentStatus === PaymentStatus.Pending) return '#fff9c4'
   return '#bbdefb'
@@ -205,6 +207,8 @@ export default function VenueTimetablePage() {
   const [dropTargetCell, setDropTargetCell] = useState<string | null>(null)
   const [moveMode, setMoveMode] = useState<'single' | 'bundle'>('single')
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [editingAddOnIDs, setEditingAddOnIDs] = useState<string[]>([])
+  const [savingAddOns, setSavingAddOns] = useState(false)
   const touchDragging = useRef(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressPending = useRef<Booking | null>(null)
@@ -253,6 +257,23 @@ export default function VenueTimetablePage() {
   }, [draggedBooking, moveMode])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
+  const detailCourt = useMemo(() => {
+    if (!detailBooking) return null
+    return courts.find((court) => court.id === detailBooking.courtID) ?? null
+  }, [courts, detailBooking])
+  const detailCourtAddOns = useMemo(
+    () => (detailCourt?.addOns ?? []).filter((addOn) => addOn.isActive !== false),
+    [detailCourt]
+  )
+  const detailSelectedAddOns = detailBooking?.selectedAddOns ?? []
+
+  useEffect(() => {
+    if (!detailBooking) {
+      setEditingAddOnIDs([])
+      return
+    }
+    setEditingAddOnIDs((detailBooking.selectedAddOns ?? []).map((addOn) => addOn.id))
+  }, [detailBooking])
 
   const cellMap = useMemo(() => {
     const map = new Map<string, Map<string, BookingCell>>()
@@ -510,6 +531,30 @@ export default function VenueTimetablePage() {
     }
   }
 
+  const handleToggleDetailAddOn = (addOnID: string) => {
+    setEditingAddOnIDs((prev) => (
+      prev.includes(addOnID)
+        ? prev.filter((id) => id !== addOnID)
+        : [...prev, addOnID]
+    ))
+  }
+
+  const handleSaveDetailAddOns = async() => {
+    if (!detailBooking) return
+    try {
+      setSavingAddOns(true)
+      const updatedBooking = await bookingsService.updateAddOns(detailBooking.id, { addOnIDs: editingAddOnIDs })
+      setDetailBooking(updatedBooking)
+      setSuccessMessage('Booking add-ons updated.')
+      mutateBookings()
+    } catch (e) {
+      setError('Failed to update booking add-ons')
+      console.error(e)
+    } finally {
+      setSavingAddOns(false)
+    }
+  }
+
   // Returns the single booked booking that exactly fills the target range (swap candidate), or null.
   const getSwappableBooking = (dragged: Booking, targetCourtID: string, targetStartTime: string): Booking | null => {
     const targetStart = timeToMinutes(targetStartTime)
@@ -708,6 +753,8 @@ export default function VenueTimetablePage() {
               <Typography variant="caption">Slip Uploaded</Typography>
               <Box sx={{ width: 14, height: 14, bgcolor: '#c8e6c9', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
               <Typography variant="caption">Paid</Typography>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#ffcc80', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
+              <Typography variant="caption">Confirmed + Add-ons</Typography>
               {selectMode && (
                 <>
                   <Box sx={{ width: 14, height: 14, bgcolor: '#ffe0b2', border: '2px solid #fb8c00', borderRadius: 0.5, ml: 1 }} />
@@ -888,7 +935,7 @@ export default function VenueTimetablePage() {
                                 }}
                                 onClick={() => !selectMode && setDetailBooking(booking)}
                                 style={{
-                                  background: getStatusColor(booking.status, booking.paymentStatus),
+                                  background: getStatusColor(booking.status, booking.paymentStatus, (booking.selectedAddOns?.length ?? 0) > 0),
                                   border: isSwapTarget && dropTargetCell === `${court.id}:${slot}`
                                     ? '2px dashed #7b1fa2'
                                     : '2px solid white',
@@ -915,6 +962,11 @@ export default function VenueTimetablePage() {
                                 <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(0,0,0,0.08)' }}>
                                   {getStatusLabel(booking.paymentStatus)}
                                 </span>
+                                {(booking.selectedAddOns?.length ?? 0) > 0 && (
+                                  <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(25, 118, 210, 0.16)', marginLeft: 4 }}>
+                                    +{booking.selectedAddOns?.length} add-on{(booking.selectedAddOns?.length ?? 0) > 1 ? 's' : ''}
+                                  </span>
+                                )}
                               </td>
                             )
                           }
@@ -1071,6 +1123,71 @@ export default function VenueTimetablePage() {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" color="text.secondary">Email</Typography>
                         <Typography variant="body2">{detailBooking.guestEmail}</Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+                {(detailCourtAddOns.length > 0 || detailSelectedAddOns.length > 0) && (
+                  <>
+                    <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1, mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">Add-ons</Typography>
+                    </Box>
+                    {detailCourtAddOns.length > 0 ? (
+                      detailCourtAddOns.map((addOn) => (
+                        <Box key={addOn.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.8 }}>
+                            <Checkbox
+                              size="small"
+                              sx={{ p: 0.2, mt: '-1px' }}
+                              checked={editingAddOnIDs.includes(addOn.id)}
+                              onChange={() => handleToggleDetailAddOn(addOn.id)}
+                              disabled={detailBooking.status === BookingStatus.Cancelled || savingAddOns}
+                            />
+                            <Box>
+                              <Typography variant="body2">{addOn.name}</Typography>
+                              {addOn.details && (
+                                <Typography variant="caption" color="text.secondary">{addOn.details}</Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          <Typography variant="body2">{addOn.price.toFixed(2)} {detailBooking.currency}</Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      detailSelectedAddOns.map((addOn) => (
+                        <Box key={addOn.id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                          <Box>
+                            <Typography variant="body2">{addOn.name}</Typography>
+                            {addOn.details && (
+                              <Typography variant="caption" color="text.secondary">{addOn.details}</Typography>
+                            )}
+                          </Box>
+                          <Typography variant="body2">{addOn.price.toFixed(2)} {detailBooking.currency}</Typography>
+                        </Box>
+                      ))
+                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Add-on subtotal</Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {(
+                          detailCourtAddOns.length > 0
+                            ? detailCourtAddOns
+                              .filter((addOn) => editingAddOnIDs.includes(addOn.id))
+                              .reduce((sum, addOn) => sum + addOn.price, 0)
+                            : (detailBooking.addOnTotalPrice ?? detailSelectedAddOns.reduce((sum, addOn) => sum + addOn.price, 0))
+                        ).toFixed(2)} {detailBooking.currency}
+                      </Typography>
+                    </Box>
+                    {detailCourtAddOns.length > 0 && detailBooking.status !== BookingStatus.Cancelled && (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={handleSaveDetailAddOns}
+                          disabled={savingAddOns}
+                        >
+                          {savingAddOns ? <CircularProgress size={16} /> : 'Save Add-ons'}
+                        </Button>
                       </Box>
                     )}
                   </>
