@@ -33,7 +33,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SelectAllIcon from '@mui/icons-material/SelectAll'
-import { Booking, BookingStatus, Court, PaymentStatus, User } from '@/type'
+import { Booking, BookingResaleOutcome, BookingStatus, Court, PaymentStatus, User } from '@/type'
 import bookingsService, { BookingBundleItem } from '../../../../services/bookings'
 import { useVenue, useCourts, useVenueBookings } from '../../../../libs/data'
 import moment from 'moment'
@@ -59,8 +59,9 @@ function minutesToTime(m: number) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${m % 60 === 0 ? '00' : '30'}`
 }
 
-function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus, hasAddOns: boolean): string {
+function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus, hasAddOns: boolean, isResaleListed: boolean): string {
   if (status === BookingStatus.Cancelled) return '#e0e0e0'
+  if (isResaleListed) return '#e1bee7'
   if (status === BookingStatus.Confirmed && hasAddOns) return '#ffcc80'
   if (paymentStatus === PaymentStatus.Paid) return '#c8e6c9'
   if (paymentStatus === PaymentStatus.Pending) return '#fff9c4'
@@ -190,6 +191,7 @@ export default function VenueTimetablePage() {
   const dragAnchor = useRef<{ courtID: string; slot: string } | null>(null)
   const [dragPreview, setDragPreview] = useState<Set<string>>(new Set())
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const datePickerInputRef = useRef<HTMLInputElement>(null)
 
   // Shared guest info
   const [guestName, setGuestName] = useState('')
@@ -257,6 +259,10 @@ export default function VenueTimetablePage() {
   }, [draggedBooking, moveMode])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
+  const dateDisplayLabel = useMemo(
+    () => (moment(date).isSame(moment(), 'day') ? 'Today' : moment(date).format('ddd D/M')),
+    [date]
+  )
   const detailCourt = useMemo(() => {
     if (!detailBooking) return null
     return courts.find((court) => court.id === detailBooking.courtID) ?? null
@@ -708,14 +714,28 @@ export default function VenueTimetablePage() {
               <IconButton size="small" onClick={() => setDate(moment(date).subtract(1, 'day').format('YYYY-MM-DD'))}>
                 <ChevronLeftIcon fontSize="small" />
               </IconButton>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  if (datePickerInputRef.current?.showPicker) {
+                    datePickerInputRef.current.showPicker()
+                  } else {
+                    datePickerInputRef.current?.click()
+                  }
+                }}
+                sx={{ minWidth: 120, textTransform: 'none', fontSize: 12, py: 0.65 }}
+              >
+                {dateDisplayLabel}
+              </Button>
               <TextField
+                inputRef={datePickerInputRef}
                 size="small"
                 type="date"
-                label="Date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ '& .MuiInputBase-root': { fontSize: 12 }, '& .MuiInputBase-input': { py: '5px' } }}
+                aria-label="Pick date"
+                sx={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
               />
               <IconButton size="small" onClick={() => setDate(moment(date).add(1, 'day').format('YYYY-MM-DD'))}>
                 <ChevronRightIcon fontSize="small" />
@@ -753,6 +773,8 @@ export default function VenueTimetablePage() {
               <Typography variant="caption">Slip Uploaded</Typography>
               <Box sx={{ width: 14, height: 14, bgcolor: '#c8e6c9', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
               <Typography variant="caption">Paid</Typography>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#e1bee7', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
+              <Typography variant="caption">On Resell</Typography>
               <Box sx={{ width: 14, height: 14, bgcolor: '#ffcc80', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
               <Typography variant="caption">Confirmed + Add-ons</Typography>
               {selectMode && (
@@ -935,7 +957,12 @@ export default function VenueTimetablePage() {
                                 }}
                                 onClick={() => !selectMode && setDetailBooking(booking)}
                                 style={{
-                                  background: getStatusColor(booking.status, booking.paymentStatus, (booking.selectedAddOns?.length ?? 0) > 0),
+                                  background: getStatusColor(
+                                    booking.status,
+                                    booking.paymentStatus,
+                                    (booking.selectedAddOns?.length ?? 0) > 0,
+                                    booking.resaleOutcome === BookingResaleOutcome.Listed,
+                                  ),
                                   border: isSwapTarget && dropTargetCell === `${court.id}:${slot}`
                                     ? '2px dashed #7b1fa2'
                                     : '2px solid white',
@@ -1073,6 +1100,12 @@ export default function VenueTimetablePage() {
           <DialogContent>
             {detailBooking && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {detailBooking.bookingRef && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Booking Ref</Typography>
+                    <Typography variant="body2" fontWeight={600}>{detailBooking.bookingRef}</Typography>
+                  </Box>
+                )}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Date</Typography>
                   <Typography variant="body2">{moment(detailBooking.date).format('DD/MM/YYYY')}</Typography>
