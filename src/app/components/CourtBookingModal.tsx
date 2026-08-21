@@ -963,25 +963,25 @@ export default function CourtBookingModal({
 
                 {bookingType === 'recurring' ? (
                   <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> <strong>{venue.name?.en || venue.name?.th}</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
                       <strong>{t('booking.courts')}:</strong> {selectedRecurringCourts.map((court) => court.name).join(', ') || '—'}
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.time')}:</strong> {recurringStartTime} – {recurringEndTime}
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.time')}:</strong> <strong>{recurringStartTime} – {recurringEndTime}</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
                       <strong>{t('booking.repeat')}:</strong>{' '}
                       {recurringPattern === 'weekly'
                         ? t('booking.weeklyOn', { days: recurringDays.map((d) => DAY_LABELS[d]).join(', ') })
                         : t('booking.everyDayLabel')}
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.dateRange')}:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.dateRange')}:</strong> <strong>{moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
                       <strong>{t('booking.sessions')}:</strong> {recurringDatesPreview.length}
                       {recurringDatesPreview.length > 0 && (
                         <>
@@ -994,9 +994,11 @@ export default function CourtBookingModal({
                       <strong>{t('booking.estTotal')}:</strong> {recurringTotalPrice.toFixed(2)} {recurringCurrency}
                     </Typography>
                     {recurringAddOnPerSession > 0 && (
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        <strong>{t('booking.addOns') || 'Add-ons'}:</strong> +{recurringAddOnPerSession.toFixed(2)} {recurringCurrency} / session
-                      </Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        <Typography variant="body1">
+                          <strong>{t('booking.addOns') || 'Add-ons'}:</strong> +{recurringAddOnPerSession.toFixed(2)} {recurringCurrency} / session
+                        </Typography>
+                      </Box>
                     )}
                     {recurringConflicts.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
@@ -1013,44 +1015,76 @@ export default function CourtBookingModal({
                     )}
                   </Box>
                 ) : (
-                  <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
+                  <Box sx={{ mb: 2, p: 0, backgroundColor: 'background.default', borderRadius: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> <strong>{venue.name?.en || venue.name?.th}</strong>
                     </Typography>
                     {isItemsPreselected && bookingItems ? (
                       bookingItems.map((item) => {
                         const court = courts.find((c) => c.id === item.courtID)
                         const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
-                        const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
+                        const basePrice = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
+                        const addOnTotal = splitIntoSlots(item.startTime, item.endTime, 60)
+                          .reduce((sum, slot) => sum + getAddOnTotalForCourtSlot(item.courtID, slot.startTime, slot.endTime), 0)
+                        const slotPriceWithAddOns = basePrice + addOnTotal
                         return (
                           <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                            <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
-                            <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('dddd, D MMM')}</Typography>
-                            <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
-                            <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
+                            <Typography variant="body1"><strong>{court?.name ?? item.courtID}</strong></Typography>
+                            <Typography variant="body1">{t('booking.date')}: <strong>{moment(item.date).format('dddd, D MMM')}</strong></Typography>
+                            <Typography variant="body1">{t('booking.time')}: <strong>{item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</strong></Typography>
+                            {splitIntoSlots(item.startTime, item.endTime, 60).map((slot) => {
+                              const slotAddOns = getSelectedAddOnsForCourtSlot(item.courtID, slot.startTime, slot.endTime)
+                              if (slotAddOns.length === 0) return null
+                              return (
+                                <Box key={`${item.courtID}-${item.date}-${slot.startTime}-${slot.endTime}`} sx={{ pl: 0.8, mt: 0.3 }}>
+                                  <Typography variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                                    {slot.startTime} - {slot.endTime}
+                                  </Typography>
+                                  {slotAddOns.map((addOn) => (
+                                    <Typography key={`${item.courtID}-${slot.startTime}-${slot.endTime}-${addOn.id}`} variant="body2" color="text.secondary" sx={{ display: 'block', pl: 0.8 }}>
+                                      {addOn.name} (+{addOn.price.toFixed(2)} {court?.currency || 'THB'})
+                                    </Typography>
+                                  ))}
+                                </Box>
+                              )
+                            })}
+                            <Typography variant="body1">
+                              {t('booking.price')}: <strong>{slotPriceWithAddOns.toFixed(2)} {court?.currency || 'THB'}</strong>
+                            </Typography>
                           </Box>
                         )
                       })
                     ) : (
                       <>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
+                        <Typography variant="body1" sx={{ mb: 1 }}>
                           <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('dddd, D MMM')}
+                        <Typography variant="body1" sx={{ mb: 1 }}>
+                          <strong>{t('booking.date')}:</strong> <strong>{moment(selectedDate).format('dddd, D MMM')}</strong>
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
+                        <Typography variant="body1" sx={{ mb: 1 }}>
+                          <strong>{t('booking.time')}:</strong> <strong>{startTime} - {endTime}</strong>
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
+                        {courts.map((court) => {
+                          const slotAddOns = (!startTime || !endTime) ? [] : getSelectedAddOnsForCourtSlot(court.id, startTime, endTime)
+                          if (slotAddOns.length === 0) return null
+                          return (
+                            <Box key={`${court.id}-${startTime}-${endTime}`} sx={{ pl: 0.8, mb: 0.6 }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                                {court.name} · {startTime} - {endTime}
+                              </Typography>
+                              {slotAddOns.map((addOn) => (
+                                <Typography key={`${court.id}-${startTime}-${endTime}-${addOn.id}`} variant="body2" color="text.secondary" sx={{ display: 'block', pl: 0.8 }}>
+                                  {addOn.name} (+{addOn.price.toFixed(2)} {court.currency})
+                                </Typography>
+                              ))}
+                            </Box>
+                          )
+                        })}
+                        <Typography variant="body1" sx={{ mb: 1 }}>
                           <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
                         </Typography>
                       </>
-                    )}
-                    {calculateAddOnTotal() > 0 && (
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>{t('booking.addOns') || 'Add-ons'}:</strong> +{calculateAddOnTotal().toFixed(2)} {courts[0]?.currency || 'THB'}
-                      </Typography>
                     )}
                     <Typography variant="h6" sx={{ mt: 2 }}>
                       <strong>{t('booking.total')}:</strong>{' '}
