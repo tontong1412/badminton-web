@@ -375,6 +375,7 @@ export interface VenueBookingsParams {
   paymentStatus?: string
   date?: string
   venueID?: string
+  search?: string
 }
 
 export interface VenueAnalyticsParams {
@@ -406,6 +407,7 @@ export const useVenueBookings = (params: VenueBookingsParams): BookingsResponse 
   if (params.venueID) searchParams.set('venueID', params.venueID)
   if (params.paymentStatus) searchParams.set('paymentStatus', params.paymentStatus)
   if (params.date) searchParams.set('date', params.date)
+  if (params.search) searchParams.set('search', params.search)
   const key = params.venueID
     ? `${SERVICE_ENDPOINT}/bookings/venue-admin?${searchParams.toString()}`
     : null

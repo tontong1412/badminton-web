@@ -21,6 +21,7 @@ import {
   Checkbox,
   FormControl,
   InputLabel,
+  InputAdornment,
   Select,
   MenuItem,
   Divider,
@@ -30,6 +31,7 @@ import {
   Snackbar,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ClearIcon from '@mui/icons-material/Clear'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SelectAllIcon from '@mui/icons-material/SelectAll'
@@ -170,7 +172,7 @@ export default function VenueTimetablePage() {
     const isOwner = venue.ownerUserID === userID
     const isManager = venue.managerUserIDs.includes(userID ?? '')
     if (!userID || (!isSystemAdmin && !isOwner && !isManager)) router.replace('/admin')
-  }, [venue, userReady, initLoading, router])
+  }, [venue, user, userReady, initLoading, router])
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
   const [bookMode, setBookMode] = useState<'single' | 'recurring'>('single')
   const [bookDurationMinutes, setBookDurationMinutes] = useState(60)
@@ -211,9 +213,17 @@ export default function VenueTimetablePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [editingAddOnIDs, setEditingAddOnIDs] = useState<string[]>([])
   const [savingAddOns, setSavingAddOns] = useState(false)
+  const [bookingSearch, setBookingSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Booking[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [pendingDetailBookingID, setPendingDetailBookingID] = useState<string | null>(null)
   const touchDragging = useRef(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressPending = useRef<Booking | null>(null)
+  const trimmedBookingSearch = bookingSearch.trim()
+  const canRunBookingSearch = trimmedBookingSearch.length >= 3
+  const courtNameById = Object.fromEntries(courts.map((c) => [c.id, c.name]))
 
   useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
 
@@ -227,6 +237,48 @@ export default function VenueTimetablePage() {
     const slotIndex = Math.max(0, Math.floor((currentMinutes - startMinutes) / 30) - 1)
     tableContainerRef.current.scrollTop = slotIndex * 36
   }, [date, loading])
+
+  useEffect(() => {
+    if (!canRunBookingSearch) {
+      setSearchResults([])
+      setSearchLoading(false)
+      setSearchError(null)
+      return
+    }
+
+    let isActive = true
+    setSearchLoading(true)
+    setSearchError(null)
+
+    const timer = setTimeout(() => {
+      void bookingsService.getVenueBookings({ venueID, search: trimmedBookingSearch })
+        .then((results) => {
+          if (!isActive) return
+          setSearchResults(results)
+        })
+        .catch((searchRequestError) => {
+          if (!isActive) return
+          setSearchError('Failed to search bookings')
+          console.error(searchRequestError)
+        })
+        .finally(() => {
+          if (isActive) setSearchLoading(false)
+        })
+    }, 300)
+
+    return () => {
+      isActive = false
+      clearTimeout(timer)
+    }
+  }, [canRunBookingSearch, trimmedBookingSearch, venueID])
+
+  useEffect(() => {
+    if (!pendingDetailBookingID) return
+    const matchedBooking = bookings.find((booking) => booking.id === pendingDetailBookingID)
+    if (!matchedBooking) return
+    setDetailBooking(matchedBooking)
+    setPendingDetailBookingID(null)
+  }, [bookings, pendingDetailBookingID])
 
   // Global touch move listener for mobile drag-to-swap
   useEffect(() => {
@@ -256,6 +308,7 @@ export default function VenueTimetablePage() {
     }
     document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
     return () => document.removeEventListener('touchmove', handleGlobalTouchMove)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggedBooking, moveMode])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
@@ -665,7 +718,17 @@ export default function VenueTimetablePage() {
   }
 
   const multiBookItems = useMemo(() => buildBundleItems(selectedCells, date), [selectedCells, date])
-  const courtNameById = useMemo(() => Object.fromEntries(courts.map((c) => [c.id, c.name])), [courts])
+
+  const handleSearchResultSelect = (booking: Booking) => {
+    const targetDate = moment(booking.date).format('YYYY-MM-DD')
+    if (targetDate === date) {
+      setDetailBooking(bookings.find((item) => item.id === booking.id) ?? booking)
+      return
+    }
+
+    setPendingDetailBookingID(booking.id)
+    setDate(targetDate)
+  }
 
   if (initLoading) {
     return (
@@ -741,6 +804,27 @@ export default function VenueTimetablePage() {
                 <ChevronRightIcon fontSize="small" />
               </IconButton>
             </Box>
+            <TextField
+              size="small"
+              value={bookingSearch}
+              onChange={(e) => setBookingSearch(e.target.value)}
+              placeholder="Search booking ref, name, phone, or email"
+              InputProps={bookingSearch ? {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      aria-label="Clear booking search"
+                      onClick={() => setBookingSearch('')}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              } : undefined}
+              sx={{ minWidth: { xs: '100%', sm: 320 }, flex: { sm: '1 1 320px' }, maxWidth: 460 }}
+            />
             <ToggleButton
               value="select"
               selected={selectMode}
@@ -791,6 +875,68 @@ export default function VenueTimetablePage() {
             </Box>
           </Box>
         </Box>
+
+        {trimmedBookingSearch && (
+          <Paper variant="outlined" sx={{ mt: 1, mb: 2 }}>
+            <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+              <Typography variant="subtitle2">Search results</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Matching booking ref, name, phone, or email across this venue.
+              </Typography>
+            </Box>
+            {!canRunBookingSearch ? (
+              <Alert severity="info" sx={{ m: 2 }}>Enter at least 3 characters to search.</Alert>
+            ) : searchLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={22} />
+              </Box>
+            ) : searchError ? (
+              <Alert severity="error" sx={{ m: 2 }}>{searchError}</Alert>
+            ) : searchResults.length === 0 ? (
+              <Alert severity="info" sx={{ m: 2 }}>{`No bookings matched "${trimmedBookingSearch}".`}</Alert>
+            ) : (
+              <Box>
+                {searchResults.map((booking, index) => {
+                  const bookingDateLabel = moment(booking.date).format('DD/MM/YYYY')
+                  const bookingName = booking.guestName || booking.bookerName || 'Unknown'
+                  const bookingContact = booking.guestPhone || booking.bookerPhone || booking.guestEmail || ''
+
+                  return (
+                    <Box
+                      key={booking.id}
+                      onClick={() => handleSearchResultSelect(booking)}
+                      sx={{
+                        px: 2,
+                        py: 1.5,
+                        cursor: 'pointer',
+                        borderTop: index === 0 ? 0 : 1,
+                        borderColor: 'divider',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {booking.bookingRef ? `#${booking.bookingRef}` : 'Booking'} {bookingName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {courtNameById[booking.courtID] || 'Court'} | {bookingDateLabel} | {booking.startTime} - {booking.endTime}
+                          </Typography>
+                          {bookingContact && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {bookingContact}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Chip size="small" label={getStatusLabel(booking.paymentStatus)} />
+                      </Box>
+                    </Box>
+                  )
+                })}
+              </Box>
+            )}
+          </Paper>
+        )}
 
         {sortedCourts.length === 0 ? (
           <Alert severity="info" sx={{ mt: 1 }}>No active courts found for this venue.</Alert>

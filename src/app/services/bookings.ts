@@ -181,6 +181,7 @@ interface VenueBookingsParams {
   paymentStatus?: string;
   date?: string;
   venueID?: string;
+  search?: string;
 }
 
 interface VenueAnalyticsParams {
