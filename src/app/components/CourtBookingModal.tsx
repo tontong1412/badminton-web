@@ -108,6 +108,7 @@ export default function CourtBookingModal({
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
   const [couponValidating, setCouponValidating] = useState(false)
   const [couponError, setCouponError] = useState<string | null>(null)
+  const [addOnIDsByCourtSlot, setAddOnIDsByCourtSlot] = useState<Record<string, string[]>>({})
 
   const isItemsPreselected = Boolean(bookingItems && bookingItems.length > 0)
 
@@ -154,7 +155,54 @@ export default function CourtBookingModal({
     return end.diff(start, 'minutes')
   }
 
-  const calculatePrice = () => {
+  const getActiveAddOnsForCourt = (courtID: string) => {
+    const court = courts.find((c) => c.id === courtID)
+    return (court?.addOns ?? []).filter((addOn) => addOn.isActive !== false)
+  }
+
+  const makeCourtSlotKey = (courtID: string, slotStart: string, slotEnd: string): string => `${courtID}|${slotStart}-${slotEnd}`
+
+  const splitIntoSlots = (windowStart: string, windowEnd: string, slotMinutes = 60): Array<{ startTime: string; endTime: string }> => {
+    const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const fromMins = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+    const start = toMins(windowStart)
+    const end = toMins(windowEnd)
+    if (end <= start) return []
+    const slots: Array<{ startTime: string; endTime: string }> = []
+    for (let cursor = start; cursor < end; cursor += slotMinutes) {
+      const slotEnd = Math.min(cursor + slotMinutes, end)
+      slots.push({ startTime: fromMins(cursor), endTime: fromMins(slotEnd) })
+    }
+    return slots
+  }
+
+  const getSingleSlotsForCourt = (courtID: string): Array<{ startTime: string; endTime: string }> => {
+    if (isItemsPreselected && bookingItems) {
+      const matchingItems = bookingItems.filter((item) => item.courtID === courtID)
+      const byKey = new Map<string, { startTime: string; endTime: string }>()
+      for (const item of matchingItems) {
+        for (const slot of splitIntoSlots(item.startTime, item.endTime, 60)) {
+          byKey.set(`${slot.startTime}-${slot.endTime}`, slot)
+        }
+      }
+      return Array.from(byKey.values())
+    }
+    if (!startTime || !endTime) return []
+    return splitIntoSlots(startTime, endTime, 60)
+  }
+
+  const recurringAddOnSlots = splitIntoSlots(recurringStartTime, recurringEndTime, 60)
+
+  const getSelectedAddOnsForCourtSlot = (courtID: string, slotStart: string, slotEnd: string) => {
+    const selectedIDs = addOnIDsByCourtSlot[makeCourtSlotKey(courtID, slotStart, slotEnd)] ?? []
+    const activeAddOns = getActiveAddOnsForCourt(courtID)
+    return activeAddOns.filter((addOn) => selectedIDs.includes(addOn.id))
+  }
+
+  const getAddOnTotalForCourtSlot = (courtID: string, slotStart: string, slotEnd: string) => getSelectedAddOnsForCourtSlot(courtID, slotStart, slotEnd)
+    .reduce((sum, addOn) => sum + addOn.price, 0)
+
+  const calculateBasePrice = () => {
     if (isItemsPreselected && bookingItems) {
       return bookingItems.reduce((sum, item) => {
         const court = courts.find((c) => c.id === item.courtID)
@@ -165,6 +213,21 @@ export default function CourtBookingModal({
     if (!startTime || !endTime) return 0
     return courts.reduce((sum, court) => sum + getPriceForRange(court, startTime, endTime), 0)
   }
+
+  const calculateAddOnTotal = () => {
+    if (isItemsPreselected && bookingItems) {
+      return bookingItems.reduce((sum, item) => (
+        sum + splitIntoSlots(item.startTime, item.endTime, 60)
+          .reduce((slotSum, slot) => slotSum + getAddOnTotalForCourtSlot(item.courtID, slot.startTime, slot.endTime), 0)
+      ), 0)
+    }
+    return courts.reduce((sum, court) => (
+      sum + getSingleSlotsForCourt(court.id)
+        .reduce((slotSum, slot) => slotSum + getAddOnTotalForCourtSlot(court.id, slot.startTime, slot.endTime), 0)
+    ), 0)
+  }
+
+  const calculatePrice = () => Number((calculateBasePrice() + calculateAddOnTotal()).toFixed(2))
 
   const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const isAdmin = currentUser?.role === 'admin'
@@ -184,15 +247,25 @@ export default function CourtBookingModal({
 
   const selectedRecurringCourts = courts.filter((c) => recurringCourtIDs.includes(c.id))
   const recurringCurrency = selectedRecurringCourts[0]?.currency ?? courts[0]?.currency ?? 'THB'
-  const recurringPricePerSession = selectedRecurringCourts.reduce((sum, court) => {
+  const recurringBasePricePerSession = selectedRecurringCourts.reduce((sum, court) => {
     return sum + getPriceForRange(court, recurringStartTime, recurringEndTime)
   }, 0)
+  const recurringAddOnPerSession = selectedRecurringCourts.reduce((sum, court) => (
+    sum + recurringAddOnSlots.reduce((slotSum, slot) => (
+      slotSum + getAddOnTotalForCourtSlot(court.id, slot.startTime, slot.endTime)
+    ), 0)
+  ), 0)
+  const recurringPricePerSession = recurringBasePricePerSession + recurringAddOnPerSession
   const recurringDatesPreview = calcRecurringDates()
   const recurringTotalPrice = recurringPricePerSession * recurringDatesPreview.length
 
   const getCourtNameByID = (courtID: string): string => {
     return courts.find((court) => court.id === courtID)?.name ?? courtID
   }
+
+  const singleAddOnCourtIDs = isItemsPreselected && bookingItems
+    ? Array.from(new Set(bookingItems.map((item) => item.courtID)))
+    : courts.map((court) => court.id)
 
   const handleNext = () => {
     if (activeStep === 0) {
@@ -261,6 +334,7 @@ export default function CourtBookingModal({
     setCouponCode('')
     setCouponResult(null)
     setCouponError(null)
+    setAddOnIDsByCourtSlot({})
   }
 
   const navigateAfterBooking = (bundleID: string, email?: string) => {
@@ -296,6 +370,19 @@ export default function CourtBookingModal({
           // Keep compatibility with both API shapes across branches.
           courtID: primaryCourtID,
           courtIDs: selectedCourtIDs,
+          addOnIDsByCourtAndSlot: Object.fromEntries(
+            selectedCourtIDs.map((courtID) => {
+              const slotMap = Object.fromEntries(
+                recurringAddOnSlots
+                  .map((slot) => {
+                    const ids = addOnIDsByCourtSlot[makeCourtSlotKey(courtID, slot.startTime, slot.endTime)] ?? []
+                    return [`${slot.startTime}-${slot.endTime}`, ids] as const
+                  })
+                  .filter(([, ids]) => ids.length > 0)
+              )
+              return [courtID, slotMap] as const
+            }).filter(([, slotMap]) => Object.keys(slotMap).length > 0)
+          ),
           startTime: recurringStartTime,
           endTime: recurringEndTime,
           pattern: recurringPattern,
@@ -406,8 +493,20 @@ export default function CourtBookingModal({
           endTime,
         }))
 
+      const effectiveItemsWithAddOns = effectiveItems.map((item) => ({
+        ...item,
+        addOnIDsBySlot: Object.fromEntries(
+          splitIntoSlots(item.startTime, item.endTime, 60)
+            .map((slot) => {
+              const ids = addOnIDsByCourtSlot[makeCourtSlotKey(item.courtID, slot.startTime, slot.endTime)] ?? []
+              return [`${slot.startTime}-${slot.endTime}`, ids] as const
+            })
+            .filter(([, ids]) => ids.length > 0)
+        ),
+      }))
+
       const result = await bookingsService.createBundle({
-        items: effectiveItems,
+        items: effectiveItemsWithAddOns,
         ...(!currentUser?.id && {
           guestName,
           guestPhone,
@@ -473,6 +572,21 @@ export default function CourtBookingModal({
     } finally {
       setCouponValidating(false)
     }
+  }
+
+  const handleToggleAddOn = (courtID: string, slotStart: string, slotEnd: string, addOnID: string) => {
+    const slotKey = makeCourtSlotKey(courtID, slotStart, slotEnd)
+    setAddOnIDsByCourtSlot((prev) => {
+      const current = new Set(prev[slotKey] ?? [])
+      if (current.has(addOnID)) current.delete(addOnID)
+      else current.add(addOnID)
+      return {
+        ...prev,
+        [slotKey]: Array.from(current),
+      }
+    })
+    setCouponResult(null)
+    setCouponError(null)
   }
 
   const handleClose = () => {
@@ -774,6 +888,62 @@ export default function CourtBookingModal({
                   </Box>
                 )}
 
+                {(
+                  bookingType === 'recurring'
+                    ? selectedRecurringCourts.some((court) => getActiveAddOnsForCourt(court.id).length > 0)
+                    : singleAddOnCourtIDs.some((courtID) => getActiveAddOnsForCourt(courtID).length > 0)
+                ) && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.2 }}>{t('booking.addOns') || 'Add-ons'}</Typography>
+                    {(bookingType === 'recurring' ? selectedRecurringCourts : singleAddOnCourtIDs.map((courtID) => courts.find((c) => c.id === courtID)).filter(Boolean)).map((court) => {
+                      const resolvedCourt = court as Court
+                      const activeAddOns = getActiveAddOnsForCourt(resolvedCourt.id)
+                      const slots = bookingType === 'recurring' ? recurringAddOnSlots : getSingleSlotsForCourt(resolvedCourt.id)
+                      if (activeAddOns.length === 0) return null
+                      return (
+                        <Box key={resolvedCourt.id} sx={{ mb: 1.5, p: 1.2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.8 }}>{resolvedCourt.name}</Typography>
+                          {slots.map((slot) => (
+                            <Box key={`${resolvedCourt.id}-${slot.startTime}-${slot.endTime}`} sx={{ mb: 0.8, pl: 0.2 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.2 }}>
+                                {slot.startTime} - {slot.endTime}
+                              </Typography>
+                              {activeAddOns.map((addOn) => {
+                                const checked = (addOnIDsByCourtSlot[makeCourtSlotKey(resolvedCourt.id, slot.startTime, slot.endTime)] ?? []).includes(addOn.id)
+                                return (
+                                  <Box
+                                    key={`${addOn.id}-${slot.startTime}-${slot.endTime}`}
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      mb: 0.2,
+                                    }}
+                                  >
+                                    <Checkbox
+                                      size="small"
+                                      checked={checked}
+                                      onChange={() => handleToggleAddOn(resolvedCourt.id, slot.startTime, slot.endTime, addOn.id)}
+                                      sx={{ p: 0.5, mr: 1, mb: 0 }}
+                                    />
+                                    <Box>
+                                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {addOn.name} · {addOn.price.toFixed(2)} {resolvedCourt.currency}
+                                      </Typography>
+                                      {addOn.details && (
+                                        <Typography variant="caption" color="text.secondary">{addOn.details}</Typography>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                )
+                              })}
+                            </Box>
+                          ))}
+                        </Box>
+                      )
+                    })}
+                  </Box>
+                )}
+
                 <TextField
                   fullWidth
                   label={t('booking.note')}
@@ -793,25 +963,25 @@ export default function CourtBookingModal({
 
                 {bookingType === 'recurring' ? (
                   <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> <strong>{venue.name?.en || venue.name?.th}</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
                       <strong>{t('booking.courts')}:</strong> {selectedRecurringCourts.map((court) => court.name).join(', ') || '—'}
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.time')}:</strong> {recurringStartTime} – {recurringEndTime}
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.time')}:</strong> <strong>{recurringStartTime} – {recurringEndTime}</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
                       <strong>{t('booking.repeat')}:</strong>{' '}
                       {recurringPattern === 'weekly'
                         ? t('booking.weeklyOn', { days: recurringDays.map((d) => DAY_LABELS[d]).join(', ') })
                         : t('booking.everyDayLabel')}
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.dateRange')}:</strong> {moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.dateRange')}:</strong> <strong>{moment(rangeStart).format('D MMM YYYY')} – {moment(rangeEnd).format('D MMM YYYY')}</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
                       <strong>{t('booking.sessions')}:</strong> {recurringDatesPreview.length}
                       {recurringDatesPreview.length > 0 && (
                         <>
@@ -823,6 +993,13 @@ export default function CourtBookingModal({
                     <Typography variant="h6" sx={{ mt: 2 }}>
                       <strong>{t('booking.estTotal')}:</strong> {recurringTotalPrice.toFixed(2)} {recurringCurrency}
                     </Typography>
+                    {recurringAddOnPerSession > 0 && (
+                      <Box sx={{ mt: 0.5 }}>
+                        <Typography variant="body1">
+                          <strong>{t('booking.addOns') || 'Add-ons'}:</strong> +{recurringAddOnPerSession.toFixed(2)} {recurringCurrency} / session
+                        </Typography>
+                      </Box>
+                    )}
                     {recurringConflicts.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1.5 }}>
                         {recurringConflicts.map((c) => (
@@ -838,36 +1015,73 @@ export default function CourtBookingModal({
                     )}
                   </Box>
                 ) : (
-                  <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>{t('booking.venue')}:</strong> {venue.name?.en || venue.name?.th}
+                  <Box sx={{ mb: 2, p: 0, backgroundColor: 'background.default', borderRadius: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      <strong>{t('booking.venue')}:</strong> <strong>{venue.name?.en || venue.name?.th}</strong>
                     </Typography>
                     {isItemsPreselected && bookingItems ? (
                       bookingItems.map((item) => {
                         const court = courts.find((c) => c.id === item.courtID)
                         const durationMins = moment(item.endTime, 'HH:mm').diff(moment(item.startTime, 'HH:mm'), 'minutes')
-                        const price = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
+                        const basePrice = court ? getPriceForRange(court, item.startTime, item.endTime) : 0
+                        const addOnTotal = splitIntoSlots(item.startTime, item.endTime, 60)
+                          .reduce((sum, slot) => sum + getAddOnTotalForCourtSlot(item.courtID, slot.startTime, slot.endTime), 0)
+                        const slotPriceWithAddOns = basePrice + addOnTotal
                         return (
                           <Box key={`${item.courtID}-${item.startTime}`} sx={{ mb: 1, pl: 1, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                            <Typography variant="body2"><strong>{court?.name ?? item.courtID}</strong></Typography>
-                            <Typography variant="body2">{t('booking.date')}: {moment(item.date).format('dddd, D MMM')}</Typography>
-                            <Typography variant="body2">{t('booking.time')}: {item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</Typography>
-                            <Typography variant="body2">{t('booking.price')}: {price.toFixed(2)} {court?.currency || 'THB'}</Typography>
+                            <Typography variant="body1"><strong>{court?.name ?? item.courtID}</strong></Typography>
+                            <Typography variant="body1">{t('booking.date')}: <strong>{moment(item.date).format('dddd, D MMM')}</strong></Typography>
+                            <Typography variant="body1">{t('booking.time')}: <strong>{item.startTime} – {item.endTime} ({durationMins} {t('booking.minutes')})</strong></Typography>
+                            {splitIntoSlots(item.startTime, item.endTime, 60).map((slot) => {
+                              const slotAddOns = getSelectedAddOnsForCourtSlot(item.courtID, slot.startTime, slot.endTime)
+                              if (slotAddOns.length === 0) return null
+                              return (
+                                <Box key={`${item.courtID}-${item.date}-${slot.startTime}-${slot.endTime}`} sx={{ pl: 0.8, mt: 0.3 }}>
+                                  <Typography variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                                    {slot.startTime} - {slot.endTime}
+                                  </Typography>
+                                  {slotAddOns.map((addOn) => (
+                                    <Typography key={`${item.courtID}-${slot.startTime}-${slot.endTime}-${addOn.id}`} variant="body2" color="text.secondary" sx={{ display: 'block', pl: 0.8 }}>
+                                      {addOn.name} (+{addOn.price.toFixed(2)} {court?.currency || 'THB'})
+                                    </Typography>
+                                  ))}
+                                </Box>
+                              )
+                            })}
+                            <Typography variant="body1">
+                              {t('booking.price')}: <strong>{slotPriceWithAddOns.toFixed(2)} {court?.currency || 'THB'}</strong>
+                            </Typography>
                           </Box>
                         )
                       })
                     ) : (
                       <>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
+                        <Typography variant="body1" sx={{ mb: 1 }}>
                           <strong>{t('booking.courts')}:</strong> {courts.map((court) => court.name).join(', ')}
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>{t('booking.date')}:</strong> {moment(selectedDate).format('dddd, D MMM')}
+                        <Typography variant="body1" sx={{ mb: 1 }}>
+                          <strong>{t('booking.date')}:</strong> <strong>{moment(selectedDate).format('dddd, D MMM')}</strong>
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>{t('booking.time')}:</strong> {startTime} - {endTime}
+                        <Typography variant="body1" sx={{ mb: 1 }}>
+                          <strong>{t('booking.time')}:</strong> <strong>{startTime} - {endTime}</strong>
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
+                        {courts.map((court) => {
+                          const slotAddOns = (!startTime || !endTime) ? [] : getSelectedAddOnsForCourtSlot(court.id, startTime, endTime)
+                          if (slotAddOns.length === 0) return null
+                          return (
+                            <Box key={`${court.id}-${startTime}-${endTime}`} sx={{ pl: 0.8, mb: 0.6 }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                                {court.name} · {startTime} - {endTime}
+                              </Typography>
+                              {slotAddOns.map((addOn) => (
+                                <Typography key={`${court.id}-${startTime}-${endTime}-${addOn.id}`} variant="body2" color="text.secondary" sx={{ display: 'block', pl: 0.8 }}>
+                                  {addOn.name} (+{addOn.price.toFixed(2)} {court.currency})
+                                </Typography>
+                              ))}
+                            </Box>
+                          )
+                        })}
+                        <Typography variant="body1" sx={{ mb: 1 }}>
                           <strong>{t('booking.duration')}:</strong> {calculateDuration()} {t('booking.minutes')}
                         </Typography>
                       </>

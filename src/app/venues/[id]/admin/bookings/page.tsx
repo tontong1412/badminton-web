@@ -22,6 +22,7 @@ import {
   Box,
   Tabs,
   Tab,
+  Badge,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Booking, Court, User, Venue } from '@/type'
@@ -68,6 +69,11 @@ export default function VenuePaymentsPage() {
 
   const { venue, isLoading: initLoading, isError: venueError } = useVenue(venueID)
   const { bookings, isLoading: loading, isError: bookingsError, mutate: mutateBookings } = useVenueBookings({ venueID, paymentStatus: tab })
+  const { bookings: pendingRawBookings } = useVenueBookings({ venueID, paymentStatus: 'pending' })
+  const pendingCount = useMemo(() =>
+    new Set(pendingRawBookings.map((b) => b.bookingBundleID || `single-${b.id}`)).size,
+  [pendingRawBookings]
+  )
 
   const error = venueError || bookingsError ? 'Failed to load data' : null
 
@@ -189,7 +195,7 @@ export default function VenuePaymentsPage() {
         >
           <Tab label="Dashboard" value="dashboard" />
           <Tab label="Timetable" value="timetable" />
-          <Tab label="Payments" value="bookings" />
+          <Tab label={<Badge badgeContent={pendingCount} color="error">Payments</Badge>} value="bookings" />
           <Tab label="Settings" value="settings" />
         </Tabs>
 

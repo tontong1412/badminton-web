@@ -66,6 +66,8 @@ export interface BookingBundleItem {
   date: string;
   startTime: string;
   endTime: string;
+  addOnIDsBySlot?: Record<string, string[]>;
+  addOnIDs?: string[];
 }
 
 export interface CreateBundlePayload {
@@ -97,6 +99,8 @@ const createBundle = (payload: CreateBundlePayload): Promise<Booking | BookingBu
 export interface CreateRecurringBookingPayload {
   courtID?: string;
   courtIDs?: string[];
+  addOnIDsByCourtAndSlot?: Record<string, Record<string, string[]>>;
+  addOnIDsByCourt?: Record<string, string[]>;
   rangeStart: string;
   rangeEnd: string;
   startTime: string;
@@ -177,6 +181,7 @@ interface VenueBookingsParams {
   paymentStatus?: string;
   date?: string;
   venueID?: string;
+  search?: string;
 }
 
 interface VenueAnalyticsParams {
@@ -192,6 +197,10 @@ interface RescheduleBookingPayload {
   endTime: string;
   applyToBundle?: boolean;
   swapWithBookingID?: string;
+}
+
+interface UpdateBookingAddOnsPayload {
+  addOnIDs: string[];
 }
 
 const getVenueBookings = (params?: VenueBookingsParams): Promise<Booking[]> => {
@@ -226,6 +235,12 @@ const reschedule = (bookingID: string, payload: RescheduleBookingPayload): Promi
   }).then((response) => response.data as Booking)
 }
 
+const updateAddOns = (bookingID: string, payload: UpdateBookingAddOnsPayload): Promise<Booking> => {
+  return axios.put(`${baseUrl}/${bookingID}/add-ons`, payload, {
+    withCredentials: true,
+  }).then((response) => response.data as Booking)
+}
+
 export default {
   getAll,
   getPaged,
@@ -241,4 +256,5 @@ export default {
   approvePayment,
   markAsPaid,
   reschedule,
+  updateAddOns,
 }

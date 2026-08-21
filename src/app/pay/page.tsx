@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
@@ -26,6 +26,7 @@ import { Booking, BookingStatus, Court, Venue } from '@/type'
 
 function GuestPayContent() {
   const { t, i18n } = useTranslation()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const bundleID = searchParams.get('bundleID')
   const guestEmail = searchParams.get('email')
@@ -110,12 +111,22 @@ function GuestPayContent() {
       await bookingsService.payBooking(bundleID, { slip: slipPreview, note: slipNote || undefined }, guestEmail ?? undefined)
       setSuccess(true)
     } catch (err) {
+      let originalMessage: string | null = null
       if (axios.isAxiosError(err)) {
-        const msg = (err.response?.data as { message?: string } | undefined)?.message
-        setSubmitError(msg ?? t('booking.payPage.errors.submitPaymentFailed'))
-      } else {
-        setSubmitError(t('booking.payPage.errors.submitPaymentFailed'))
+        const data = err.response?.data as
+          | string
+          | { message?: string; error?: string; detail?: string }
+          | undefined
+        if (typeof data === 'string' && data.trim()) {
+          originalMessage = data.trim()
+        } else if (data && typeof data === 'object') {
+          originalMessage = data.message ?? data.error ?? data.detail ?? null
+        }
       }
+
+      const fallbackMessage = t('booking.payPage.errors.submitPaymentFailed')
+      const contactVenueMessage = t('booking.payPage.errors.contactVenueIfNecessary')
+      setSubmitError([originalMessage ?? fallbackMessage, contactVenueMessage].join(' '))
     } finally {
       setSubmitting(false)
     }
@@ -193,6 +204,19 @@ function GuestPayContent() {
               {t('booking.payPage.bookingRef')}: #{bookingRef}
             </Typography>
           )}
+          {guestEmail ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+              {t('booking.payPage.success.guestCheckEmail')}
+            </Typography>
+          ) : (
+            <Button
+              variant="contained"
+              sx={{ mt: 3 }}
+              onClick={() => router.push('/bookings')}
+            >
+              {t('booking.payPage.success.goToMyBookings')}
+            </Button>
+          )}
         </Paper>
       </Container>
     )
@@ -256,6 +280,15 @@ function GuestPayContent() {
                     {(Number(b.totalPrice) || 0).toFixed(2)} {b.currency}
                   </Typography>
                 </Box>
+                {(b.selectedAddOns?.length ?? 0) > 0 && (
+                  <Box sx={{ pl: 0.5, pb: 0.5 }}>
+                    {b.selectedAddOns?.map((addOn) => (
+                      <Typography key={`${b.id}-${addOn.id}`} variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        + {addOn.name} ({addOn.price.toFixed(2)} {b.currency}){addOn.details ? ` — ${addOn.details}` : ''}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
               </Box>
             )
           })}

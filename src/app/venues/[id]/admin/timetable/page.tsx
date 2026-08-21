@@ -17,8 +17,11 @@ import {
   Button,
   Tabs,
   Tab,
+  Badge,
+  Checkbox,
   FormControl,
   InputLabel,
+  InputAdornment,
   Select,
   MenuItem,
   Divider,
@@ -28,10 +31,11 @@ import {
   Snackbar,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ClearIcon from '@mui/icons-material/Clear'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SelectAllIcon from '@mui/icons-material/SelectAll'
-import { Booking, BookingStatus, Court, PaymentStatus, User } from '@/type'
+import { Booking, BookingResaleOutcome, BookingStatus, Court, PaymentStatus, User } from '@/type'
 import bookingsService, { BookingBundleItem } from '../../../../services/bookings'
 import { useVenue, useCourts, useVenueBookings } from '../../../../libs/data'
 import moment from 'moment'
@@ -57,8 +61,10 @@ function minutesToTime(m: number) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${m % 60 === 0 ? '00' : '30'}`
 }
 
-function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus): string {
+function getStatusColor(status: BookingStatus, paymentStatus: PaymentStatus, hasAddOns: boolean, isResaleListed: boolean): string {
   if (status === BookingStatus.Cancelled) return '#e0e0e0'
+  if (isResaleListed) return '#e1bee7'
+  if (status === BookingStatus.Confirmed && hasAddOns) return '#ffcc80'
   if (paymentStatus === PaymentStatus.Paid) return '#c8e6c9'
   if (paymentStatus === PaymentStatus.Pending) return '#fff9c4'
   return '#bbdefb'
@@ -152,6 +158,11 @@ export default function VenueTimetablePage() {
     [allCourts, venueID]
   )
   const { bookings, isLoading: loading, mutate: mutateBookings } = useVenueBookings({ venueID, date })
+  const { bookings: pendingRawBookings } = useVenueBookings({ venueID, paymentStatus: 'pending' })
+  const pendingCount = useMemo(() =>
+    new Set(pendingRawBookings.map((b) => b.bookingBundleID || `single-${b.id}`)).size,
+  [pendingRawBookings]
+  )
 
   // Auth / access guard
   useEffect(() => {
@@ -161,7 +172,7 @@ export default function VenueTimetablePage() {
     const isOwner = venue.ownerUserID === userID
     const isManager = venue.managerUserIDs.includes(userID ?? '')
     if (!userID || (!isSystemAdmin && !isOwner && !isManager)) router.replace('/admin')
-  }, [venue, userReady, initLoading, router])
+  }, [venue, user, userReady, initLoading, router])
   const [bookDialog, setBookDialog] = useState<{ court: Court; startTime: string } | null>(null)
   const [bookMode, setBookMode] = useState<'single' | 'recurring'>('single')
   const [bookDurationMinutes, setBookDurationMinutes] = useState(60)
@@ -182,6 +193,7 @@ export default function VenueTimetablePage() {
   const dragAnchor = useRef<{ courtID: string; slot: string } | null>(null)
   const [dragPreview, setDragPreview] = useState<Set<string>>(new Set())
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const datePickerInputRef = useRef<HTMLInputElement>(null)
 
   // Shared guest info
   const [guestName, setGuestName] = useState('')
@@ -199,9 +211,19 @@ export default function VenueTimetablePage() {
   const [dropTargetCell, setDropTargetCell] = useState<string | null>(null)
   const [moveMode, setMoveMode] = useState<'single' | 'bundle'>('single')
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [editingAddOnIDs, setEditingAddOnIDs] = useState<string[]>([])
+  const [savingAddOns, setSavingAddOns] = useState(false)
+  const [bookingSearch, setBookingSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Booking[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [pendingDetailBookingID, setPendingDetailBookingID] = useState<string | null>(null)
   const touchDragging = useRef(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressPending = useRef<Booking | null>(null)
+  const trimmedBookingSearch = bookingSearch.trim()
+  const canRunBookingSearch = trimmedBookingSearch.length >= 3
+  const courtNameById = Object.fromEntries(courts.map((c) => [c.id, c.name]))
 
   useEffect(() => { setSelectedCells(new Set()) }, [date, selectMode])
 
@@ -215,6 +237,48 @@ export default function VenueTimetablePage() {
     const slotIndex = Math.max(0, Math.floor((currentMinutes - startMinutes) / 30) - 1)
     tableContainerRef.current.scrollTop = slotIndex * 36
   }, [date, loading])
+
+  useEffect(() => {
+    if (!canRunBookingSearch) {
+      setSearchResults([])
+      setSearchLoading(false)
+      setSearchError(null)
+      return
+    }
+
+    let isActive = true
+    setSearchLoading(true)
+    setSearchError(null)
+
+    const timer = setTimeout(() => {
+      void bookingsService.getVenueBookings({ venueID, search: trimmedBookingSearch })
+        .then((results) => {
+          if (!isActive) return
+          setSearchResults(results)
+        })
+        .catch((searchRequestError) => {
+          if (!isActive) return
+          setSearchError('Failed to search bookings')
+          console.error(searchRequestError)
+        })
+        .finally(() => {
+          if (isActive) setSearchLoading(false)
+        })
+    }, 300)
+
+    return () => {
+      isActive = false
+      clearTimeout(timer)
+    }
+  }, [canRunBookingSearch, trimmedBookingSearch, venueID])
+
+  useEffect(() => {
+    if (!pendingDetailBookingID) return
+    const matchedBooking = bookings.find((booking) => booking.id === pendingDetailBookingID)
+    if (!matchedBooking) return
+    setDetailBooking(matchedBooking)
+    setPendingDetailBookingID(null)
+  }, [bookings, pendingDetailBookingID])
 
   // Global touch move listener for mobile drag-to-swap
   useEffect(() => {
@@ -244,9 +308,31 @@ export default function VenueTimetablePage() {
     }
     document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
     return () => document.removeEventListener('touchmove', handleGlobalTouchMove)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggedBooking, moveMode])
 
   const sortedCourts = useMemo(() => [...courts].sort((a, b) => a.name.localeCompare(b.name)), [courts])
+  const dateDisplayLabel = useMemo(
+    () => (moment(date).isSame(moment(), 'day') ? 'Today' : moment(date).format('ddd D/M')),
+    [date]
+  )
+  const detailCourt = useMemo(() => {
+    if (!detailBooking) return null
+    return courts.find((court) => court.id === detailBooking.courtID) ?? null
+  }, [courts, detailBooking])
+  const detailCourtAddOns = useMemo(
+    () => (detailCourt?.addOns ?? []).filter((addOn) => addOn.isActive !== false),
+    [detailCourt]
+  )
+  const detailSelectedAddOns = detailBooking?.selectedAddOns ?? []
+
+  useEffect(() => {
+    if (!detailBooking) {
+      setEditingAddOnIDs([])
+      return
+    }
+    setEditingAddOnIDs((detailBooking.selectedAddOns ?? []).map((addOn) => addOn.id))
+  }, [detailBooking])
 
   const cellMap = useMemo(() => {
     const map = new Map<string, Map<string, BookingCell>>()
@@ -504,6 +590,30 @@ export default function VenueTimetablePage() {
     }
   }
 
+  const handleToggleDetailAddOn = (addOnID: string) => {
+    setEditingAddOnIDs((prev) => (
+      prev.includes(addOnID)
+        ? prev.filter((id) => id !== addOnID)
+        : [...prev, addOnID]
+    ))
+  }
+
+  const handleSaveDetailAddOns = async() => {
+    if (!detailBooking) return
+    try {
+      setSavingAddOns(true)
+      const updatedBooking = await bookingsService.updateAddOns(detailBooking.id, { addOnIDs: editingAddOnIDs })
+      setDetailBooking(updatedBooking)
+      setSuccessMessage('Booking add-ons updated.')
+      mutateBookings()
+    } catch (e) {
+      setError('Failed to update booking add-ons')
+      console.error(e)
+    } finally {
+      setSavingAddOns(false)
+    }
+  }
+
   // Returns the single booked booking that exactly fills the target range (swap candidate), or null.
   const getSwappableBooking = (dragged: Booking, targetCourtID: string, targetStartTime: string): Booking | null => {
     const targetStart = timeToMinutes(targetStartTime)
@@ -608,7 +718,17 @@ export default function VenueTimetablePage() {
   }
 
   const multiBookItems = useMemo(() => buildBundleItems(selectedCells, date), [selectedCells, date])
-  const courtNameById = useMemo(() => Object.fromEntries(courts.map((c) => [c.id, c.name])), [courts])
+
+  const handleSearchResultSelect = (booking: Booking) => {
+    const targetDate = moment(booking.date).format('YYYY-MM-DD')
+    if (targetDate === date) {
+      setDetailBooking(bookings.find((item) => item.id === booking.id) ?? booking)
+      return
+    }
+
+    setPendingDetailBookingID(booking.id)
+    setDate(targetDate)
+  }
 
   if (initLoading) {
     return (
@@ -643,7 +763,7 @@ export default function VenueTimetablePage() {
         >
           <Tab label="Dashboard" value="dashboard" />
           <Tab label="Timetable" value="timetable" />
-          <Tab label="Payments" value="bookings" />
+          <Tab label={<Badge badgeContent={pendingCount} color="error">Payments</Badge>} value="bookings" />
           <Tab label="Settings" value="settings" />
         </Tabs>
 
@@ -657,19 +777,54 @@ export default function VenueTimetablePage() {
               <IconButton size="small" onClick={() => setDate(moment(date).subtract(1, 'day').format('YYYY-MM-DD'))}>
                 <ChevronLeftIcon fontSize="small" />
               </IconButton>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  if (datePickerInputRef.current?.showPicker) {
+                    datePickerInputRef.current.showPicker()
+                  } else {
+                    datePickerInputRef.current?.click()
+                  }
+                }}
+                sx={{ minWidth: 120, textTransform: 'none', fontSize: 12, py: 0.65 }}
+              >
+                {dateDisplayLabel}
+              </Button>
               <TextField
+                inputRef={datePickerInputRef}
                 size="small"
                 type="date"
-                label="Date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ '& .MuiInputBase-root': { fontSize: 12 }, '& .MuiInputBase-input': { py: '5px' } }}
+                aria-label="Pick date"
+                sx={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
               />
               <IconButton size="small" onClick={() => setDate(moment(date).add(1, 'day').format('YYYY-MM-DD'))}>
                 <ChevronRightIcon fontSize="small" />
               </IconButton>
             </Box>
+            <TextField
+              size="small"
+              value={bookingSearch}
+              onChange={(e) => setBookingSearch(e.target.value)}
+              placeholder="Search booking ref, name, phone, or email"
+              InputProps={bookingSearch ? {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      aria-label="Clear booking search"
+                      onClick={() => setBookingSearch('')}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              } : undefined}
+              sx={{ minWidth: { xs: '100%', sm: 320 }, flex: { sm: '1 1 320px' }, maxWidth: 460 }}
+            />
             <ToggleButton
               value="select"
               selected={selectMode}
@@ -702,6 +857,10 @@ export default function VenueTimetablePage() {
               <Typography variant="caption">Slip Uploaded</Typography>
               <Box sx={{ width: 14, height: 14, bgcolor: '#c8e6c9', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
               <Typography variant="caption">Paid</Typography>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#e1bee7', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
+              <Typography variant="caption">On Resell</Typography>
+              <Box sx={{ width: 14, height: 14, bgcolor: '#ffcc80', border: '1px solid #ccc', borderRadius: 0.5, ml: 1 }} />
+              <Typography variant="caption">Confirmed + Add-ons</Typography>
               {selectMode && (
                 <>
                   <Box sx={{ width: 14, height: 14, bgcolor: '#ffe0b2', border: '2px solid #fb8c00', borderRadius: 0.5, ml: 1 }} />
@@ -716,6 +875,68 @@ export default function VenueTimetablePage() {
             </Box>
           </Box>
         </Box>
+
+        {trimmedBookingSearch && (
+          <Paper variant="outlined" sx={{ mt: 1, mb: 2 }}>
+            <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+              <Typography variant="subtitle2">Search results</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Matching booking ref, name, phone, or email across this venue.
+              </Typography>
+            </Box>
+            {!canRunBookingSearch ? (
+              <Alert severity="info" sx={{ m: 2 }}>Enter at least 3 characters to search.</Alert>
+            ) : searchLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={22} />
+              </Box>
+            ) : searchError ? (
+              <Alert severity="error" sx={{ m: 2 }}>{searchError}</Alert>
+            ) : searchResults.length === 0 ? (
+              <Alert severity="info" sx={{ m: 2 }}>{`No bookings matched "${trimmedBookingSearch}".`}</Alert>
+            ) : (
+              <Box>
+                {searchResults.map((booking, index) => {
+                  const bookingDateLabel = moment(booking.date).format('DD/MM/YYYY')
+                  const bookingName = booking.guestName || booking.bookerName || 'Unknown'
+                  const bookingContact = booking.guestPhone || booking.bookerPhone || booking.guestEmail || ''
+
+                  return (
+                    <Box
+                      key={booking.id}
+                      onClick={() => handleSearchResultSelect(booking)}
+                      sx={{
+                        px: 2,
+                        py: 1.5,
+                        cursor: 'pointer',
+                        borderTop: index === 0 ? 0 : 1,
+                        borderColor: 'divider',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {booking.bookingRef ? `#${booking.bookingRef}` : 'Booking'} {bookingName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {courtNameById[booking.courtID] || 'Court'} | {bookingDateLabel} | {booking.startTime} - {booking.endTime}
+                          </Typography>
+                          {bookingContact && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {bookingContact}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Chip size="small" label={getStatusLabel(booking.paymentStatus)} />
+                      </Box>
+                    </Box>
+                  )
+                })}
+              </Box>
+            )}
+          </Paper>
+        )}
 
         {sortedCourts.length === 0 ? (
           <Alert severity="info" sx={{ mt: 1 }}>No active courts found for this venue.</Alert>
@@ -882,7 +1103,12 @@ export default function VenueTimetablePage() {
                                 }}
                                 onClick={() => !selectMode && setDetailBooking(booking)}
                                 style={{
-                                  background: getStatusColor(booking.status, booking.paymentStatus),
+                                  background: getStatusColor(
+                                    booking.status,
+                                    booking.paymentStatus,
+                                    (booking.selectedAddOns?.length ?? 0) > 0,
+                                    booking.resaleOutcome === BookingResaleOutcome.Listed,
+                                  ),
                                   border: isSwapTarget && dropTargetCell === `${court.id}:${slot}`
                                     ? '2px dashed #7b1fa2'
                                     : '2px solid white',
@@ -909,6 +1135,11 @@ export default function VenueTimetablePage() {
                                 <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(0,0,0,0.08)' }}>
                                   {getStatusLabel(booking.paymentStatus)}
                                 </span>
+                                {(booking.selectedAddOns?.length ?? 0) > 0 && (
+                                  <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 8, background: 'rgba(25, 118, 210, 0.16)', marginLeft: 4 }}>
+                                    +{booking.selectedAddOns?.length} add-on{(booking.selectedAddOns?.length ?? 0) > 1 ? 's' : ''}
+                                  </span>
+                                )}
                               </td>
                             )
                           }
@@ -1015,6 +1246,12 @@ export default function VenueTimetablePage() {
           <DialogContent>
             {detailBooking && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {detailBooking.bookingRef && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Booking Ref</Typography>
+                    <Typography variant="body2" fontWeight={600}>{detailBooking.bookingRef}</Typography>
+                  </Box>
+                )}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Date</Typography>
                   <Typography variant="body2">{moment(detailBooking.date).format('DD/MM/YYYY')}</Typography>
@@ -1065,6 +1302,71 @@ export default function VenueTimetablePage() {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" color="text.secondary">Email</Typography>
                         <Typography variant="body2">{detailBooking.guestEmail}</Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+                {(detailCourtAddOns.length > 0 || detailSelectedAddOns.length > 0) && (
+                  <>
+                    <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1, mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">Add-ons</Typography>
+                    </Box>
+                    {detailCourtAddOns.length > 0 ? (
+                      detailCourtAddOns.map((addOn) => (
+                        <Box key={addOn.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.8 }}>
+                            <Checkbox
+                              size="small"
+                              sx={{ p: 0.2, mt: '-1px' }}
+                              checked={editingAddOnIDs.includes(addOn.id)}
+                              onChange={() => handleToggleDetailAddOn(addOn.id)}
+                              disabled={detailBooking.status === BookingStatus.Cancelled || savingAddOns}
+                            />
+                            <Box>
+                              <Typography variant="body2">{addOn.name}</Typography>
+                              {addOn.details && (
+                                <Typography variant="caption" color="text.secondary">{addOn.details}</Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          <Typography variant="body2">{addOn.price.toFixed(2)} {detailBooking.currency}</Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      detailSelectedAddOns.map((addOn) => (
+                        <Box key={addOn.id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                          <Box>
+                            <Typography variant="body2">{addOn.name}</Typography>
+                            {addOn.details && (
+                              <Typography variant="caption" color="text.secondary">{addOn.details}</Typography>
+                            )}
+                          </Box>
+                          <Typography variant="body2">{addOn.price.toFixed(2)} {detailBooking.currency}</Typography>
+                        </Box>
+                      ))
+                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Add-on subtotal</Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {(
+                          detailCourtAddOns.length > 0
+                            ? detailCourtAddOns
+                              .filter((addOn) => editingAddOnIDs.includes(addOn.id))
+                              .reduce((sum, addOn) => sum + addOn.price, 0)
+                            : (detailBooking.addOnTotalPrice ?? detailSelectedAddOns.reduce((sum, addOn) => sum + addOn.price, 0))
+                        ).toFixed(2)} {detailBooking.currency}
+                      </Typography>
+                    </Box>
+                    {detailCourtAddOns.length > 0 && detailBooking.status !== BookingStatus.Cancelled && (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={handleSaveDetailAddOns}
+                          disabled={savingAddOns}
+                        >
+                          {savingAddOns ? <CircularProgress size={16} /> : 'Save Add-ons'}
+                        </Button>
                       </Box>
                     )}
                   </>
