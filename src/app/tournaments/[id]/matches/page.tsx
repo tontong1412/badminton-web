@@ -11,7 +11,6 @@ import theme from '@/theme'
 import { setActiveMenu } from '@/app/libs/redux/slices/appSlice'
 import { useAppDispatch } from '@/app/providers'
 import MatchListMobile from './MatchListMobile'
-import MatchListTable from './MatchListTable'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
 import { Block } from '@mui/icons-material'
@@ -86,7 +85,53 @@ const MatchesPage = () => {
               </Box>
             </Box>
           </Box>
-          : <MatchListTable tournamentID={tournament.id} isManager={false}/>
+          : <Box component="main" sx={{ flexGrow: 1, p: 2 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 2,
+                alignItems: 'start',
+              }}
+            >
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1 }}>Waiting</Typography>
+                <Box
+                  sx={{
+                    height: 'calc(100vh - 220px)',
+                    overflowY: 'auto',
+                    pr: 1,
+                  }}
+                >
+                  <MatchListMobile tournamentID={tournament.id} status={MatchStatus.Waiting}/>
+                </Box>
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1 }}>Playing</Typography>
+                <Box
+                  sx={{
+                    height: 'calc(100vh - 220px)',
+                    overflowY: 'auto',
+                    pr: 1,
+                  }}
+                >
+                  <MatchListMobile tournamentID={tournament.id} status={MatchStatus.Playing}/>
+                </Box>
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1 }}>Finished</Typography>
+                <Box
+                  sx={{
+                    height: 'calc(100vh - 220px)',
+                    overflowY: 'auto',
+                    pr: 1,
+                  }}
+                >
+                  <MatchListMobile tournamentID={tournament.id} status={MatchStatus.Finished}/>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
       }
     </TournamentLayout>
   )

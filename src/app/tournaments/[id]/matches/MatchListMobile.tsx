@@ -23,7 +23,10 @@ const MatchListMobile = ({ tournamentID, status }: MatchListMobileProps) => {
     if(!a.matchNumber || !b.matchNumber){
       return 0
     }
-    return a.matchNumber - b.matchNumber
+    if(status === MatchStatus.Waiting){
+      return a.matchNumber - b.matchNumber
+    }
+    return b.matchNumber - a.matchNumber
   }
 
   const getRoundLabel = (match: Match) => {
