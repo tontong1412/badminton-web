@@ -103,7 +103,13 @@ const MatchesPage = () => {
                     pr: 1,
                   }}
                 >
-                  <MatchListMobile tournamentID={tournament.id} status={MatchStatus.Waiting}/>
+                  <MatchListMobile
+                    tournamentID={tournament.id}
+                    status={MatchStatus.Waiting}
+                    enableMatchNavigation={false}
+                    enablePlayerPopover
+                    useHandicap={Boolean(tournament.useHandicap)}
+                  />
                 </Box>
               </Box>
               <Box>
@@ -115,7 +121,13 @@ const MatchesPage = () => {
                     pr: 1,
                   }}
                 >
-                  <MatchListMobile tournamentID={tournament.id} status={MatchStatus.Playing}/>
+                  <MatchListMobile
+                    tournamentID={tournament.id}
+                    status={MatchStatus.Playing}
+                    enableMatchNavigation={false}
+                    enablePlayerPopover
+                    useHandicap={Boolean(tournament.useHandicap)}
+                  />
                 </Box>
               </Box>
               <Box>
@@ -127,7 +139,13 @@ const MatchesPage = () => {
                     pr: 1,
                   }}
                 >
-                  <MatchListMobile tournamentID={tournament.id} status={MatchStatus.Finished}/>
+                  <MatchListMobile
+                    tournamentID={tournament.id}
+                    status={MatchStatus.Finished}
+                    enableMatchNavigation={false}
+                    enablePlayerPopover
+                    useHandicap={Boolean(tournament.useHandicap)}
+                  />
                 </Box>
               </Box>
             </Box>

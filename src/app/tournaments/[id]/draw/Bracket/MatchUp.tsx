@@ -1,6 +1,6 @@
 import React from 'react'
 import moment from 'moment'
-import { Language, Match } from '@/type'
+import { Language, Match, Player } from '@/type'
 import { Typography } from '@mui/material'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
@@ -12,15 +12,28 @@ interface MatchUpProps {
   style: 'bracket' | 'list'
   placeholderTeamA?: string
   placeholderTeamB?: string
+  onPlayerClick?: (e: React.MouseEvent<HTMLDivElement>, player: Player) => void
 }
 
-const MatchUp = ({ match, style = 'bracket', placeholderTeamA, placeholderTeamB }: MatchUpProps) => {
+const MatchUp = ({ match, style = 'bracket', placeholderTeamA, placeholderTeamB, onPlayerClick }: MatchUpProps) => {
   const language: Language = useSelector((state: RootState) => state.app.language)
   const styles = style === 'bracket' ? stylesBracket : styleMatchList
 
   const renderTeamName = (team: Match['teamA'], placeholder?: string, isBye?: boolean) => {
     if (team?.players && team.players.length > 0) {
-      return team.players.map((p) => <Typography key={`player-${p.id}`}>{p.officialName?.[language]}</Typography>)
+      return team.players.map((p) => (
+        <div
+          key={`player-${p.id}`}
+          onClick={(e) => {
+            if(onPlayerClick){
+              e.stopPropagation()
+              onPlayerClick(e, p)
+            }
+          }}
+        >
+          <Typography>{p.officialName?.[language]}</Typography>
+        </div>
+      ))
     }
     if (placeholder) return <Typography>{placeholder}</Typography>
     if (isBye) return <Typography>Bye</Typography>
