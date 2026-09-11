@@ -39,6 +39,10 @@ const Me = () => {
   const { myEvents, mutate: fetchMyEvents } = useMyEvents(params.id as string)
   const { myMatches, mutate: fetchMyMatches } = useMyMatches(params.id as string)
   const { matches } = useMatchesTournament(params.id as string)
+  const refreshMyEventsForPayment = async() => {
+    await fetchMyEvents()
+    return undefined
+  }
   const usedByTeam = useMemo(() => buildShuttlecockUsedByTeam(matches), [matches])
   const [lastMatchAnnounced, setLastMatchAnnounced] = useState<Match>()
   const [myNextMatch, setMyNextMatch] = useState<Match>()
@@ -228,7 +232,7 @@ const Me = () => {
               ))
             }
           </Box>
-          {selectedTeam && selectedEvent && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={selectedEvent} team={selectedTeam} setEvent={fetchMyEvents} isManager={isManager} setTeam={setSelectedTeam}/>}
+          {selectedTeam && selectedEvent && <PaymentModal visible={paymentModalVisible} setVisible={setPaymentModalVisible} event={selectedEvent} team={selectedTeam} setEvent={refreshMyEventsForPayment} isManager={isManager} setTeam={setSelectedTeam}/>}
         </Container>
       )
     } else if(tournament.status === TournamentStatus.SchedulePublished || tournament.status === TournamentStatus.Ongoing || tournament.status === TournamentStatus.Finished){
