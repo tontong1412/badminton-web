@@ -13,12 +13,13 @@ import { Event, EventTeam, Language, Match, MatchStatus, Player, TeamStatus, Tou
 import { Avatar, Box, Button, Card, CardActions, CardContent, CardHeader, Chip, CircularProgress, Container, Divider, Typography } from '@mui/material'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styles from '../draw/Bracket/MatchList.module.scss'
 import MatchUp from '../draw/Bracket/MatchUp'
 import moment from 'moment'
+import { buildShuttlecockUsedByTeam, getRemainingShuttlecockCredit } from '@/app/libs/shuttlecockCredit'
 
 
 const Me = () => {
@@ -38,6 +39,7 @@ const Me = () => {
   const { myEvents, mutate: fetchMyEvents } = useMyEvents(params.id as string)
   const { myMatches, mutate: fetchMyMatches } = useMyMatches(params.id as string)
   const { matches } = useMatchesTournament(params.id as string)
+  const usedByTeam = useMemo(() => buildShuttlecockUsedByTeam(matches), [matches])
   const [lastMatchAnnounced, setLastMatchAnnounced] = useState<Match>()
   const [myNextMatch, setMyNextMatch] = useState<Match>()
 
@@ -202,7 +204,7 @@ const Me = () => {
                                 <div style={{ position: 'relative', width: '20px', height: 'auto' }}>
                                   <Image alt='shuttle-icon' src='/shuttlecock.png' fill style={{ objectFit: 'contain' }}/>
                                 </div>
-                                <Typography>{team.shuttlecockCredit}</Typography>
+                                <Typography>{getRemainingShuttlecockCredit(team.shuttlecockCredit, team.id, usedByTeam)}</Typography>
                               </Box>
                             </Box>
                             {team.note && <Typography sx={{ pt:2 }}>{`${t('tournament.registration.note')}: ${team.note}`}</Typography>}

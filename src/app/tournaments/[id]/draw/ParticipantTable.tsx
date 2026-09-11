@@ -7,13 +7,14 @@ import {  FilterList } from '@mui/icons-material'
 import { Box, Button, Chip,  CircularProgress,  IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Tooltip, Typography } from '@mui/material'
 import axios from 'axios'
 import moment from 'moment'
-import { MouseEvent, useState } from 'react'
+import { MouseEvent, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import StatusColumn from './StatusColumn'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
 import ParticipantMenu from './ParticipantMenu'
-import { useEvent } from '@/app/libs/data'
+import { useEvent, useMatchesEvent } from '@/app/libs/data'
+import { buildShuttlecockUsedByTeam, getRemainingShuttlecockCredit } from '@/app/libs/shuttlecockCredit'
 
 interface ParticipantTableProps {
   eventID: string;
@@ -42,6 +43,9 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
   const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
   const { event, mutate: setEvent } = useEvent(eventID)
+  const { matches } = useMatchesEvent(eventID)
+
+  const usedByTeam = useMemo(() => buildShuttlecockUsedByTeam(matches), [matches])
 
   const handleSort = (property: Exclude<keyof EventTeam, 'slip' | 'note'>) => {
     const isAsc = orderBy === property && order === 'asc'
@@ -84,9 +88,19 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
   }
 
   const sortedRows: EventTeam[] | undefined = event && [...event.teams].sort((a, b) => {
+    if (orderBy === 'shuttlecockCredit') {
+      const valA = getRemainingShuttlecockCredit(a.shuttlecockCredit, a.id, usedByTeam)
+      const valB = getRemainingShuttlecockCredit(b.shuttlecockCredit, b.id, usedByTeam)
+
+      if (valA < valB) return order === 'asc' ? -1 : 1
+      if (valA > valB) return order === 'asc' ? 1 : -1
+      return 0
+    }
+
     const valA = a[orderBy]
     const valB = b[orderBy]
-    if(!valA || !valB) return 0
+
+    if (valA === undefined || valA === null || valB === undefined || valB === null) return 0
     if (valA < valB) return order === 'asc' ? -1 : 1
     if (valA > valB) return order === 'asc' ? 1 : -1
     return 0
@@ -209,7 +223,7 @@ const ParticipantTable = ({ eventID, isManager }: ParticipantTableProps) => {
                     color={MAP_PAYMENT_STATUS[team.paymentStatus].color} />
                 </TableCell>
                 <TableCell align="center">
-                  {team.shuttlecockCredit}
+                  {getRemainingShuttlecockCredit(team.shuttlecockCredit, team.id, usedByTeam)}
                 </TableCell>
                 <TableCell>
                   {team.note}
