@@ -8,12 +8,13 @@ import { Box, Button, Card, CardActions, CardContent, CardHeader, Chip, Circular
 import axios from 'axios'
 import Image from 'next/image'
 
-import { MouseEvent, useState } from 'react'
+import { MouseEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PlayerPopover from './PlayerPopover'
 import moment from 'moment'
 import ParticipantMenu from './ParticipantMenu'
-import { useEvent } from '@/app/libs/data'
+import { useEvent, useMatchesEvent } from '@/app/libs/data'
+import { buildShuttlecockUsedByTeam, getRemainingShuttlecockCredit } from '@/app/libs/shuttlecockCredit'
 
 interface ParticipantMobileProps {
   eventID: string;
@@ -35,6 +36,9 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
   const [menuTeam, setMenuTeam] = useState<EventTeam | null>(null)
   const { event, mutate: setEvent } = useEvent(eventID)
+  const { matches } = useMatchesEvent(eventID)
+
+  const usedByTeam = useMemo(() => buildShuttlecockUsedByTeam(matches), [matches])
 
   const sortTeams = (a:EventTeam, b:EventTeam) => {
     if(a.slipTimestamp === undefined && b.slipTimestamp === undefined){
@@ -119,7 +123,7 @@ const ParticipantMobile = ({ eventID, isManager }: ParticipantMobileProps) => {
                   <div style={{ position: 'relative', width: '20px', height: 'auto' }}>
                     <Image alt='shuttle-icon' src='/shuttlecock.png' fill style={{ objectFit: 'contain' }}/>
                   </div>
-                  <Typography>{team.shuttlecockCredit}</Typography>
+                  <Typography>{getRemainingShuttlecockCredit(team.shuttlecockCredit, team.id, usedByTeam)}</Typography>
                 </Box>
               </Box>
               {team.note && <Typography sx={{ pt:2 }}>{`${t('tournament.registration.note')}: ${team.note}`}</Typography>}

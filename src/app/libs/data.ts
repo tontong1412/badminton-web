@@ -39,7 +39,7 @@ export interface MyEventsResponse {
   myEvents: Event[]
   isLoading: boolean
   isError: boolean
-  mutate: (data?: Event | Promise<Event>) => Promise<Event | undefined>
+  mutate: (data?: Event[] | Promise<Event[]>) => Promise<Event[] | undefined>
 }
 
 export const useMyEvents = (tournamentID: string|undefined): MyEventsResponse => {
@@ -48,8 +48,16 @@ export const useMyEvents = (tournamentID: string|undefined): MyEventsResponse =>
     (url) => fetcher(url, true)
   )
 
+  const normalizedMyEvents = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.myEvents)
+      ? data.myEvents
+      : Array.isArray(data?.events)
+        ? data.events
+        : []
+
   return {
-    myEvents: data,
+    myEvents: normalizedMyEvents,
     isLoading: !error && !data,
     isError: error,
     mutate
@@ -102,7 +110,7 @@ export interface MatchesResponse {
   matches: Match[]
   isLoading: boolean
   isError: boolean
-  mutate: (data?: Match | Promise<Match>) => Promise<Match | undefined>
+  mutate: (data?: Match[] | Promise<Match[]>) => Promise<Match[] | undefined>
 }
 
 export const useMatchesEvent = (eventID: (string | undefined)): MatchesResponse => {
@@ -112,8 +120,14 @@ export const useMatchesEvent = (eventID: (string | undefined)): MatchesResponse 
     fetcher
   )
 
+  const normalizedMatches = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.matches)
+      ? data.matches
+      : []
+
   return {
-    matches: data,
+    matches: normalizedMatches,
     isLoading: !error && !data,
     isError: error,
     mutate
@@ -126,8 +140,14 @@ export const useMatchesTournament = (tournamentID: (string | undefined)): Matche
     fetcher
   )
 
+  const normalizedMatches = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.matches)
+      ? data.matches
+      : []
+
   return {
-    matches: data,
+    matches: normalizedMatches,
     isLoading: !error && !data,
     isError: error,
     mutate
@@ -160,7 +180,7 @@ export interface MyMatchesResponse {
   myMatches: Match[]
   isLoading: boolean
   isError: boolean
-  mutate: (data?: Event | Promise<Event>) => Promise<Event | undefined>
+  mutate: (data?: Match[] | Promise<Match[]>) => Promise<Match[] | undefined>
 }
 
 export const useMyMatches = (tournamentID: string|undefined): MyMatchesResponse => {
@@ -169,8 +189,16 @@ export const useMyMatches = (tournamentID: string|undefined): MyMatchesResponse 
     (url) => fetcher(url, true)
   )
 
+  const normalizedMyMatches = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.myMatches)
+      ? data.myMatches
+      : Array.isArray(data?.matches)
+        ? data.matches
+        : []
+
   return {
-    myMatches: data,
+    myMatches: normalizedMyMatches,
     isLoading: !error && !data,
     isError: error,
     mutate
@@ -274,7 +302,13 @@ export const useSessions = (): SessionsResponse => {
     `${SERVICE_ENDPOINT}/sessions`,
     fetcher
   )
-  return { sessions: data ?? [], isLoading, isError: !!error, mutate }
+  const normalizedSessions = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.sessions)
+      ? data.sessions
+      : []
+
+  return { sessions: normalizedSessions, isLoading, isError: !!error, mutate }
 }
 
 export interface SessionResponse {
@@ -299,7 +333,13 @@ export const useMySessions = (): SessionsResponse => {
     key,
     (url) => fetcher(url, true)
   )
-  return { sessions: data ?? [], isLoading, isError: !!error, mutate }
+  const normalizedSessions = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.sessions)
+      ? data.sessions
+      : []
+
+  return { sessions: normalizedSessions, isLoading, isError: !!error, mutate }
 }
 
 export interface SessionRegistrationResponse {
@@ -333,7 +373,13 @@ export const useSessionMatches = (sessionID: string | undefined, enabled: boolea
     key,
     (url) => fetcher(url, true),
   )
-  return { matches: data ?? [], isLoading, isError: !!error, mutate }
+  const normalizedMatches = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.matches)
+      ? data.matches
+      : []
+
+  return { matches: normalizedMatches, isLoading, isError: !!error, mutate }
 }
 
 export interface SessionStatsHookResponse {
