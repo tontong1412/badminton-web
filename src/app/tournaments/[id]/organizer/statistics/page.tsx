@@ -10,6 +10,16 @@ import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import MenuDrawer from '../MenuDrawer'
 
+interface StatisticFormState {
+  registrationIncomeInput: string;
+  courtFeesInput: string;
+  shuttlecockBuyingPriceInput: string;
+  shuttlecockSellingPriceInput: string;
+  staffExpenseInput: string;
+  prizeExpenseInput: string;
+  otherExpenseInput: string;
+}
+
 const toSafeNumber = (value: string): number => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed) || parsed < 0) return 0
@@ -25,9 +35,10 @@ const toMoney = (value: number): string => {
 
 const OrganizerStatisticsPage = () => {
   const params = useParams<{ id: string }>()
+  const tournamentID = params.id
   const dispatch = useAppDispatch()
-  const { tournament } = useTournament(params.id)
-  const { matches, isLoading: isMatchLoading } = useMatchesTournament(params.id)
+  const { tournament } = useTournament(tournamentID)
+  const { matches, isLoading: isMatchLoading } = useMatchesTournament(tournamentID)
 
   const [registrationIncomeInput, setRegistrationIncomeInput] = useState('0')
   const [courtFeesInput, setCourtFeesInput] = useState('0')
@@ -36,16 +47,74 @@ const OrganizerStatisticsPage = () => {
   const [staffExpenseInput, setStaffExpenseInput] = useState('0')
   const [prizeExpenseInput, setPrizeExpenseInput] = useState('0')
   const [otherExpenseInput, setOtherExpenseInput] = useState('0')
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false)
+
+  const localStorageKey = useMemo(() => {
+    return `tournament-statistics:${tournamentID}`
+  }, [tournamentID])
 
   useEffect(() => {
     dispatch(setActiveMenu(TournamentMenu.Organize))
   }, [dispatch])
 
   useEffect(() => {
+    if (!isStorageLoaded) return
+    if (shuttlecockSellingPriceInput !== '0') return
     if (tournament?.shuttlecockFee && tournament.shuttlecockFee > 0) {
       setShuttlecockSellingPriceInput(String(tournament.shuttlecockFee))
     }
-  }, [tournament?.shuttlecockFee])
+  }, [tournament?.shuttlecockFee, shuttlecockSellingPriceInput, isStorageLoaded])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    try {
+      const saved = window.localStorage.getItem(localStorageKey)
+      if (!saved) {
+        setIsStorageLoaded(true)
+        return
+      }
+
+      const parsed = JSON.parse(saved) as Partial<StatisticFormState>
+      if (typeof parsed.registrationIncomeInput === 'string') setRegistrationIncomeInput(parsed.registrationIncomeInput)
+      if (typeof parsed.courtFeesInput === 'string') setCourtFeesInput(parsed.courtFeesInput)
+      if (typeof parsed.shuttlecockBuyingPriceInput === 'string') setShuttlecockBuyingPriceInput(parsed.shuttlecockBuyingPriceInput)
+      if (typeof parsed.shuttlecockSellingPriceInput === 'string') setShuttlecockSellingPriceInput(parsed.shuttlecockSellingPriceInput)
+      if (typeof parsed.staffExpenseInput === 'string') setStaffExpenseInput(parsed.staffExpenseInput)
+      if (typeof parsed.prizeExpenseInput === 'string') setPrizeExpenseInput(parsed.prizeExpenseInput)
+      if (typeof parsed.otherExpenseInput === 'string') setOtherExpenseInput(parsed.otherExpenseInput)
+    } catch {
+      // Ignore malformed localStorage data and keep defaults.
+    } finally {
+      setIsStorageLoaded(true)
+    }
+  }, [localStorageKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isStorageLoaded) return
+
+    const payload: StatisticFormState = {
+      registrationIncomeInput,
+      courtFeesInput,
+      shuttlecockBuyingPriceInput,
+      shuttlecockSellingPriceInput,
+      staffExpenseInput,
+      prizeExpenseInput,
+      otherExpenseInput,
+    }
+
+    window.localStorage.setItem(localStorageKey, JSON.stringify(payload))
+  }, [
+    registrationIncomeInput,
+    courtFeesInput,
+    shuttlecockBuyingPriceInput,
+    shuttlecockSellingPriceInput,
+    staffExpenseInput,
+    prizeExpenseInput,
+    otherExpenseInput,
+    isStorageLoaded,
+    localStorageKey,
+  ])
 
   const totalShuttlecockUsed = useMemo(() => {
     return (matches ?? [])
