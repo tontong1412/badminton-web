@@ -87,6 +87,13 @@ const MatchPage = () => {
     mutate(response.data, { revalidate: false })
   }
 
+  const addShuttlecockUsed = async() => {
+    const response = await axios.put(`${SERVICE_ENDPOINT}/matches/${match.id}`, {
+      $inc: { shuttlecockUsed: 1 }
+    }, { withCredentials:true })
+    mutate(response.data, { revalidate: false })
+  }
+
   const onUndo = async() => {
     const prev = undo.pop()
     const response = await axios.put(`${SERVICE_ENDPOINT}/matches/${match.id}`, prev, { withCredentials:true })
@@ -94,6 +101,9 @@ const MatchPage = () => {
   }
 
   const endGame = async() => {
+    const confirmed = window.confirm(language === 'th' ? 'ยืนยันการจบเกม?' : 'Confirm end game?')
+    if(!confirmed) return
+
     const scoreLabel = [...match.scoreLabel]
     scoreLabel.push(`${match.teamA.score}-${match.teamB.score}`)
     await axios.post(`${SERVICE_ENDPOINT}/matches/set-score`, {
@@ -119,6 +129,9 @@ const MatchPage = () => {
   }
 
   const endMatch = async() => {
+    const confirmed = window.confirm(language === 'th' ? 'ยืนยันการจบแมตช์?' : 'Confirm end match?')
+    if(!confirmed) return
+
     const response = await axios.post(`${SERVICE_ENDPOINT}/matches/set-score`, {
       matchID: match.id,
       score: match.scoreLabel,
@@ -259,6 +272,9 @@ const MatchPage = () => {
               {match.teamA.score === 0 && match.teamB.score === 0 &&
               <Button variant='outlined' onClick={() => setSettingModalVisible(true)}>เลือกคนรับ/เสิร์ฟ</Button>
               }
+              <Button onClick={addShuttlecockUsed} variant='outlined' startIcon={<Add/>}>
+                {language === 'th' ? 'เพิ่มลูก' : 'Add shuttlecock'}
+              </Button>
               <Button
                 variant='outlined'
                 color='error'
