@@ -4,6 +4,7 @@ import axios from 'axios'
 import { Booking, BookingAvailability, Court, Event, Match, OpenPlaySession, Player, ResaleListing, ResalePayoutItem, SessionRegistrationDetail, SessionOpenPlayMatch, SessionStatsResponse, Tournament, Venue, VenueAnalyticsResponse } from '@/type'
 import { useSelector } from 'react-redux'
 import { RootState } from './redux/store'
+import { useEffect } from 'react'
 
 const fetcher = (url: string, withCredentials: boolean) => axios.get(
   url,
@@ -13,6 +14,76 @@ const fetcher = (url: string, withCredentials: boolean) => axios.get(
 }).catch((err) => {
   console.log(err)
 })
+
+type MatchUpdateEvent = {
+  type: 'ready' | 'match-updated'
+  tournamentID: string
+  matchID?: string
+}
+
+const tournamentMatchUpdateListeners = new Map<string, Set<() => void>>()
+const tournamentMatchUpdateSources = new Map<string, EventSource>()
+
+const removeMatchUpdateListener = (tournamentID: string, listener: () => void) => {
+  const listeners = tournamentMatchUpdateListeners.get(tournamentID)
+  if (!listeners) {
+    return
+  }
+
+  listeners.delete(listener)
+  if (listeners.size > 0) {
+    return
+  }
+
+  tournamentMatchUpdateListeners.delete(tournamentID)
+  const source = tournamentMatchUpdateSources.get(tournamentID)
+  source?.close()
+  tournamentMatchUpdateSources.delete(tournamentID)
+}
+
+const subscribeToTournamentMatchUpdates = (tournamentID: string, onUpdate: () => void) => {
+  let listeners = tournamentMatchUpdateListeners.get(tournamentID)
+  if (!listeners) {
+    listeners = new Set<() => void>()
+    tournamentMatchUpdateListeners.set(tournamentID, listeners)
+  }
+
+  listeners.add(onUpdate)
+
+  if (!tournamentMatchUpdateSources.has(tournamentID) && typeof window !== 'undefined') {
+    const source = new EventSource(`${SERVICE_ENDPOINT}/matches/stream?tournamentID=${tournamentID}`, {
+      withCredentials: true,
+    })
+
+    source.onmessage = (event) => {
+      let payload: MatchUpdateEvent | undefined
+      try {
+        payload = JSON.parse(event.data) as MatchUpdateEvent
+      } catch {
+        return
+      }
+
+      if (payload?.type !== 'match-updated') {
+        return
+      }
+
+      const tournamentListeners = tournamentMatchUpdateListeners.get(payload.tournamentID)
+      if (!tournamentListeners) {
+        return
+      }
+
+      tournamentListeners.forEach((listener) => listener())
+    }
+
+    source.onerror = () => {
+      // EventSource reconnects automatically; keep the stream alive.
+    }
+
+    tournamentMatchUpdateSources.set(tournamentID, source)
+  }
+
+  return () => removeMatchUpdateListener(tournamentID, onUpdate)
+}
 
 export interface TournamentResponse {
   tournament: Tournament
@@ -136,9 +207,21 @@ export const useMatchesEvent = (eventID: (string | undefined)): MatchesResponse 
 
 export const useMatchesTournament = (tournamentID: (string | undefined)): MatchesResponse => {
   const { data, error, mutate } = useSWR(
-    `${SERVICE_ENDPOINT}/matches?tournamentID=${tournamentID}`,
+    tournamentID ? `${SERVICE_ENDPOINT}/matches?tournamentID=${tournamentID}` : null,
     fetcher
   )
+
+  useEffect(() => {
+    if (!tournamentID) {
+      return
+    }
+
+    const unsubscribe = subscribeToTournamentMatchUpdates(tournamentID, () => {
+      void mutate()
+    })
+
+    return unsubscribe
+  }, [mutate, tournamentID])
 
   const normalizedMatches = Array.isArray(data)
     ? data
