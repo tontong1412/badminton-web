@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { MouseEvent, useEffect, useState } from 'react'
 import MatchUp from './MatchUp'
-import { Match, MatchStep } from '@/type'
+import { Match, MatchStep, Player } from '@/type'
 import { useEvent, useMatchesEvent } from '@/app/libs/data'
 import { CircularProgress } from '@mui/material'
 import styles from './Bracket.module.scss'
+import PlayerPopover from '../PlayerPopover'
 
 const Connector = () => (
   <div className={styles.connector}>
@@ -13,10 +14,12 @@ const Connector = () => (
 )
 const Winner = ({
   matches,
-  getPlaceholder
+  getPlaceholder,
+  onPlayerClick,
 }: {
   matches: Match[]
   getPlaceholder: (match: Match, side: 'teamA' | 'teamB') => string | undefined
+  onPlayerClick: (e: MouseEvent<HTMLDivElement>, player: Player) => void
 }) => {
   return (
     <div className={styles.winners}>
@@ -26,12 +29,14 @@ const Winner = ({
           style='bracket'
           placeholderTeamA={getPlaceholder(matches[0], 'teamA')}
           placeholderTeamB={getPlaceholder(matches[0], 'teamB')}
+          onPlayerClick={onPlayerClick}
         />
         <MatchUp
           match={matches[1]}
           style='bracket'
           placeholderTeamA={getPlaceholder(matches[1], 'teamA')}
           placeholderTeamB={getPlaceholder(matches[1], 'teamB')}
+          onPlayerClick={onPlayerClick}
         />
       </div>
       <Connector />
@@ -69,6 +74,8 @@ interface BracketProps {
 const Bracket = ({ eventID, step }: BracketProps) => {
   const [bracket, setBracket] = useState<{ [key: string]: Match[] }>()
   const [entryRound, setEntryRound] = useState(0)
+  const [showPlayer, setShowPlayer] = useState<Player | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const { event } = useEvent(eventID)
   const { matches, isLoading, isError } = useMatchesEvent(eventID)
 
@@ -101,40 +108,65 @@ const Bracket = ({ eventID, step }: BracketProps) => {
     return value
   }
 
+  const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
+    e.stopPropagation()
+    setShowPlayer(player)
+    setAnchorEl(e.currentTarget)
+  }
+
   const renderBracket = (roundArray: string[], bracket: { [key: string]: Match[] }) => {
     if(bracket === undefined) return
     return (
-      <div className={styles.bracket}>
-        {
-          roundArray.map((round, roundIndex) => {
-            return (
-              <section key={`round-${roundIndex}`} className={`${styles.round} ${styles[round]}`}>
-                {
-                  bracket[round].map((matches: Match, index: number) => {
-                    if (round !== 'finals' && index % 2 === 1) {
-                      const matchArray = [bracket[round][index - 1], matches]
-                      return <Winner key={index + 1} matches={matchArray} getPlaceholder={getPlaceholder} />
-                    } else if (round === 'finals') {
-                      return (
-                        <div key={index + 1} className={styles.winners}>
-                          <div className={styles.matchups}>
-                            <MatchUp
-                              match={matches}
-                              style='bracket'
-                              placeholderTeamA={getPlaceholder(matches, 'teamA')}
-                              placeholderTeamB={getPlaceholder(matches, 'teamB')}
-                            />
+      <>
+        <div className={styles.bracket}>
+          {
+            roundArray.map((round, roundIndex) => {
+              return (
+                <section key={`round-${roundIndex}`} className={`${styles.round} ${styles[round]}`}>
+                  {
+                    bracket[round].map((matches: Match, index: number) => {
+                      if (round !== 'finals' && index % 2 === 1) {
+                        const matchArray = [bracket[round][index - 1], matches]
+                        return (
+                          <Winner
+                            key={index + 1}
+                            matches={matchArray}
+                            getPlaceholder={getPlaceholder}
+                            onPlayerClick={handleShowPlayerDetail}
+                          />
+                        )
+                      } else if (round === 'finals') {
+                        return (
+                          <div key={index + 1} className={styles.winners}>
+                            <div className={styles.matchups}>
+                              <MatchUp
+                                match={matches}
+                                style='bracket'
+                                placeholderTeamA={getPlaceholder(matches, 'teamA')}
+                                placeholderTeamB={getPlaceholder(matches, 'teamB')}
+                                onPlayerClick={handleShowPlayerDetail}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )
-                    }
-                  })
-                }
-              </section>
-            )
-          })
-        }
-      </div>
+                        )
+                      }
+                    })
+                  }
+                </section>
+              )
+            })
+          }
+        </div>
+        {showPlayer && (
+          <PlayerPopover
+            showPlayer={showPlayer}
+            setShowPlayer={setShowPlayer}
+            anchorEl={anchorEl}
+            setAnchorEl={setAnchorEl}
+            useHandicap={event?.tournament?.useHandicap ?? false}
+          />
+        )}
+      </>
     )
   }
 

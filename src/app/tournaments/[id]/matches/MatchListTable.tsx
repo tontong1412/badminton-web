@@ -1,23 +1,26 @@
 'use client'
 import { useMatchesTournament } from '@/app/libs/data'
-import { Language, Match, MatchStatus, MatchStep } from '@/type'
+import { Language, Match, MatchStatus, MatchStep, Player } from '@/type'
 import { Box, Button, Chip, CircularProgress, IconButton, Menu, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/app/libs/redux/store'
 import { MAP_ROUND_NAME, MAP_STATUS_COLOR } from '@/app/constants'
 import { useTranslation } from 'react-i18next'
 import { FilterList } from '@mui/icons-material'
-import { useState } from 'react'
+import { MouseEvent, useState } from 'react'
 import moment from 'moment'
 import MatchMenu from './MatchMenu'
 import { useRouter } from 'next/navigation'
+import PlayerPopover from '../draw/PlayerPopover'
 
 interface MatchListTableProps {
   tournamentID: string
   isManager: boolean
+  enablePlayerPopover?: boolean
+  useHandicap?: boolean
 }
 
-const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
+const MatchListTable = ({ tournamentID, isManager, enablePlayerPopover = false, useHandicap = false }: MatchListTableProps) => {
   const { matches, isLoading } = useMatchesTournament(tournamentID)
   const language: Language = useSelector((state: RootState) => state.app.language)
   const { t } = useTranslation()
@@ -25,7 +28,18 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null)
   const [selectedMatch, setSelectedMatch] = useState<Match|null>(null)
+  const [showPlayer, setShowPlayer] = useState<Player | null>(null)
+  const [anchorElPlayer, setAnchorElPlayer] = useState<HTMLDivElement | null>(null)
   const router = useRouter()
+
+  const handleShowPlayerDetail = (e: MouseEvent<HTMLDivElement>, player: Player) => {
+    if(!enablePlayerPopover){
+      return
+    }
+    e.stopPropagation()
+    setShowPlayer(player)
+    setAnchorElPlayer(e.currentTarget)
+  }
 
   const handleStatusClick = (event: React.MouseEvent<HTMLElement>) => {
     setStatusAnchorEl(event.currentTarget)
@@ -128,7 +142,9 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                 <TableCell >
                   {match.teamA?.players.map((player) => {
                     return(<Box key={player.id} sx={{ display:'flex', gap: 2 }}>
-                      <Typography sx={{ width: 170 }}>{player.officialName?.[language]}</Typography>
+                      <Box onClick={(e: MouseEvent<HTMLDivElement>) => handleShowPlayerDetail(e, player)}>
+                        <Typography sx={{ width: 170 }}>{player.officialName?.[language]}</Typography>
+                      </Box>
                       <Typography sx={{ maxWidth: 150 }}>{player.club}</Typography>
                     </Box>)
                   })}
@@ -139,7 +155,9 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
                 <TableCell>
                   {match.teamB?.players.map((player) => {
                     return(<Box key={player.id} sx={{ display:'flex', gap: 2 }}>
-                      <Typography sx={{ width: 170 }}>{player.officialName?.[language]}</Typography>
+                      <Box onClick={(e: MouseEvent<HTMLDivElement>) => handleShowPlayerDetail(e, player)}>
+                        <Typography sx={{ width: 170 }}>{player.officialName?.[language]}</Typography>
+                      </Box>
                       <Typography sx={{ maxWidth: 150 }}>{player.club}</Typography>
                     </Box>)
                   })}
@@ -164,6 +182,15 @@ const MatchListTable = ({ tournamentID, isManager }: MatchListTableProps) => {
         isManager={isManager}
         tournamentID={tournamentID}
       />}
+      {showPlayer && (
+        <PlayerPopover
+          showPlayer={showPlayer}
+          setShowPlayer={setShowPlayer}
+          anchorEl={anchorElPlayer}
+          setAnchorEl={setAnchorElPlayer}
+          useHandicap={useHandicap}
+        />
+      )}
     </Box>
   )
 }

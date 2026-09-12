@@ -45,7 +45,12 @@ const RunMatch = () => {
           <MenuDrawer tournamentID={tournament.id}/>
           <Box padding={1}>
             <DownloadDoc tournamentID={tournament.id} />
-            <MatchListTable tournamentID={tournament.id} isManager={isManager}/>
+            <MatchListTable
+              tournamentID={tournament.id}
+              isManager={isManager}
+              enablePlayerPopover
+              useHandicap={Boolean(tournament.useHandicap)}
+            />
           </Box>
         </Box>}
     </TournamentLayout>

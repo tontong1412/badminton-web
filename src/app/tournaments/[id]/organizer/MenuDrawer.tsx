@@ -44,6 +44,10 @@ const PersonelMenu = [
 
 const duringTournamentMenu = [
   {
+    title: 'สถิติและการเงิน',
+    action: '/statistics'
+  },
+  {
     title: 'ดำเนินการแข่งขัน',
     action: '/run-match'
   },
