@@ -21,10 +21,26 @@ type MatchUpdateEvent = {
   matchID?: string
 }
 
-const tournamentMatchUpdateListeners = new Map<string, Set<() => void>>()
+export const mergeMatchesById = (matches: Match[] | undefined, updatedMatch?: Match): Match[] => {
+  const nextMatches = Array.isArray(matches) ? [...matches] : []
+
+  if (!updatedMatch) {
+    return nextMatches
+  }
+
+  const existingMatchIndex = nextMatches.findIndex((match) => match.id === updatedMatch.id)
+  if (existingMatchIndex === -1) {
+    return [...nextMatches, updatedMatch]
+  }
+
+  nextMatches[existingMatchIndex] = updatedMatch
+  return nextMatches
+}
+
+const tournamentMatchUpdateListeners = new Map<string, Set<(payload: MatchUpdateEvent) => void>>()
 const tournamentMatchUpdateSources = new Map<string, EventSource>()
 
-const removeMatchUpdateListener = (tournamentID: string, listener: () => void) => {
+const removeMatchUpdateListener = (tournamentID: string, listener: (payload: MatchUpdateEvent) => void) => {
   const listeners = tournamentMatchUpdateListeners.get(tournamentID)
   if (!listeners) {
     return
@@ -41,10 +57,10 @@ const removeMatchUpdateListener = (tournamentID: string, listener: () => void) =
   tournamentMatchUpdateSources.delete(tournamentID)
 }
 
-const subscribeToTournamentMatchUpdates = (tournamentID: string, onUpdate: () => void) => {
+const subscribeToTournamentMatchUpdates = (tournamentID: string, onUpdate: (payload: MatchUpdateEvent) => void) => {
   let listeners = tournamentMatchUpdateListeners.get(tournamentID)
   if (!listeners) {
-    listeners = new Set<() => void>()
+    listeners = new Set<(payload: MatchUpdateEvent) => void>()
     tournamentMatchUpdateListeners.set(tournamentID, listeners)
   }
 
@@ -72,7 +88,7 @@ const subscribeToTournamentMatchUpdates = (tournamentID: string, onUpdate: () =>
         return
       }
 
-      tournamentListeners.forEach((listener) => listener())
+      tournamentListeners.forEach((listener) => listener(payload))
     }
 
     source.onerror = () => {
@@ -216,8 +232,21 @@ export const useMatchesTournament = (tournamentID: (string | undefined)): Matche
       return
     }
 
-    const unsubscribe = subscribeToTournamentMatchUpdates(tournamentID, () => {
-      void mutate()
+    const unsubscribe = subscribeToTournamentMatchUpdates(tournamentID, async(payload) => {
+      if (!payload.matchID) {
+        await mutate()
+        return
+      }
+
+      try {
+        const updatedMatch = await fetcher(`${SERVICE_ENDPOINT}/matches/${payload.matchID}`, false) as Match
+        await mutate(
+          (currentMatches) => mergeMatchesById(currentMatches, updatedMatch),
+          { revalidate: false }
+        )
+      } catch {
+        await mutate()
+      }
     })
 
     return unsubscribe
