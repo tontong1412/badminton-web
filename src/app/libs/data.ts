@@ -241,7 +241,7 @@ export const useMatchesTournament = (tournamentID: (string | undefined)): Matche
       try {
         const updatedMatch = await fetcher(`${SERVICE_ENDPOINT}/matches/${payload.matchID}`, false) as Match
         await mutate(
-          (currentMatches) => mergeMatchesById(currentMatches, updatedMatch),
+          (currentMatches: Match[] | undefined) => mergeMatchesById(currentMatches, updatedMatch),
           { revalidate: false }
         )
       } catch {
