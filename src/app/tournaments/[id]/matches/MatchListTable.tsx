@@ -12,6 +12,7 @@ import moment from 'moment'
 import MatchMenu from './MatchMenu'
 import { useRouter } from 'next/navigation'
 import PlayerPopover from '../draw/PlayerPopover'
+import { getDisplayedScores } from './scoreDisplay'
 
 interface MatchListTableProps {
   tournamentID: string
@@ -150,7 +151,7 @@ const MatchListTable = ({ tournamentID, isManager, enablePlayerPopover = false, 
                   })}
                 </TableCell>
                 <TableCell align="center">
-                  <Box >{match.scoreLabel.map((set, i) => <Typography key={i}>{set}</Typography>)}</Box>
+                  <Box >{getDisplayedScores(match).map((set, i) => <Typography key={i}>{set}</Typography>)}</Box>
                 </TableCell>
                 <TableCell>
                   {match.teamB?.players.map((player) => {
