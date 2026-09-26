@@ -124,7 +124,7 @@ const MatchesPage = () => {
                   <MatchListMobile
                     tournamentID={tournament.id}
                     status={MatchStatus.Playing}
-                    enableMatchNavigation={false}
+                    enableMatchNavigation
                     enablePlayerPopover
                     useHandicap={Boolean(tournament.useHandicap)}
                   />
