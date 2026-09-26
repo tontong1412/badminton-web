@@ -1,5 +1,6 @@
 import { MatchStatus, type Match } from '@/type'
 import { mergeMatchesById } from '@/app/libs/data'
+import { getDisplayedScores } from '@/app/tournaments/[id]/matches/scoreDisplay'
 
 const createMatch = (id: string, status: MatchStatus = MatchStatus.Waiting): Match => ({
   id,
@@ -49,5 +50,41 @@ describe('mergeMatchesById', () => {
       existing[0],
       inserted,
     ])
+  })
+})
+
+describe('getDisplayedScores', () => {
+  it('appends the live score while a match is playing', () => {
+    const match = {
+      ...createMatch('m-4', MatchStatus.Playing),
+      scoreLabel: ['21-18'],
+      teamA: {
+        ...createMatch('m-4', MatchStatus.Playing).teamA,
+        score: 7,
+      },
+      teamB: {
+        ...createMatch('m-4', MatchStatus.Playing).teamB,
+        score: 5,
+      },
+    }
+
+    expect(getDisplayedScores(match)).toEqual(['21-18', '7-5'])
+  })
+
+  it('keeps finished-match scores unchanged', () => {
+    const match = {
+      ...createMatch('m-5', MatchStatus.Finished),
+      scoreLabel: ['21-18', '21-19'],
+      teamA: {
+        ...createMatch('m-5', MatchStatus.Finished).teamA,
+        score: 0,
+      },
+      teamB: {
+        ...createMatch('m-5', MatchStatus.Finished).teamB,
+        score: 0,
+      },
+    }
+
+    expect(getDisplayedScores(match)).toEqual(['21-18', '21-19'])
   })
 })
