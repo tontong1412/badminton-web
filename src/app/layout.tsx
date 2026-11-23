@@ -1,25 +1,19 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import '@fontsource/nunito/300.css'
+import '@fontsource/nunito/400.css'
+import '@fontsource/nunito/500.css'
+import '@fontsource/nunito/700.css'
+import '@fontsource/ibm-plex-sans-thai/400.css'
+import '@fontsource/ibm-plex-sans-thai/500.css'
+import '@fontsource/ibm-plex-sans-thai/600.css'
 import './globals.css'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
-import { Nunito, IBM_Plex_Sans_Thai  } from 'next/font/google'
 import { ThemeProvider } from '@mui/material/styles'
 import theme from '../theme'
 import Providers from './providers'
 import { TranslationWrapper } from './components/TranslationWrapper'
 import RouteAnalyticsTracker from './components/analytics/RouteAnalyticsTracker'
-
-const nunito = Nunito({
-  weight: ['300', '400', '500', '700'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-nunito',
-})
-
-const ibmPlexSansThai = IBM_Plex_Sans_Thai({
-  weight: ['400', '500', '600'],  // specify the font weights you want to use
-  subsets: ['latin', 'thai'], // specify the subsets (if using Thai characters)
-})
 
 export const metadata: Metadata = {
   title: 'Badminstar | Your Badminton Community Hub',
@@ -47,7 +41,7 @@ export default function RootLayout({
       <head>
         <meta name="color-scheme" content="light" />
       </head>
-      <body className={`${ibmPlexSansThai.className} ${nunito.className}`} >
+      <body>
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <Providers>

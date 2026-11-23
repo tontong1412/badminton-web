@@ -43,7 +43,7 @@ import moment from 'moment'
 import Layout from '../components/Layout'
 import axios from 'axios'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { deriveGroupedPaymentStatus, getBookingDateBundleGroupKey } from './grouping'
+import { deriveGroupedPaymentStatus, getBookingDateBundleGroupKey, getBookingDisplayStatus, getGroupedDisplayStatus } from './grouping'
 
 const EXPIRY_MINUTES = 10
 
@@ -584,6 +584,7 @@ function MyBookingsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
     case 'confirmed':
+    case 'sold':
       return 'success'
     case 'pending':
       return 'warning'
@@ -700,6 +701,7 @@ function MyBookingsPage() {
                         const showDate = dateStr !== prevDateStr
                         const booking = row.representative
                         const isCancelledSlot = booking.status === 'cancelled'
+                        const isResoldBooking = getBookingDisplayStatus(booking) === 'sold'
                         const isDateFullyCancelled = arr.filter((r) => moment(r.date).format('DD MMM YYYY') === dateStr).every((r) => r.representative.status === 'cancelled')
                         if (row.bookings.length > 1) {
                           // Merged: consecutive hours, no resale activity
@@ -740,8 +742,8 @@ function MyBookingsPage() {
                                       <Typography variant="body2" color="text.secondary" sx={{ textDecoration: (shouldShowInlineCancelledState && isCancelledSlot) || isSoldSlot ? 'line-through' : 'none' }}>{slot.startTime} – {slot.endTime}</Typography>
                                       <Typography variant="body2" color="text.secondary">·</Typography>
                                       <Typography variant="body2" color="text.secondary">{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                      {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                      {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {shouldShowInlineCancelledState && isCancelledSlot && !isResoldBooking && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                      {(isResoldBooking || (isSoldSlot && !isCancelledSlot)) && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                       {canShowResellActions && isListedSlot && (
                                         <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
@@ -762,7 +764,8 @@ function MyBookingsPage() {
                                 <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{booking.startTime} – {booking.endTime}</Typography>
                                 <Typography variant="body2" color="text.secondary">·</Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>{courtDetails[booking.courtID]?.name || '—'}</Typography>
-                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                {shouldShowInlineCancelledState && isCancelledSlot && !isResoldBooking && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                {isResoldBooking && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                 {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                 {canShowResellActions && isListedForSale && (
                                   <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
@@ -786,9 +789,9 @@ function MyBookingsPage() {
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                           <Chip
-                            label={group.status}
+                            label={getGroupedDisplayStatus(group.status, group.bookings)}
                             size="small"
-                            color={getStatusColor(group.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            color={getStatusColor(getGroupedDisplayStatus(group.status, group.bookings)) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                             variant="outlined"
                           />
                           <Chip
@@ -891,6 +894,7 @@ function MyBookingsPage() {
                                 {mergedRows.map((row) => {
                                   const booking = row.representative
                                   const isCancelledSlot = booking.status === 'cancelled'
+                                  const isResoldBooking = getBookingDisplayStatus(booking) === 'sold'
                                   if (row.bookings.length > 1) {
                                     const eligibleBookings = row.bookings.filter(isResellEligible)
                                     return (
@@ -923,8 +927,8 @@ function MyBookingsPage() {
                                                 <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: (shouldShowInlineCancelledState && isCancelledSlot) || isSoldSlot ? 'line-through' : 'none' }}>
                                                   {slot.startTime} – {slot.endTime}
                                                 </Typography>
-                                                {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
-                                                {isSoldSlot && !isCancelledSlot && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {shouldShowInlineCancelledState && isCancelledSlot && !isResoldBooking && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                                {(isResoldBooking || (isSoldSlot && !isCancelledSlot)) && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {isListedSlot && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                                 {canShowResellActions && isListedSlot && (
                                                   <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
@@ -945,7 +949,8 @@ function MyBookingsPage() {
                                           <Typography variant="body2" sx={{ opacity: isCancelledSlot && shouldShowInlineCancelledState ? 0.5 : 1, textDecoration: shouldShowInlineCancelledState && isCancelledSlot ? 'line-through' : 'none' }}>
                                             {booking.startTime} – {booking.endTime}
                                           </Typography>
-                                          {shouldShowInlineCancelledState && isCancelledSlot && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                          {shouldShowInlineCancelledState && isCancelledSlot && !isResoldBooking && <Chip label="cancelled" size="small" color="error" variant="outlined" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                          {isResoldBooking && <Chip label="Sold" size="small" color="success" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                           {isListedForSale && <Chip label="For Sale" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem' }} />}
                                           {canShowResellActions && isListedForSale && (
                                             <Button size="small" color="warning" sx={{ py: 0, px: 0.75, minWidth: 0, fontSize: '0.65rem', height: 20, lineHeight: 1 }} onClick={() => handleCancelListing(booking)}>
@@ -971,9 +976,9 @@ function MyBookingsPage() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={group.status}
+                            label={getGroupedDisplayStatus(group.status, group.bookings)}
                             size="small"
-                            color={getStatusColor(group.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            color={getStatusColor(getGroupedDisplayStatus(group.status, group.bookings)) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                             variant="outlined"
                           />
                         </TableCell>
