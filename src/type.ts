@@ -547,6 +547,7 @@ export enum BookingResaleOutcome {
   None = 'none',
   Listed = 'listed',
   Sold = 'sold',
+  Resold = 'resold',
   Cancelled = 'cancelled',
 }
 

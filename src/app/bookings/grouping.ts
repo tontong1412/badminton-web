@@ -1,4 +1,19 @@
-import { BookingStatus, PaymentStatus } from '@/type'
+import { BookingResaleOutcome, BookingStatus, PaymentStatus } from '@/type'
+
+interface BookingStatusSnapshot {
+  status: BookingStatus | string;
+  resaleOutcome?: BookingResaleOutcome | string;
+}
+
+export const getBookingDisplayStatus = (booking: BookingStatusSnapshot): string =>
+  booking.status === BookingStatus.Cancelled && booking.resaleOutcome === BookingResaleOutcome.Resold
+    ? 'sold'
+    : booking.status
+
+export const getGroupedDisplayStatus = (status: string, bookings: BookingStatusSnapshot[]): string =>
+  status === BookingStatus.Cancelled && bookings.length > 0 && bookings.every((booking) => getBookingDisplayStatus(booking) === 'sold')
+    ? 'sold'
+    : status
 
 interface BookingPaymentSnapshot {
   status: BookingStatus | string;

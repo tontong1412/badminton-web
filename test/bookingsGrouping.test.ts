@@ -1,5 +1,25 @@
-import { BookingStatus, PaymentStatus } from '@/type'
-import { deriveGroupedPaymentStatus, getBookingDateBundleGroupKey } from '@/app/bookings/grouping'
+import { describe, expect, it } from 'vitest'
+import { BookingResaleOutcome, BookingStatus, PaymentStatus } from '@/type'
+import { deriveGroupedPaymentStatus, getBookingDateBundleGroupKey, getBookingDisplayStatus, getGroupedDisplayStatus } from '@/app/bookings/grouping'
+
+describe('booking display status', () => {
+  const sold = { status: BookingStatus.Cancelled, resaleOutcome: BookingResaleOutcome.Resold }
+  const cancelled = { status: BookingStatus.Cancelled, resaleOutcome: BookingResaleOutcome.None }
+
+  it('distinguishes resold bookings from cancellations', () => {
+    expect(BookingResaleOutcome.Resold).toBe('resold')
+    expect(getBookingDisplayStatus(sold)).toBe('sold')
+    expect(getBookingDisplayStatus(cancelled)).toBe(BookingStatus.Cancelled)
+    expect(getBookingDisplayStatus({ status: BookingStatus.Confirmed, resaleOutcome: BookingResaleOutcome.Resold })).toBe(BookingStatus.Confirmed)
+  })
+
+  it('only labels a cancelled group sold when every booking was resold', () => {
+    expect(getGroupedDisplayStatus(BookingStatus.Cancelled, [sold, sold])).toBe('sold')
+    expect(getGroupedDisplayStatus(BookingStatus.Cancelled, [sold, cancelled])).toBe(BookingStatus.Cancelled)
+    expect(getGroupedDisplayStatus(BookingStatus.Cancelled, [])).toBe(BookingStatus.Cancelled)
+    expect(getGroupedDisplayStatus(BookingStatus.Confirmed, [sold])).toBe(BookingStatus.Confirmed)
+  })
+})
 
 describe('deriveGroupedPaymentStatus', () => {
   it('returns unpaid for fully cancelled group when underlying items are unpaid', () => {
